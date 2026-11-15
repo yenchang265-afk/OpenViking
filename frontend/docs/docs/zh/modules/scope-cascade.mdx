@@ -1,11 +1,11 @@
 # ScopeCascade 級聯選擇
 
-依次選擇知識庫、資料空間和使用者的三級選擇器：上級變化時，下級清空並重新載入，三級都選中後通過 `onChange` 返回完整身份。
+依次選擇知識庫、資料空間和使用者的三級選擇器：上級變化時，下級清空並重新載入，三級都選中後透過 `onChange` 返回完整身份。
 
 ## 何時使用
 
 - 需要依次選擇知識庫、資料空間和使用者，再按選中的身份載入業務資料時。
-- 資料來自宿主自己的介面時：元件通過三個載入函式取數，請求、級聯、取消和重試都由元件管理。它不請求 OpenViking 原生 API，因此沒有 `requestOptions`，也不需要 `OpenVikingProvider`；其他區塊的請求配置見[區塊概覽](../modules/)。
+- 資料來自宿主自己的介面時：元件透過三個載入函式取數，請求、級聯、取消和重試都由元件管理。它不請求 OpenViking 原生 API，因此沒有 `requestOptions`，也不需要 `OpenVikingProvider`；其他區塊的請求配置見[區塊概覽](../modules/)。
 - 需要自己管理各級資料、自定義面板或固定某一級時，改用 [ScopeSwitcher](../components/scope-switcher)。
 
 ## 引入
@@ -33,6 +33,14 @@ import '@openviking/react/modules/scope-cascade/style.css';
 
 ```
 
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，區塊顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/scope-cascade-crash.tsx" preview
+
+```
+
 ## API
 
 ### ScopeCascade
@@ -57,7 +65,7 @@ import '@openviking/react/modules/scope-cascade/style.css';
 | 引數        | 說明                                                                                       | 型別        | 預設值  |
 | ----------- | ------------------------------------------------------------------------------------------ | ----------- | ------- |
 | id          | 選項的唯一標識；上級的 `id` 會傳給下一級的載入函式，三級的 `id` 組成 `onChange` 返回的身份 | `string`    | 必填    |
-| label       | 顯示文本，搜尋時按它過濾並高亮匹配的片段                                                   | `string`    | 必填    |
+| label       | 顯示文字，搜尋時按它過濾並高亮匹配的片段                                                   | `string`    | 必填    |
 | icon        | 選項行首的圖示，省略時使用本級預設圖示                                                     | `ReactNode` | -       |
 | description | 顯示在標籤下方的次要說明                                                                   | `string`    | -       |
 | disabled    | 停用該選項：置灰、不可點選，也不會被自動選中                                               | `boolean`   | `false` |
@@ -80,3 +88,7 @@ import '@openviking/react/modules/scope-cascade/style.css';
 - 每一級一次返回完整列表，不支援服務端搜尋和分頁。超過 10 項時顯示搜尋框，在本地按選項文字過濾。
 - 選項沒有 `icon` 時，知識庫顯示 [LibraryIcon](../components/icons)（按 `id` 取色的圓形漸變色塊），資料空間和使用者分別顯示 `SpaceIcon`、`UserIcon`；載入函式返回了 `icon` 就使用它。
 - 型別從 `@openviking/react/modules/scope-cascade` 匯出：`ScopeCascadeProps`、`ScopeCascadeSelection`，以及三個載入函式合在一起的 `ScopeCascadeApi`；`ScopeSwitcherOption` 和 `ScopeSwitcherLabels` 從 `@openviking/react/components/scope-switcher` 匯出。包根入口只匯出元件和 `ScopeCascadeProps`。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

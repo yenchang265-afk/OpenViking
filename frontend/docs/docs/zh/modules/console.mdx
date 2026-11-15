@@ -48,6 +48,22 @@ import '@openviking/react/modules/console/style.css';
 
 示例使用模擬服務，可切換原生能力與火山當前契約。原生介面卡提供 `interrupt` 和 `steer`，支援停止及生成中追問；火山當前介面卡省略這兩個方法，生成中停用傳送且不顯示停止。回答後的下一輪提問兩者均支援。
 
+### 待確認互動
+
+傳送任意訊息觸發模擬問題組。示例為名稱注入非同步校驗、為輸出目錄提供選擇器，並用自定義元件替換指令卡片；定時的外部規則將更新時間限制在 09:00–18:00。勾選「模擬答案傳送失敗」可檢查輸入保留、錯誤清理與重試。
+
+```tsx file="../../_demos/console-hitl.tsx" preview
+
+```
+
+Console 在 `request_user_input` 工具成功且當前輪正常結束後展示問題，按問題組順序收集答案。中斷、截斷、錯誤結果和不支援的協議保留普通工具展示。傳入 `chatOptions.hitl={false}` 關閉自動互動；顯式傳入 `conversation.interaction` 時使用宿主的問題與回撥。
+
+歷史訊息不包含可確認的輪次終止狀態，載入歷史只恢復訊息和答案摘要，不重新觸發問題卡片。新一輪實時回覆正常結束後仍可觸發互動。
+
+最後一項提交後，Console 傳送 `request_user_input_response` JSON 繼續下一輪對話，包含 `schema_version: '1.0'`、`tool_call_id` 和按原順序排列的 `answers: { card_type, title, value }[]`。使用者氣泡、複製和歷史展示採用標籤/值摘要；傳送與儲存保留協議原文，選項名稱從對應問題中恢復。
+
+宿主透過 `chatOptions.hitl.cards[card_type]` 提供擴充套件。同一型別的多個問題可用 `configureCard(card)` 按 `card.id` 或 `card.payload` 分別配置。欄位名與值型別見 [VikingBotInteractionFields](../components/viking-bot#vikingbotinteractionfields)。校驗透過後才進入下一項，最後一項才呼叫對話服務。目錄存在性、許可權和業務規則由宿主校驗器檢查；自定義選擇器的資料與請求由宿主提供。
+
 ### 後臺任務
 
 終端提交 `ov add-resource https://example.com/demo`，再切換對話模式傳送任意文字，兩條記錄會跟蹤同一個模擬任務。點選「模擬完成」或「模擬失敗」後檢視狀態更新。
@@ -61,6 +77,14 @@ import '@openviking/react/modules/console/style.css';
 `modes={['command']}` 只啟用 TUI，`modes={['conversation']}` 只啟用 VikingBot。省略時兩者都啟用；單功能時隱藏模式切換，關閉的模式不渲染，也不發起請求。當前 `mode` 或 `defaultMode` 不在啟用列表時，顯示列表第一項，不觸發 `onModeChange`。切換模式保留對話；從 `modes` 中移除對話會中止連線，重新啟用時重新載入會話。
 
 ```tsx file="../../_demos/console-modes.tsx" preview
+
+```
+
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，區塊顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/console-crash.tsx" preview
 
 ```
 
@@ -89,16 +113,58 @@ import '@openviking/react/modules/console/style.css';
 
 ### ConsoleChatOptions
 
-| 引數           | 說明                                                | 型別                                             | 預設值       |
-| -------------- | --------------------------------------------------- | ------------------------------------------------ | ------------ |
-| taskService    | 對話後臺任務查詢介面卡，預設共享 Console 的查詢服務 | `ConsoleTaskService`                             | 繼承 Console |
-| locale         | 對話文案語言                                        | `'zh-CN' \| 'en-US'`                             | 繼承 Console |
-| persist        | 儲存已完成的訊息                                    | `boolean`                                        | `true`       |
-| scopeKey       | 動態身份的隔離鍵                                    | `string`                                         | 繼承 Console |
-| service        | 對話與會話介面卡，保持引用穩定                      | `VikingBotChatService & VikingBotSessionService` | 原生服務     |
-| requestOptions | 對話請求配置                                        | `OvRequestOptions`                               | 繼承 Console |
+| 引數           | 說明                                                | 型別                                             | 預設值           |
+| -------------- | --------------------------------------------------- | ------------------------------------------------ | ---------------- |
+| taskService    | 對話後臺任務查詢介面卡，預設共享 Console 的查詢服務 | `ConsoleTaskService`                             | 繼承 Console     |
+| locale         | 對話文案語言                                        | `'zh-CN' \| 'en-US'`                             | 繼承 Console     |
+| persist        | 儲存已完成的訊息                                    | `boolean`                                        | `true`           |
+| scopeKey       | 動態身份的隔離鍵                                    | `string`                                         | 繼承 Console     |
+| service        | 對話與會話介面卡，保持引用穩定                      | `VikingBotChatService & VikingBotSessionService` | 原生服務         |
+| requestOptions | 對話請求配置                                        | `OvRequestOptions`                               | 繼承 Console     |
+| hitl           | 自動問題組、欄位校驗與自定義卡片配置                | `ConsoleHitlOptions \| false`                    | 自動啟用內建卡片 |
 
 介面卡每個方法都收到 `AbortSignal`，應響應取消並在失敗時丟擲錯誤。後端自動儲存訊息時省略 `saveMessage`。
+
+### ConsoleHitlOptions
+
+| 引數          | 說明                                     | 型別                                                             | 預設值 |
+| ------------- | ---------------------------------------- | ---------------------------------------------------------------- | ------ |
+| cards         | 按 `card_type` 配置內建卡片或註冊新卡片  | `Record<string, ConsoleHitlCardOptions>`                         | -      |
+| configureCard | 按當前問題動態配置，返回值優先於 `cards` | `(card: ConsoleHitlCard) => ConsoleHitlCardOptions \| undefined` | -      |
+
+### ConsoleHitlCard
+
+| 引數     | 說明                                    | 型別                                | 預設值 |
+| -------- | --------------------------------------- | ----------------------------------- | ------ |
+| id       | 工具呼叫 ID 加冒號和從 0 開始的問題序號 | `string`                            | 必填   |
+| cardType | 服務端的 `card_type`                    | `string`                            | 必填   |
+| title    | 服務端問題標題                          | `string`                            | 必填   |
+| payload  | 服務端問題引數                          | `Readonly<Record<string, unknown>>` | 必填   |
+
+### ConsoleHitlCardOptions
+
+| 引數          | 說明                                       | 型別                                                                     | 預設值   |
+| ------------- | ------------------------------------------ | ------------------------------------------------------------------------ | -------- |
+| fields        | 內建欄位的文案、校驗器和控制元件渲染       | `VikingBotInteractionFields`                                             | -        |
+| createRequest | 建立或替換問題，註冊新型別時必填           | `(card: ConsoleHitlCard) => VikingBotInteractionRequest`                 | 內建適配 |
+| serialize     | 將答案轉為該卡片協議中的 `value`           | `(answer: VikingBotInteractionAnswer, card: ConsoleHitlCard) => unknown` | 內建轉換 |
+| summarize     | 格式化氣泡及複製使用的值，歷史展示同樣呼叫 | `(value: unknown, card: ConsoleHitlCard) => string`                      | 內建摘要 |
+
+#### 內建卡片
+
+| card_type           | 預設表單欄位              | 協議中的 value                                                 |
+| ------------------- | ------------------------- | -------------------------------------------------------------- |
+| compile_name        | `value`，文字             | `string`                                                       |
+| compile_output_type | `value`，單選             | 選項的 `value`                                                 |
+| compile_source      | `value`，每行一個目錄 URI | 去空行、去重後的 `string[]`                                    |
+| compile_target      | `value`，目錄 URI         | `string`                                                       |
+| compile_skill       | `value`，候選或自定義 URI | `string`                                                       |
+| compile_instruction | `value`，多行文字         | `string`                                                       |
+| compile_schedule    | `mode`、`time`、`weekday` | `{ frequency: 'disabled' }` 或包含頻率、時間、星期和時區的物件 |
+
+工具結果支援直接 JSON、MCP `structuredContent` 或文字 `content`，`schema_version` 必須為 `'1.0'`。優先讀取 `structuredContent`；一組中任一問題無效或未註冊時，整組保留為工具結果。原生服務接受裸工具名及 `mcp_openviking-mcp_request_user_input`；自定義介面卡應保留工具呼叫的唯一 `id`，將服務名設為 `openviking-mcp`、工具名設為 `request_user_input`。
+
+`createRequest` 可返回 `kind: 'custom'`，由自定義元件透過 `context.submit(value)` 提交物件或其他答案，並自行管理其欄位校驗。配置 `serialize` 適配服務端值，配置 `summarize` 提供可讀展示；未知型別需提供 `createRequest` 才會觸發互動。
 
 ### VikingBotChatInput
 
@@ -106,19 +172,22 @@ import '@openviking/react/modules/console/style.css';
 | ----------- | ---------------- | -------------------------------- | ------ |
 | sessionId   | 會話標識         | `string`                         | 必填   |
 | text        | 提交的正文       | `string`                         | 必填   |
-| attachments | 宿主已上傳的附件 | `readonly VikingBotAttachment[]` | 必填   |
+| attachments | 已準備傳送的附件 | `readonly VikingBotAttachment[]` | 必填   |
 | references  | 資源引用         | `readonly VikingBotReference[]`  | -      |
 
 ### VikingBotChatService
 
-| 引數          | 說明                                                  | 型別                                                                                    | 預設值 |
-| ------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ |
-| stream        | 流式請求；必須發出 complete 或 interrupted 終止事件   | `(input: VikingBotChatInput, signal: AbortSignal) => AsyncIterable<VikingBotChatEvent>` | 必填   |
-| createSession | 新建會話                                              | `(signal: AbortSignal) => Promise<VikingBotSession>`                                    | 必填   |
-| loadMessages  | 讀取完整會話歷史                                      | `(id: string, signal: AbortSignal) => Promise<readonly VikingBotMessage[]>`             | 必填   |
-| saveMessage   | 逐條儲存；後端自動持久化時省略，避免重複              | `(id: string, message: VikingBotMessage, signal: AbortSignal) => Promise<void>`         | 可選   |
-| interrupt     | 實際中斷後端生成；與本地斷開連線不同                  | `(id: string, signal: AbortSignal) => Promise<{ interrupted: boolean }>`                | 可選   |
-| steer         | 向當前流追加輸入；accepted 僅表示接受，不表示回覆完成 | `(input: VikingBotChatInput, signal: AbortSignal) => Promise<{ accepted: boolean }>`    | 可選   |
+| 引數             | 說明                                                                     | 型別                                                                                    | 預設值 |
+| ---------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ |
+| stream           | 流式請求；必須發出 complete 或 interrupted 終止事件                      | `(input: VikingBotChatInput, signal: AbortSignal) => AsyncIterable<VikingBotChatEvent>` | 必填   |
+| createSession    | 新建會話                                                                 | `(signal: AbortSignal) => Promise<VikingBotSession>`                                    | 必填   |
+| loadMessages     | 讀取完整會話歷史                                                         | `(id: string, signal: AbortSignal) => Promise<readonly VikingBotMessage[]>`             | 必填   |
+| attachmentUpload | 啟用新增資源按鈕；傳送時將 `upload` 返回的標識傳給 `attachment.uploadId` | `VikingBotAttachmentUpload`                                                             | 可選   |
+| saveMessage      | 逐條儲存；後端自動持久化時省略，避免重複                                 | `(id: string, message: VikingBotMessage, signal: AbortSignal) => Promise<void>`         | 可選   |
+| interrupt        | 實際中斷後端生成；與本地斷開連線不同                                     | `(id: string, signal: AbortSignal) => Promise<{ interrupted: boolean }>`                | 可選   |
+| steer            | 向當前流追加輸入；accepted 僅表示接受，不表示回覆完成                    | `(input: VikingBotChatInput, signal: AbortSignal) => Promise<{ accepted: boolean }>`    | 可選   |
+
+`VikingBotAttachmentUpload` 接收可選的檔案選擇器過濾器 `accept`，以及必填的 `upload(file, signal)`，它返回已上傳檔案的標識。檔案選擇器不會過濾拖入的檔案，介面卡仍需驗證檔案。附件上傳完成後才可傳送。移除附件會取消該檔案的上傳；切換帳號、請求身份或會話，或取消請求訊號時，會取消待完成的上傳並清空託管附件。透過 `conversation.sessions.currentId` 回寫新建會話 ID 時，會保留該會話的正常上傳。如果宿主提供草稿附件或檔案選擇回撥，則使用宿主的配置。
 
 ### VikingBotSessionService
 
@@ -240,9 +309,9 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 
 傳送失敗的提問和客戶端錯誤保留在訊息列表中。會話尚未建立時，下次傳送會補建會話，將未送達的使用者輸入作為上下文合併到同一次聊天請求，分別儲存原始使用者訊息；錯誤提示不會儲存或傳送給模型。原生閘道器只接收單條 `message`，因此僅補寫會話訊息不能恢復模型上下文。 未送達的輸入會保留到收到首個流事件；在此之前失敗，下次傳送仍會攜帶這些上下文。生成開始後不再重放舊輸入。
 
-- 預設傳送原生 VikingBot 對話請求。傳入 `conversation.messages` 或 `conversation.onSend` 時改由宿主管理對話；附件上傳仍由宿主完成。
-- 宿主查詢 Bot 狀態後設置 `conversation.isAvailable` 和 `conversation.unavailableMessage`，不可用時輸入區被停用並顯示說明。
-- 命令只在使用者提交時傳送請求，掛載時不請求。同一例項一次只執行一條命令，執行期間輸入框被停用。
+- 預設傳送原生 VikingBot 對話請求。傳入 `conversation.messages` 或 `conversation.onSend` 時改由宿主管理對話和附件狀態。
+- 宿主查詢 Bot 狀態後設定 `conversation.isAvailable` 和 `conversation.unavailableMessage`，不可用時輸入區被禁用並顯示說明。
+- 命令只在使用者提交時傳送請求，掛載時不請求。同一例項一次只執行一條命令，執行期間輸入框被禁用。
 - 命令失敗時，錯誤顯示在對應的記錄裡，修正後重新提交即可；寫入類命令失敗時服務端可能已經接收，重新提交前先核對結果。
 - 命令模式的「新建會話」會中止進行中的請求並忽略遲到的響應，同時清空命令記錄、錯誤和輸入框；服務端已接收的操作不會撤銷，服務端資料也不會刪除。`clear` 命令只清空本地記錄。
 - 命令歷史列出當前面板的記錄，最新的在前，時間為提交時的本地時間（`YYYY-MM-DD HH:mm`）；點選一條會把命令填回輸入框，不會執行。
@@ -252,3 +321,9 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 - 切換 `locale` 會更新已有記錄裡的命令幫助、引數錯誤和取消提示，保留記錄和草稿；服務端返回的內容保持原樣。
 - 認證、帳號切換和頁面佈局由宿主負責。`onOpenUri` 只上報資源連結的開啟意圖，導航由宿主完成。
 - 型別從 `@openviking/react/modules/console` 匯出，包根入口只匯出 `Console` 和 `ConsoleProps`。
+
+原生 VikingBot 的附件在傳送請求前校驗，不符合原有圖片型別或 URL 要求時透過 Toast 提示並保留草稿。自定義 `chatOptions.service` 負責自己的附件契約。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

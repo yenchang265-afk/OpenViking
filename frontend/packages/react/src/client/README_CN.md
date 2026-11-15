@@ -119,7 +119,7 @@ const stream = await client.stream({
 });
 
 for await (const event of stream) {
-  // event.data 是原始文本，事件型別在 JSON 裡面
+  // event.data 是原始文字，事件型別在 JSON 裡面
 }
 
 stream.abort();
@@ -130,7 +130,7 @@ stream.abort();
 - `data` 保持原文，不做 JSON 解析：OpenViking 把事件型別和事件 id 放在 `data` 的 JSON 裡，不佔 SSE 的 `event` / `id` 欄位。
 - 只有註釋的心跳塊（`: keepalive`）不產生事件；末尾缺空行的塊仍會派發。
 - `stream` 在響應到達時 resolve。HTTP 失敗、`content-type` 不是事件流，以及非流響應裡的 `status: 'error'`，都在 resolve 之前丟擲 `OvClientError`。
-- `abort()` 或通過 `signal` 取消後，迭代安靜結束而不拋 `AbortError`：取消是呼叫方的意圖，不是失敗。
+- `abort()` 或透過 `signal` 取消後，迭代安靜結束而不拋 `AbortError`：取消是呼叫方的意圖，不是失敗。
 - 一條流只能迭代一次。
 
 ## 介面路徑
@@ -162,7 +162,7 @@ await client.request({
 - `UNEXPECTED_CONTENT_TYPE`：`stream` 收到的不是事件流。
 - `INVALID_REQUEST`：`requestEnvelope` 被要求返回 `blob`。
 
-通過 `signal` 取消請求不算客戶端失敗：`request` 以原始的 `AbortError` 拒絕。
+透過 `signal` 取消請求不算客戶端失敗：`request` 以原始的 `AbortError` 拒絕。
 
 ## 替換傳輸層
 
@@ -181,8 +181,8 @@ const fixedFetch: typeof fetch = async () =>
 
 `createOvClient` 返回的 `OvClient` 帶有 `request`、`requestEnvelope`、`stream` 和 `baseURL`，是區塊依賴的介面。區塊始終使用最近的 Provider 建立的客戶端，Provider 不接收自己實現的客戶端，所以要改變區塊的傳輸方式，就傳 `fetch`。不管傳輸層怎麼換，這三件事都由 Client 負責，區塊不再重複：拼接服務地址與路徑、把身份欄位轉成請求頭、把響應變成結果或 `OvClientError`。
 
-## 服務端渲染
+## 瀏覽器執行環境
 
-匯入 `@openviking/react/client` 沒有副作用，在服務端渲染階段是安全的。`createOvClient` 需要一個 `fetch`，可以是全域性的，也可以是你傳入的，兩者都沒有就會拋錯。
+Client 面向瀏覽器執行。`createOvClient` 需要一個 `fetch`，可以是全域性的，也可以是你傳入的，兩者都沒有就會拋錯。
 
 客戶端的測試位於 `packages/react/test/client*.test.mjs`，在 `frontend/` 下執行 `npm test`（見[前端工作區 README](../../../../README.md)）。

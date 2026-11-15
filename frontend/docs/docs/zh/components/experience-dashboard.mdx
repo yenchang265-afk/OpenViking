@@ -27,6 +27,14 @@ import '@openviking/react/components/experience-dashboard/style.css';
 
 示例使用固定資料：點選經驗名稱進入檔案檢視，點選軌跡名稱只顯示收到的 URI。
 
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，元件顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/experience-dashboard-crash.tsx" preview
+
+```
+
 ## API
 
 ### ExperienceDashboard
@@ -105,7 +113,7 @@ import '@openviking/react/components/experience-dashboard/style.css';
 
 | 引數    | 說明                                                                           | 型別            | 預設值 |
 | ------- | ------------------------------------------------------------------------------ | --------------- | ------ |
-| loading | 是否正在載入，對應區域顯示骨架佔位條，載入狀態另以視覺隱藏的文本給出           | `boolean`       | -      |
+| loading | 是否正在載入，對應區域顯示骨架佔位條，載入狀態另以視覺隱藏的文字給出           | `boolean`       | -      |
 | error   | 載入失敗的錯誤，對應區域顯示失敗與重試；追加軌跡頁失敗時例外，已載入的記錄保留 | `Error \| null` | -      |
 | onRetry | 點選重試時觸發                                                                 | `() => void`    | -      |
 
@@ -118,3 +126,7 @@ import '@openviking/react/components/experience-dashboard/style.css';
 - 複製使用 `navigator.clipboard.writeText`，只在 HTTPS 或 localhost 下可用；不可用或瀏覽器拒絕時按鈕顯示「複製失敗」。
 - 元件高度為 `100%` 且內容區自己滾動，父元素需要給出高度。
 - 型別從 `@openviking/react/components/experience-dashboard` 匯出，包括 `ExperienceDashboardTab` 和 `ExperienceOutcome`；包根入口只匯出元件和 `ExperienceDashboardProps`。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

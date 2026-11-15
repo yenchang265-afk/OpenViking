@@ -708,6 +708,10 @@ class VikingClient:
             wait=wait,
         )
 
+    async def write(self, uri: str, content: str, mode: str = "replace") -> Dict[str, Any]:
+        """Write one text file with the task identity and return the OV content receipt."""
+        return await self.client.write(uri, content, mode=mode)
+
     async def batch_write(
         self,
         *,
@@ -737,6 +741,8 @@ class VikingClient:
         user_id: Optional[str] = None,
         offset: int = 0,
         limit: int = -1,
+        *,
+        raise_on_error: bool = False,
     ) -> str:
         """讀取內容
 
@@ -745,6 +751,7 @@ class VikingClient:
             level: 讀取級別 ("abstract" - L0摘要, "overview" - L1概覽, "read" - L2完整內容)
             offset: Starting line number (0-indexed); only used for level="read"
             limit: Number of lines to read, -1 means read to end; only used for level="read"
+            raise_on_error: Propagate read errors when the caller must distinguish them from empty files.
         """
         if self._skill_snapshot_ref(uri):
             if level in {"read", "raw"}:
@@ -781,8 +788,12 @@ class VikingClient:
             else:
                 raise ValueError(f"Unsupported level: {level}")
         except FileNotFoundError:
+            if raise_on_error:
+                raise
             return ""
         except Exception as e:
+            if raise_on_error:
+                raise
             logger.warning(f"Failed to read content from {uri}: {e}")
             return ""
         finally:

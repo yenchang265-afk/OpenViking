@@ -6,8 +6,8 @@
 
 - `EmailLoginForm`：用郵箱和密碼登入，可附帶忘記密碼入口。
 - `ApiKeyLoginForm`：用 API Key 登入，輸入內容預設遮蔽，可切換顯示。
-- `PasswordResetRequestForm`：使用者忘記密碼時請求傳送重置郵件，支援重新發送並顯示等待秒數。
-- `PasswordSetupForm`：首次設定密碼，或通過郵件連結重置密碼。
+- `PasswordResetRequestForm`：使用者忘記密碼時請求傳送重置郵件，支援重新傳送並顯示等待秒數。
+- `PasswordSetupForm`：首次設定密碼，或透過郵件連結重置密碼。
 - `LoginMethodSelector`：宿主支援多種登入方式時，讓使用者先選擇一種。
 - `InvitationConfirmation`：展示邀請資訊，讓使用者接受、拒絕或稍後處理。
 - 請求、登入態和頁面跳轉由宿主負責：這些元件只負責輸入、校驗和展示，不發起請求，也不需要 `OpenVikingProvider`。
@@ -75,7 +75,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | readOnlyEmail  | 郵箱輸入框設為只讀，值仍參與校驗和提交                                                  | `boolean`                                               | `false` |
 | forgotPassword | 密碼輸入框標籤右側的忘記密碼入口，沒有 `onClick` 時不顯示                               | `AuthAction`                                            | -       |
 | alternateLogin | 表單底部切換到其他登入方式的入口，沒有 `onClick` 時不顯示                               | `AuthAction`                                            | -       |
-| onSubmit       | 校驗通過且協議（如已配置）已同意後觸發；`email` 已去除首尾空白，`password` 保持輸入原樣 | `(values: { email: string; password: string }) => void` | -       |
+| onSubmit       | 校驗透過且協議（如已配置）已同意後觸發；`email` 已去除首尾空白，`password` 保持輸入原樣 | `(values: { email: string; password: string }) => void` | -       |
 
 ### ApiKeyLoginForm
 
@@ -84,7 +84,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | 引數           | 說明                                                          | 型別                                   | 預設值 |
 | -------------- | ------------------------------------------------------------- | -------------------------------------- | ------ |
 | alternateLogin | 表單底部切換到其他登入方式的入口，沒有 `onClick` 時不顯示     | `AuthAction`                           | -      |
-| onSubmit       | 校驗通過且協議（如已配置）已同意後觸發，`apiKey` 保持輸入原樣 | `(values: { apiKey: string }) => void` | -      |
+| onSubmit       | 校驗透過且協議（如已配置）已同意後觸發，`apiKey` 保持輸入原樣 | `(values: { apiKey: string }) => void` | -      |
 
 ### PasswordResetRequestForm
 
@@ -93,9 +93,9 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | 引數         | 說明                                                                                      | 型別                                    | 預設值 |
 | ------------ | ----------------------------------------------------------------------------------------- | --------------------------------------- | ------ |
 | defaultEmail | 郵箱輸入框的初始值，只在首次渲染時生效                                                    | `string`                                | `''`   |
-| sentMessage  | 郵件已傳送的結果：輸入框裡的郵箱與 `email` 一致時顯示 `message`，並把提交按鈕改為重新發送 | `{ email: string; message: ReactNode }` | -      |
+| sentMessage  | 郵件已傳送的結果：輸入框裡的郵箱與 `email` 一致時顯示 `message`，並把提交按鈕改為重新傳送 | `{ email: string; message: ReactNode }` | -      |
 | retryAfter   | 距離可以再次傳送的剩餘秒數，由宿主持續更新；大於 0 時停用整個表單，提交按鈕顯示剩餘秒數   | `number`                                | `0`    |
-| onSubmit     | 校驗通過且協議（如已配置）已同意後觸發，`email` 已去除首尾空白                            | `(values: { email: string }) => void`   | -      |
+| onSubmit     | 校驗透過且協議（如已配置）已同意後觸發，`email` 已去除首尾空白                            | `(values: { email: string }) => void`   | -      |
 
 ### PasswordSetupForm
 
@@ -105,8 +105,8 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | ---------------- | ------------------------------------------------------------------------------------- | ------------------------------------------- | ------ |
 | account          | 要設定密碼的帳號，顯示在輸入框上方，下方附帶 `labels.account` 的說明                  | `ReactNode`                                 | -      |
 | passwordHint     | 密碼規則提示，顯示在兩個輸入框下方                                                    | `ReactNode`                                 | -      |
-| validatePassword | 校驗新密碼：返回錯誤文案表示不通過，返回 `undefined` 表示通過；省略時只檢查必填和一致 | `(password: string) => string \| undefined` | -      |
-| onSubmit         | 校驗通過且協議（如已配置）已同意後觸發，`password` 保持輸入原樣                       | `(values: { password: string }) => void`    | -      |
+| validatePassword | 校驗新密碼：返回錯誤文案表示不透過，返回 `undefined` 表示透過；省略時只檢查必填和一致 | `(password: string) => string \| undefined` | -      |
+| onSubmit         | 校驗透過且協議（如已配置）已同意後觸發，`password` 保持輸入原樣                       | `(values: { password: string }) => void`    | -      |
 
 ### LoginMethodSelector
 
@@ -140,7 +140,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 
 | 引數    | 說明                                           | 型別         | 預設值 |
 | ------- | ---------------------------------------------- | ------------ | ------ |
-| label   | 入口文案，元件不翻譯，由宿主提供當前語言的文本 | `string`     | 必填   |
+| label   | 入口文案，元件不翻譯，由宿主提供當前語言的文字 | `string`     | 必填   |
 | onClick | 點選時觸發，省略時不顯示該入口                 | `() => void` | -      |
 
 ### AuthAgreements
@@ -168,7 +168,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | mismatch             | 兩次輸入的密碼不一致時的錯誤提示                   | `string` | `'兩次輸入的密碼不一致。'`       |
 | login                | `EmailLoginForm` 和 `ApiKeyLoginForm` 的提交按鈕   | `string` | `'登入'`                         |
 | send                 | `PasswordResetRequestForm` 的提交按鈕              | `string` | `'傳送重置郵件'`                 |
-| resend               | 已傳送郵件後 `PasswordResetRequestForm` 的提交按鈕 | `string` | `'重新發送郵件'`                 |
+| resend               | 已傳送郵件後 `PasswordResetRequestForm` 的提交按鈕 | `string` | `'重新傳送郵件'`                 |
 | confirm              | `PasswordSetupForm` 的提交按鈕                     | `string` | `'確認並登入'`                   |
 | agreementPrefix      | 協議勾選框中，協議連結前的文案                     | `string` | `'我已閱讀並同意'`               |
 | agreementTitle       | 確認對話方塊的標題                                 | `string` | `'閱讀並同意協議'`               |
@@ -181,7 +181,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 
 - 提交時先校驗輸入，再處理協議：已勾選則直接觸發 `onSubmit`，未勾選則彈出確認對話方塊，點選同意會勾選協議並觸發 `onSubmit`。
 - 確認對話方塊使用原生 `<dialog>` 的 `showModal()`，需要瀏覽器支援。取消或按 Esc 會關閉對話方塊，保留輸入，不勾選協議，也不提交。
-- 元件不發起請求，也忽略 `onSubmit` 的返回值。宿主在處理期間設定 `loading`，失敗時通過 `error` 展示，成功後的跳轉也由宿主完成。
+- 元件不發起請求，也忽略 `onSubmit` 的返回值。宿主在處理期間設定 `loading`，失敗時透過 `error` 展示，成功後的跳轉也由宿主完成。
 - 表單的 `loading` 和 `disabled` 停用輸入、提交按鈕和 `forgotPassword`，`back` 和 `alternateLogin` 仍可點選；`InvitationConfirmation` 的 `loading` 和 `disabled` 停用全部按鈕。
 - 輸入內容、欄位錯誤、密碼顯隱和協議勾選儲存在表單內部。更換帳號或協議內容時，給表單設定新的 `key` 重新掛載，才會清空輸入和已同意的協議。
 - 郵箱按基本格式校驗，為空時同樣提示郵箱無效。登入密碼和 API Key 只檢查非空，不套用新密碼的強度規則。
@@ -195,3 +195,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 - 六個元件共用同一份樣式，各 `style.css` 入口內容相同；同一頁面用到多個元件時，引入其中一個即可。
 - 顏色取自 `--ov-ui-color-*` 主題變數，暗色模式跟隨 `<html>` 上的 `.dark` 類，詳見[快速開始](../guide/getting-started)。
 - 型別從各元件子路徑匯出：`AuthAction`、`AuthAgreements` 和 `AuthLabels` 可從四個表單的子路徑匯入，`AuthAction` 也可從 `invitation-confirmation` 匯入。包根入口只匯出六個元件和它們的 Props 型別。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

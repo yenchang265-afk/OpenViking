@@ -1,3 +1,5 @@
+import { useAnalyticsRef } from '../../shared/analytics/context.js';
+import { startOperation, errorKind } from '../../shared/analytics/reporter.js';
 import { useEffect, useRef, useState } from 'react';
 
 import type { FilePreviewFileTab, FilePreviewTab } from './types.js';
@@ -22,11 +24,12 @@ import type { FilePreviewFileTab, FilePreviewTab } from './types.js';
  * the new one.
  */
 export function useFilePreviewEditing(activeTabKey: string) {
+  const analytics = useAnalyticsRef();
   const [editing, setEditing] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [editFailed, setEditFailed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [saveFailure, setSaveFailure] = useState<{ reason: unknown }>();
   const [versionNotCreated, setVersionNotCreated] = useState(false);
   const [versionNoteKey, setVersionNoteKey] = useState<string>();
   const noteRequest = useRef<{
@@ -48,7 +51,7 @@ export function useFilePreviewEditing(activeTabKey: string) {
     if (editing) setEditing(false);
     if (loadingEdit) setLoadingEdit(false);
     if (editFailed) setEditFailed(false);
-    if (saveFailed) setSaveFailed(false);
+    if (saveFailure) setSaveFailure(undefined);
     if (versionNotCreated) setVersionNotCreated(false);
     if (draft) setDraft('');
   }
@@ -78,9 +81,11 @@ export function useFilePreviewEditing(activeTabKey: string) {
     setEditing(false);
     setLoadingEdit(false);
     setEditFailed(false);
-    setSaveFailed(false);
+    setSaveFailure(undefined);
     setVersionNotCreated(false);
     setDraft('');
+    if (wasEditing)
+      analytics.current?.emit('file_preview_edit_cancel', () => ({}));
     if (wasEditing && tab.kind === 'file') tab.editing?.onCancel?.(discarded);
   }
 
@@ -90,7 +95,7 @@ export function useFilePreviewEditing(activeTabKey: string) {
     loading.current = true;
     setLoadingEdit(true);
     setEditFailed(false);
-    setSaveFailed(false);
+    setSaveFailure(undefined);
     setVersionNotCreated(false);
     let content: string | undefined;
     try {
@@ -106,6 +111,7 @@ export function useFilePreviewEditing(activeTabKey: string) {
     if (content !== undefined) {
       setDraft(content);
       setEditing(true);
+      analytics.current?.emit('file_preview_edit_start', () => ({}));
     }
   }
 
@@ -129,7 +135,12 @@ export function useFilePreviewEditing(activeTabKey: string) {
       return false;
     pendingSave.current = true;
     setSaving(true);
-    setSaveFailed(false);
+    setSaveFailure(undefined);
+    const operation = analytics.current && startOperation();
+    if (operation)
+      analytics.current?.emit('file_preview_save_submit', () => ({
+        operation_id: operation.operation_id,
+      }));
     const value = draft;
     let result: Awaited<ReturnType<typeof capability.save>>;
     try {
@@ -137,14 +148,29 @@ export function useFilePreviewEditing(activeTabKey: string) {
         note === undefined
           ? await capability.save(value)
           : await capability.save(value, note);
-    } catch {
-      if (id === requestId.current) setSaveFailed(true);
+    } catch (error) {
+      if (operation && id === requestId.current)
+        analytics.current?.emit('file_preview_save_fail', () => ({
+          ...operation.finish(),
+          error_kind: errorKind(error),
+        }));
+      if (
+        id === requestId.current &&
+        !(error instanceof Error && error.name === 'AbortError')
+      )
+        setSaveFailure({ reason: error });
       return false;
     } finally {
       pendingSave.current = false;
       setSaving(false);
     }
     const current = id === requestId.current;
+    if (operation && current)
+      analytics.current?.emit('file_preview_save_success', () => ({
+        ...operation.finish(),
+        version_status:
+          result?.warning === 'version-not-created' ? 'not-created' : 'unknown',
+      }));
     if (current) {
       setEditing(false);
       setDraft('');
@@ -159,7 +185,8 @@ export function useFilePreviewEditing(activeTabKey: string) {
     loadingEdit,
     editFailed,
     saving,
-    saveFailed,
+    saveFailed: saveFailure !== undefined,
+    saveFailure,
     versionNotCreated,
     versionNoteOpen: versionNoteKey === activeTabKey && editing,
     finishVersionNote,
@@ -169,7 +196,7 @@ export function useFilePreviewEditing(activeTabKey: string) {
     save,
     updateDraft: (value: string) => {
       setDraft(value);
-      setSaveFailed(false);
+      setSaveFailure(undefined);
     },
   };
 }

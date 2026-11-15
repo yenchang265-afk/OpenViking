@@ -17,17 +17,17 @@ import '@openviking/react/components/viking-bot/style.css';
 
 樣式入口已包含主題基線和檢視用到的 `@ark-design/ui` 樣式，可以單獨引入。
 
-訊息列表、輸入區和待確認互動區由 `@ark-design/ui` 渲染。它是可選 peer 依賴，不會隨 `@openviking/react` 自動安裝，使用前需要安裝不低於 `0.0.0-beta.7` 的版本：
+訊息列表和輸入區由 `@ark-design/ui` 渲染。它是可選 peer 依賴，不會隨 `@openviking/react` 自動安裝，使用訊息列表或輸入區前需要安裝不低於 `0.0.0-beta.7` 的版本：
 
 ```bash
 npm install @ark-design/ui@0.0.0-beta.7
 ```
 
-只需要待確認互動區時，可以從 `interaction` 子路徑匯入 `VikingBotInteraction`，樣式入口相同：
+只需要待確認互動區時，可以從 `interaction` 子路徑匯入 `VikingBotInteraction`，同時引入對應樣式：
 
 ```tsx
 import { VikingBotInteraction } from '@openviking/react/components/viking-bot/interaction';
-import '@openviking/react/components/viking-bot/style.css';
+import '@openviking/react/components/viking-bot/interaction/style.css';
 ```
 
 ## 程式碼演示
@@ -60,9 +60,25 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### 待確認互動
 
-依次演示 `choice`、`text`、`schedule`、`repair` 四種內建表單，提交後答案顯示在示例底部；第一個表單還演示了步驟進度、「其他」輸入項和取消按鈕。
+演示輸出目錄、文字、定時和修復表單，提交結果顯示在示例底部。輸出目錄支援搜尋、自動定位、新建子目錄、許可權狀態和提交前複核；目錄與請求均為離線模擬。
 
 ```tsx file="../../_demos/viking-bot-interaction.tsx" preview
+
+```
+
+### 外部目錄選擇
+
+透過 `allowCustomInput.onOpen` 接管目錄選擇，使用公共 [ContextPicker](./context-picker) 管理彈窗，確認後呼叫 `select` 寫回答案。
+
+```tsx file="../../_demos/viking-bot-custom-directory.tsx" preview
+
+```
+
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，元件顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/viking-bot-crash.tsx" preview
 
 ```
 
@@ -76,13 +92,14 @@ import '@openviking/react/components/viking-bot/style.css';
 | streaming             | 助手仍在生成時已產生的片段，顯示在 `insertIndex` 處；回覆結束後由宿主併入 `messages` 並清除                                    | `VikingBotStreamingState`                                             | -                        |
 | draft                 | 輸入框的草稿文本，受控；省略時不顯示輸入區，適用於只讀會話                                                                     | `string`                                                              | -                        |
 | attachments           | 已選中的附件，顯示在輸入框上方                                                                                                 | `readonly VikingBotAttachment[]`                                      | -                        |
+| accept                | 檔案選擇器接受的型別                                                                                                           | `string`                                                              | -                        |
 | isSending             | 正在回覆；停止與追加輸入入口由 `onCancel` 和 `canSendWhileStreaming` 控制                                                      | `boolean`                                                             | `false`                  |
 | isSubmitting          | 追加輸入正在等待後端接受，期間禁止重複傳送                                                                                     | `boolean`                                                             | `false`                  |
 | canSendWhileStreaming | 生成中允許追加輸入；由宿主對映服務的 `canSteer`                                                                                | `boolean`                                                             | `false`                  |
 | isAvailable           | 是否可以輸入；為 `false` 時停用輸入區並顯示不可用說明                                                                          | `boolean`                                                             | `true`                   |
 | unavailableMessage    | 不可用說明，顯示在輸入區上方，沒有內建輸入區時顯示在頭部下方；省略時使用內建文案                                               | `string`                                                              | -                        |
 | sessions              | 會話資料和操作，設定後頭部顯示會話標識、歷史會話和新建會話入口                                                                 | `VikingBotSessions`                                                   | -                        |
-| quickInputs           | 快捷輸入，點選後填入草稿，不自動傳送                                                                                           | `readonly VikingBotQuickInput[]`                                      | -                        |
+| quickInputs           | 快捷輸入，常駐在內建輸入框上方，宿主自帶輸入區時顯示在歡迎頁；點選後填入草稿，不自動傳送                                       | `readonly VikingBotQuickInput[]`                                      | -                        |
 | references            | 檔案和目錄引用的候選與已選項，省略時不顯示引用入口                                                                             | `VikingBotReferences`                                                 | -                        |
 | interaction           | 待確認的問題，設定後替代輸入區；語言跟隨 `locale`，可用 `interaction.locale` 單獨指定                                          | `VikingBotInteractionProps`                                           | -                        |
 | listKey               | 訊息列表的身份標識，值變化時重置展示狀態                                                                                       | `string`                                                              | `'viking-bot'`           |
@@ -111,18 +128,19 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### VikingBotMessage
 
-| 引數        | 說明                                                                                                | 型別                                                                                                                               | 預設值   |
-| ----------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| id          | 訊息的唯一標識                                                                                      | `string`                                                                                                                           | 必填     |
-| role        | 訊息角色；`system` 顯示為提示條，`tool` 用於獨立的工具塊                                            | `'user' \| 'assistant' \| 'system' \| 'tool'`                                                                                      | 必填     |
-| parts       | 訊息內容，由多個片段組成                                                                            | `readonly VikingBotMessagePart[]`                                                                                                  | 必填     |
-| turnId      | 輪次標識；相鄰的助手訊息 `turnId` 相同或任一條未設定時，合併為一輪顯示                              | `string`                                                                                                                           | -        |
-| createdAt   | 建立時間，ISO 時間字串；使用者訊息和每輪最後一條含文本的助手回覆在懸停或聚焦時顯示，格式隨 `locale` | `string`                                                                                                                           | -        |
-| streaming   | 該助手訊息是否仍在生成；為 `true` 且沒有片段時顯示載入氣泡                                          | `boolean`                                                                                                                          | -        |
-| tone        | `system` 訊息的語氣，`'error'` 顯示淡紅底、細邊框的行內錯誤提示                                     | `'info' \| 'error'`                                                                                                                | `'info'` |
-| clientError | 客戶端失敗原文，僅用於展示，不儲存到會話或傳送給模型                                                | `Error`                                                                                                                            | -        |
-| action      | 訊息下方的動作按鈕，點選後觸發 `onMessageAction`                                                    | `{ key: string; label?: ReactNode; status?: 'idle' \| 'pending' \| 'submitted' \| 'success' \| 'error'; disabledReason?: string }` | -        |
-| actions     | 合併同一輪助手訊息後保留的動作清單，每項帶原訊息 ID；由元件生成，一般不需要設定                     | `readonly { messageId: string; action: NonNullable<VikingBotMessage['action']> }[]`                                                | -        |
+| 引數          | 說明                                                                                                | 型別                                                                                                                               | 預設值   |
+| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| id            | 訊息的唯一標識                                                                                      | `string`                                                                                                                           | 必填     |
+| role          | 訊息角色；`system` 顯示為提示條，`tool` 用於獨立的工具塊                                            | `'user' \| 'assistant' \| 'system' \| 'tool'`                                                                                      | 必填     |
+| parts         | 訊息內容，由多個片段組成                                                                            | `readonly VikingBotMessagePart[]`                                                                                                  | 必填     |
+| turnId        | 輪次標識；相鄰的助手訊息 `turnId` 相同或任一條未設定時，合併為一輪顯示                              | `string`                                                                                                                           | -        |
+| createdAt     | 建立時間，ISO 時間字串；使用者訊息和每輪最後一條含文字的助手回覆在懸停或聚焦時顯示，格式隨 `locale` | `string`                                                                                                                           | -        |
+| streaming     | 該助手訊息是否仍在生成；為 `true` 且沒有片段時顯示載入氣泡                                          | `boolean`                                                                                                                          | -        |
+| tone          | `system` 訊息的語氣，`'error'` 顯示淡紅底、細邊框的行內錯誤提示                                     | `'info' \| 'error'`                                                                                                                | `'info'` |
+| clientError   | 客戶端失敗原文，僅用於展示，不儲存到會話或傳送給模型                                                | `Error`                                                                                                                            | -        |
+| action        | 訊息下方的動作按鈕，點選後觸發 `onMessageAction`                                                    | `{ key: string; label?: ReactNode; status?: 'idle' \| 'pending' \| 'submitted' \| 'success' \| 'error'; disabledReason?: string }` | -        |
+| answerSummary | 提交答案的可讀標籤和值，替換使用者氣泡及複製展示，保留 `parts` 原文                                 | `readonly { label: string; value: string }[]`                                                                                      | -        |
+| actions       | 合併同一輪助手訊息後保留的動作清單，每項帶原訊息 ID；由元件生成，一般不需要設定                     | `readonly { messageId: string; action: NonNullable<VikingBotMessage['action']> }[]`                                                | -        |
 
 ### VikingBotMessage.action
 
@@ -245,15 +263,16 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### VikingBotAttachment
 
-| 引數         | 說明                                                      | 型別                                             | 預設值 |
-| ------------ | --------------------------------------------------------- | ------------------------------------------------ | ------ |
-| key          | 附件的唯一標識                                            | `string`                                         | 必填   |
-| name         | 檔名                                                      | `string`                                         | 必填   |
-| status       | 上傳狀態；為 `'error'` 時在檔名後顯示失敗提示             | `'pending' \| 'uploading' \| 'ready' \| 'error'` | -      |
-| errorMessage | 上傳失敗時的提示，省略時顯示 `labels.toolError`           | `string`                                         | -      |
-| previewUrl   | 預覽地址，輸入區不使用，原樣回傳給回撥                    | `string`                                         | -      |
-| mimeType     | MIME 型別，輸入區不使用，原樣回傳給回撥                   | `string`                                         | -      |
-| sizeBytes    | 位元組大小，未知時為 `null`，輸入區不使用，原樣回傳給回撥 | `number \| null`                                 | -      |
+| 引數         | 說明                                                         | 型別                                             | 預設值 |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------ | ------ |
+| key          | 附件的唯一標識                                               | `string`                                         | 必填   |
+| uploadId     | 上傳服務返回的標識                                           | `string`                                         | -      |
+| name         | 檔名                                                         | `string`                                         | 必填   |
+| status       | 上傳狀態；上傳中或失敗時顯示提示，並禁用傳送                 | `'pending' \| 'uploading' \| 'ready' \| 'error'` | -      |
+| errorMessage | 上傳失敗時的提示，省略時顯示 `labels.attachmentUploadFailed` | `string`                                         | -      |
+| previewUrl   | 預覽地址，輸入區不使用，原樣回傳給回撥                       | `string`                                         | -      |
+| mimeType     | MIME 型別，輸入區不使用，原樣回傳給回撥                      | `string`                                         | -      |
+| sizeBytes    | 位元組大小，未知時為 `null`，輸入區不使用，原樣回傳給回撥    | `number \| null`                                 | -      |
 
 ### VikingBotDraft
 
@@ -392,54 +411,147 @@ import '@openviking/react/components/viking-bot/style.css';
 | requestKey | 問題的穩定身份，變化時重置內建表單；省略時由 `request.kind` 和 `index` 決定                                                                      | `string`                                                              | -                        |
 | index      | 當前步驟序號，從 0 開始                                                                                                                          | `number`                                                              | `0`                      |
 | total      | 步驟總數；大於 1 時顯示進度                                                                                                                      | `number`                                                              | `1`                      |
-| disabled   | 是否停用表單                                                                                                                                     | `boolean`                                                             | `false`                  |
-| submitting | 是否正在提交，提交期間停用表單                                                                                                                   | `boolean`                                                             | `false`                  |
-| error      | 上一次提交失敗的原因，顯示在表單上方                                                                                                             | `ReactNode`                                                           | -                        |
-| onSubmit   | 提交答案時觸發；返回 Promise 時，提交按鈕在其完成前保持停用                                                                                      | `(answer: VikingBotInteractionAnswer) => void \| Promise<void>`       | -                        |
+| disabled   | 是否禁用表單                                                                                                                                     | `boolean`                                                             | `false`                  |
+| submitting | 是否正在提交，提交期間禁用表單                                                                                                                   | `boolean`                                                             | `false`                  |
+| error      | 上一次提交失敗的原因，顯示在表單內                                                                                                               | `ReactNode`                                                           | -                        |
+| onSubmit   | 提交答案時觸發；返回 Promise 時，提交按鈕在其完成前保持禁用                                                                                      | `(answer: VikingBotInteractionAnswer) => void \| Promise<void>`       | -                        |
 | onCancel   | 放棄本次互動時觸發；省略時不顯示取消按鈕                                                                                                         | `() => void`                                                          | -                        |
 | slots      | 替換渲染異常的展示內容，見[錯誤展示插槽](../guide/getting-started#自定義錯誤展示)                                                                | `{ errorFallback?: ReactNode \| ((reset: () => void) => ReactNode) }` | -                        |
 | labels     | 覆蓋介面文案，全部鍵見 `DEFAULT_INTERACTION_LABELS`；`answer` 是文本答案的無障礙名稱，`progress` 接收當前序號和總數，`weekdays` 按週一至週日排列 | `VikingBotInteractionLabels`                                          | -                        |
 | locale     | 介面語言，規則見[國際化](../guide/i18n)；在 `VikingBot` 的 `interaction` 中預設跟隨 `VikingBot` 的語言                                           | `'zh-CN' \| 'en-US'`                                                  | 繼承上級，預設 `'en-US'` |
+| fields     | 內建欄位的標籤、說明、校驗器和控制元件渲染                                                                                                       | `VikingBotInteractionFields`                                          | -                        |
 | className  | 附加到根元素的類名                                                                                                                               | `string`                                                              | -                        |
+
+待確認互動使用庫內表單與基礎控制元件，單獨使用 `VikingBotInteraction` 無需安裝 Ark Design。提交失敗時保留草稿並顯示錯誤，可以修改後重試；取消會恢復初始值。
+
+### VikingBotInteractionLabels
+
+| 引數                        | 說明                       | 型別                                       | 預設值                                                   |
+| --------------------------- | -------------------------- | ------------------------------------------ | -------------------------------------------------------- |
+| answer                      | 文字答案的標籤             | `string`                                   | 答案                                                     |
+| title                       | 互動區域及預設問題標題     | `string`                                   | 待確認                                                   |
+| submit                      | 提交按鈕                   | `string`                                   | 提交                                                     |
+| cancel                      | 取消按鈕                   | `string`                                   | 取消                                                     |
+| other                       | 自定義選項                 | `string`                                   | 其他                                                     |
+| submitted                   | 保留欄位，內建表單不顯示   | `string`                                   | 已提交                                                   |
+| cancelled                   | 保留欄位，內建表單不顯示   | `string`                                   | 已取消                                                   |
+| progress                    | 步驟進度，序號從 0 開始    | `(index: number, total: number) => string` | `${index + 1} / ${total}`                                |
+| scheduleNone                | 不更新選項                 | `string`                                   | 不更新                                                   |
+| scheduleDaily               | 每日選項                   | `string`                                   | 每日                                                     |
+| scheduleWeekly              | 每週選項                   | `string`                                   | 每週                                                     |
+| scheduleTime                | 更新時間標籤               | `string`                                   | 更新時間                                                 |
+| scheduleWeekday             | 更新日期標籤               | `string`                                   | 更新日期                                                 |
+| scheduleFrequency           | 更新頻次標籤               | `string`                                   | 更新頻次                                                 |
+| scheduleHour                | 小時列表標籤               | `string`                                   | 小時                                                     |
+| scheduleMinute              | 分鐘列表標籤               | `string`                                   | 分鐘                                                     |
+| required                    | 選項未完成提示             | `string`                                   | 請完成當前問題                                           |
+| timeInvalid                 | 時間格式錯誤提示           | `string`                                   | 請輸入有效時間，格式為 HH:mm（00:00–23:59）              |
+| weekdayRequired             | 更新日期未選提示           | `string`                                   | 請選擇每週更新的日期                                     |
+| submitFailed                | 無錯誤詳情時的提交失敗提示 | `string`                                   | 提交失敗，請重試                                         |
+| weekdays                    | 週一至週日的名稱           | `readonly string[]`                        | ['週一', '週二', '週三', '週四', '週五', '週六', '週日'] |
+| directoryPickerTitle        | 目錄彈窗標題               | `string`                                   | 選擇儲存目錄                                             |
+| directoryPickerConfirm      | 確認目錄按鈕               | `string`                                   | 選擇此目錄                                               |
+| directoryPickerHint         | 未選目錄提示               | `string`                                   | 請選擇一個目錄                                           |
+| directoryTarget             | 目錄流程文案               | `string`                                   | 輸出目錄                                                 |
+| directorySelected           | 目錄流程文案               | `string`                                   | 已選目標：                                               |
+| directorySearch             | 目錄流程文案               | `string`                                   | 目錄名稱                                                 |
+| directoryEmpty              | 目錄流程文案               | `string`                                   | 暫無搜尋結果                                             |
+| directoryPermissionChecking | 目錄流程文案               | `string`                                   | 正在讀取目錄許可權                                       |
+| directoryPermissionWritable | 目錄流程文案               | `string`                                   | 此目錄可寫，提交時將再次校驗                             |
+| directoryNotWritable        | 目錄流程文案               | `string`                                   | 此目錄不可寫，請選擇其他目錄                             |
+| directoryUnavailable        | 目錄流程文案               | `string`                                   | 請選擇一個已有目錄                                       |
+| directoryCheckFailed        | 目錄流程文案               | `string`                                   | 無法確認目錄及寫入許可權，請重試或選擇其他目錄           |
+| directoryCreate             | 目錄流程文案               | `string`                                   | 新建子目錄                                               |
+| directoryCreateTitle        | 目錄流程文案               | `string`                                   | 子目錄                                                   |
+| directoryName               | 目錄流程文案               | `string`                                   | 目錄名稱                                                 |
+| directoryNameHint           | 目錄流程文案               | `string`                                   | 在上述目錄內建立一個直屬目錄；請填寫名稱，不填完整路徑   |
+| directoryCreateConfirm      | 目錄流程文案               | `string`                                   | 建立並選擇                                               |
+| directoryCreateFailed       | 目錄流程文案               | `string`                                   | 無法建立目錄，請確認目錄許可權後重試                     |
+| directoryRetry              | 目錄流程文案               | `string`                                   | 重試                                                     |
+| directoryLoadFailed         | 目錄流程文案               | `string`                                   | 目錄載入失敗                                             |
+| directoryParent             | 父目錄說明                 | `(uri: string) => string`                  | `父目錄：{uri}`                                          |
+
+### VikingBotInteractionFields
+
+| 引數    | 說明                                        | 型別                                                         | 預設值 |
+| ------- | ------------------------------------------- | ------------------------------------------------------------ | ------ |
+| value   | 文字、單選、修復或目錄答案的 `answer.value` | `VikingBotInteractionField<string>`                          | -      |
+| mode    | 定時答案的 `answer.value.mode`              | `VikingBotInteractionField<'none' \| 'daily' \| 'weekly'>`   | -      |
+| time    | 定時答案的 `answer.value.time`              | `VikingBotInteractionField<string>`                          | -      |
+| weekday | 定時答案的 `answer.value.weekday`，週一為 1 | `VikingBotInteractionField<1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7>` | -      |
+
+只執行當前可見欄位的校驗：`mode: 'none'` 不校驗時間和星期，`daily` 不校驗星期。先檢查內建格式，再執行外部校驗，透過後呼叫 `onSubmit`。修改欄位會清除該欄位的錯誤；切換頻率也會清除已隱藏欄位的錯誤。非同步校驗期間防止重複提交，切換問題或解除安裝時取消校驗訊號並忽略過期結果。
+
+### VikingBotInteractionField
+
+| 引數        | 說明                                                        | 型別                                                                                                                      | 預設值       |
+| ----------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| label       | 替換欄位標籤                                                | `ReactNode`                                                                                                               | 內建標籤     |
+| description | 替換欄位說明                                                | `ReactNode`                                                                                                               | 內建說明     |
+| validate    | 返回錯誤提示阻止提交，返回空值透過；`answer` 為當前完整答案 | `(value: Value, answer: VikingBotInteractionAnswer, context: { signal: AbortSignal }) => ReactNode \| Promise<ReactNode>` | -            |
+| render      | 替換輸入控制元件，保留統一標籤、錯誤狀態和提示              | `(context: VikingBotInteractionFieldContext<Value>) => ReactNode`                                                         | 內建控制元件 |
+
+### VikingBotInteractionFieldContext
+
+| 引數         | 說明                                                                             | 型別                     | 預設值 |
+| ------------ | -------------------------------------------------------------------------------- | ------------------------ | ------ |
+| value        | 當前欄位值                                                                       | `Value`                  | 必填   |
+| onChange     | 更新欄位並清除該欄位錯誤                                                         | `(value: Value) => void` | 必填   |
+| disabled     | 校驗、提交或宿主禁用期間為真                                                     | `boolean`                | 必填   |
+| error        | 當前欄位錯誤                                                                     | `ReactNode`              | -      |
+| controlProps | 傳給實際控制元件的 `id`、`aria-labelledby`、`aria-describedby` 和 `aria-invalid` | `object`                 | 必填   |
+
+自定義控制元件將 `controlProps` 透傳給可聚焦元素，用 `onChange` 回寫值。整體替換問題使用 `request.kind: 'custom'`；自定義元件負責自己的欄位校驗，透過 `context.submit(value)` 上報答案。
 
 ### VikingBotInteractionRequest
 
 `kind` 決定問題型別和可用欄位，下面按型別分別列出。
 
+#### target 輸出目錄
+
+| 引數            | 說明                                                             | 型別                                  | 預設值   |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------- | -------- |
+| kind            | 輸出目錄表單                                                     | `'target'`                            | 必填     |
+| question        | 卡片標題                                                         | `ReactNode`                           | 輸出目錄 |
+| initialUri      | 初始目錄 URI；樹行非同步載入後恢復選中並定位                     | `string`                              | `''`     |
+| directoryPicker | 目錄資料、操作及宿主提供的許可權狀態；提交前校驗由 onSubmit 完成 | `VikingBotInteractionDirectoryPicker` | 必填     |
+
 #### choice 單選
 
-| 引數             | 說明                                                                                   | 型別                                    | 預設值  |
-| ---------------- | -------------------------------------------------------------------------------------- | --------------------------------------- | ------- |
-| kind             | 問題型別                                                                               | `'choice'`                              | 必填    |
-| options          | 選項；必須選中其中一項（或填寫「其他」）才能提交，否則點選提交沒有反應                 | `readonly VikingBotInteractionOption[]` | 必填    |
-| question         | 問題文案                                                                               | `ReactNode`                             | -       |
-| allowCustomInput | 是否提供「其他」輸入項；傳物件時 `placeholder` 作為輸入提示，省略時使用 `labels.other` | `boolean \| { placeholder?: string }`   | `false` |
+| 引數             | 說明                                                                              | 型別                                                                                                                                                                             | 預設值  |
+| ---------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| kind             | 問題型別                                                                          | `'choice'`                                                                                                                                                                       | 必填    |
+| options          | 選項；必須選中其中一項（或填寫「其他」）才能提交，未完成時顯示校驗提示            | `readonly VikingBotInteractionOption[]`                                                                                                                                          | 必填    |
+| question         | 問題文案                                                                          | `ReactNode`                                                                                                                                                                      | -       |
+| allowCustomInput | 自定義答案；onOpen 由宿主接管選擇，directoryPicker 複用內建目錄彈窗，否則內聯輸入 | `boolean \| { placeholder?: string; open?: boolean; onOpen?: (context: VikingBotInteractionCustomInputContext) => void; directoryPicker?: VikingBotInteractionDirectoryPicker }` | `false` |
 
 #### text 文本輸入
 
-| 引數         | 說明                                               | 型別        | 預設值 |
-| ------------ | -------------------------------------------------- | ----------- | ------ |
-| kind         | 問題型別                                           | `'text'`    | 必填   |
-| question     | 問題文案                                           | `ReactNode` | -      |
-| initialValue | 輸入框的初始文本                                   | `string`    | `''`   |
-| description  | 補充說明，顯示在輸入框上方                         | `ReactNode` | -      |
-| multiline    | 是否多行；輸入框始終是多行文本域，該欄位不影響顯示 | `boolean`   | -      |
+| 引數         | 說明                                            | 型別        | 預設值 |
+| ------------ | ----------------------------------------------- | ----------- | ------ |
+| kind         | 問題型別                                        | `'text'`    | 必填   |
+| question     | 問題文案                                        | `ReactNode` | -      |
+| initialValue | 輸入框的初始文字                                | `string`    | `''`   |
+| description  | 補充說明，顯示在輸入框下方                      | `ReactNode` | -      |
+| multiline    | 預設使用多行文字域，傳 `false` 時使用單行輸入框 | `boolean`   | `true` |
 
 #### schedule 定時
 
-| 引數         | 說明                                   | 型別                     | 預設值 |
-| ------------ | -------------------------------------- | ------------------------ | ------ |
-| kind         | 問題型別                               | `'schedule'`             | 必填   |
-| initialValue | 定時的初始值                           | `VikingBotScheduleValue` | 必填   |
-| question     | 問題文案                               | `ReactNode`              | -      |
-| timezone     | 時區名稱，顯示在定時輸入下方，僅作提示 | `string`                 | -      |
+更新頻次使用分段單選，每週更新時顯示星期選擇。時間支援輸入 `HH:mm` 或透過小時、分鐘面板選擇；切換頻次會保留本次編輯的時間和星期。
+
+| 引數         | 說明                             | 型別                     | 預設值 |
+| ------------ | -------------------------------- | ------------------------ | ------ |
+| kind         | 問題型別                         | `'schedule'`             | 必填   |
+| initialValue | 定時的初始值                     | `VikingBotScheduleValue` | 必填   |
+| question     | 問題文案                         | `ReactNode`              | -      |
+| timezone     | 執行時區，作為時間輸入的輔助說明 | `string`                 | -      |
 
 #### repair 修復候選
 
 | 引數         | 說明                                                 | 型別                               | 預設值 |
 | ------------ | ---------------------------------------------------- | ---------------------------------- | ------ |
 | kind         | 問題型別                                             | `'repair'`                         | 必填   |
-| options      | 候選；必須選中其中一項才能提交，否則點選提交沒有反應 | `readonly VikingBotRepairOption[]` | 必填   |
+| options      | 候選；必須選中其中一項才能提交，未完成時顯示校驗提示 | `readonly VikingBotRepairOption[]` | 必填   |
 | question     | 問題文案                                             | `ReactNode`                        | -      |
 | initialValue | 初始選中的候選 `id`                                  | `string`                           | -      |
 
@@ -451,14 +563,51 @@ import '@openviking/react/components/viking-bot/style.css';
 | render   | 渲染函式，用於樹選擇器、上傳器等宿主自己的表單                | `(context: VikingBotInteractionRenderContext) => ReactNode` | 必填   |
 | question | 問題文案；`custom` 由 `render` 自行繪製全部內容，不顯示該欄位 | `ReactNode`                                                 | -      |
 
+### VikingBotInteractionDirectoryPicker
+
+用於 `target.directoryPicker` 或 `choice.allowCustomInput.directoryPicker`。彈窗內的選擇和搜尋草稿在取消時丟棄，原答案保留；自動定位只展開初始目錄的祖先並按需翻頁，使用者搜尋或操作目錄樹後停止自動定位。宿主提供展開、分頁、搜尋和許可權等執行回撥，元件不直接請求業務介面。
+
+| 引數              | 說明                                                                    | 型別                                      | 預設值       |
+| ----------------- | ----------------------------------------------------------------------- | ----------------------------------------- | ------------ |
+| rows              | 目錄樹的可見行，檔案行不顯示，見 [FileTreeRow](./file-tree#filetreerow) | `readonly FileTreeRow[]`                  | 必填         |
+| operations        | 目錄的執行能力，見下表                                                  | `VikingBotInteractionDirectoryOperations` | -            |
+| query             | 與 `onQueryChange` 一起提供的受控搜尋詞                                 | `string`                                  | `''`         |
+| onQueryChange     | 輸入搜尋詞時通知宿主；未提供時搜尋框禁用                                | `(query: string) => void`                 | -            |
+| isReady           | 首次載入完成                                                            | `boolean`                                 | `true`       |
+| loading           | 搜尋或重新整理等待狀態                                                  | `boolean`                                 | `false`      |
+| error             | 載入錯誤，保留已有行並允許重試                                          | `ReactNode`                               | -            |
+| loadingFallback   | 首次載入內容                                                            | `ReactNode`                               | -            |
+| errorFallback     | 整樹錯誤行的替代內容                                                    | `ReactNode`                               | -            |
+| emptyFallback     | 沒有目錄時的內容                                                        | `ReactNode`                               | 暫無搜尋結果 |
+| permission        | 宿主提供當前草稿的許可權狀態                                            | `VikingBotInteractionDirectoryPermission` | -            |
+| onSelectionChange | 草稿目錄變化時觸發，由宿主讀取許可權                                    | `(uri: string) => void`                   | -            |
+
+### VikingBotInteractionDirectoryOperations
+
+| 引數            | 說明                                                                       | 型別                                                                                     | 預設值 |
+| --------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| toggleExpand    | 展開或收起目錄，自動定位也使用此回撥                                       | `FileTreeOperations['toggleExpand']`                                                     | -      |
+| loadMore        | 載入下一頁，自動定位缺失目錄時也使用此回撥                                 | `FileTreeOperations['loadMore']`                                                         | -      |
+| retry           | 重試失敗的子節點                                                           | `FileTreeOperations['retry']`                                                            | -      |
+| refresh         | 過載目錄；建立後的重新整理失敗不改判建立結果                               | `(uri?: string) => Promise<void>`                                                        | -      |
+| createDirectory | 在父目錄下建立一個直屬子目錄，成功返回新目錄 URI；拒絕時保留名稱並顯示錯誤 | `(parentUri: string, name: string, options: { signal: AbortSignal }) => Promise<string>` | -      |
+
+### VikingBotInteractionDirectoryInfo
+
+| 引數        | 說明                                                 | 型別      | 預設值 |
+| ----------- | ---------------------------------------------------- | --------- | ------ |
+| uri         | 介面確認的規範目錄 URI                               | `string`  | 必填   |
+| isDirectory | 條目確實是目錄                                       | `boolean` | 必填   |
+| canWrite    | 當前使用者擁有寫入許可權；建立子目錄還需提供建立回撥 | `boolean` | 必填   |
+
 ### VikingBotInteractionOption
 
-| 引數        | 說明                             | 型別        | 預設值 |
-| ----------- | -------------------------------- | ----------- | ------ |
-| value       | 選項值，提交答案時作為 `value`   | `string`    | 必填   |
-| label       | 選項主文案                       | `ReactNode` | 必填   |
-| description | 顯示在文案下方的說明             | `ReactNode` | -      |
-| code        | 文案後的等寬片段，內建表單不顯示 | `string`    | -      |
+| 引數        | 說明                           | 型別        | 預設值 |
+| ----------- | ------------------------------ | ----------- | ------ |
+| value       | 選項值，提交答案時作為 `value` | `string`    | 必填   |
+| label       | 選項主文案                     | `ReactNode` | 必填   |
+| description | 顯示在文案下方的說明           | `ReactNode` | -      |
+| code        | 顯示在選項文案下方的等寬片段   | `string`    | -      |
 
 ### VikingBotRepairOption
 
@@ -482,15 +631,32 @@ import '@openviking/react/components/viking-bot/style.css';
 | ---------- | ------------------------------------------------------- | ------------------------------------------- | ------ |
 | submit     | 上報答案，`onSubmit` 會收到 `{ kind: 'custom', value }` | `(value: unknown) => void \| Promise<void>` | 必填   |
 | cancel     | 放棄本次互動，呼叫 `onCancel`                           | `() => void`                                | 必填   |
-| disabled   | 是否停用提交，即 `disabled` 或 `submitting` 為真        | `boolean`                                   | -      |
+| disabled   | 是否禁用提交，即 `disabled` 或 `submitting` 為真        | `boolean`                                   | -      |
+| clearError | 自定義輸入變化時清除本次提交錯誤                        | `() => void`                                | 必填   |
 | submitting | 是否正在提交                                            | `boolean`                                   | -      |
 
 ### VikingBotInteractionAnswer
 
 | 引數  | 說明                                                                                                                                                        | 型別                                                                                        | 預設值 |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------ |
-| kind  | 問題型別，與 `request.kind` 一致                                                                                                                            | `'choice' \| 'text' \| 'schedule' \| 'repair' \| 'custom'`                                  | 必填   |
-| value | 答案：`choice` 是所選選項的 `value` 或「其他」輸入的文本，`text` 是輸入的文本，`schedule` 是定時值，`repair` 是所選候選的 `id`，`custom` 是 `submit` 的引數 | `string`（choice、text、repair）、`VikingBotScheduleValue`（schedule）、`unknown`（custom） | 必填   |
+| kind  | 問題型別，與 `request.kind` 一致                                                                                                                            | `'target' \| 'choice' \| 'text' \| 'schedule' \| 'repair' \| 'custom'`                      | 必填   |
+| value | 答案：`choice` 是所選選項的 `value` 或「其他」輸入的文字，`text` 是輸入的文字，`schedule` 是定時值，`repair` 是所選候選的 `id`，`custom` 是 `submit` 的引數 | `string`（choice、text、repair）、`VikingBotScheduleValue`（schedule）、`unknown`（custom） | 必填   |
+
+### VikingBotInteractionCustomInputContext
+
+| 引數   | 說明                                             | 型別                      | 預設值 |
+| ------ | ------------------------------------------------ | ------------------------- | ------ |
+| value  | 當前自定義答案                                   | `string`                  | 必填   |
+| select | 將宿主選中的值寫回答案；禁用或互動解除安裝後忽略 | `(value: string) => void` | 必填   |
+
+### VikingBotInteractionDirectoryPermission
+
+| 引數     | 說明                   | 型別                                | 預設值 |
+| -------- | ---------------------- | ----------------------------------- | ------ |
+| uri      | 狀態對應的目錄 URI     | `string`                            | 必填   |
+| checking | 許可權讀取中           | `boolean`                           | -      |
+| info     | 宿主對映後的許可權資料 | `VikingBotInteractionDirectoryInfo` | -      |
+| error    | 許可權讀取錯誤         | `unknown`                           | -      |
 
 ## 注意
 
@@ -504,9 +670,10 @@ import '@openviking/react/components/viking-bot/style.css';
 - 使用者修改了已填入的文案，或宿主整體替換草稿而無法確定修改位置時，這段文案視為使用者自己的內容，下一個快捷輸入改為追加。
 - 在輸入框裡輸入 `@` 與點選 `@` 按鈕使用同一個選擇器，選中後引用加入 `references.selected`，輸入框裡的 `@` 查詢文字被刪除。引用按 URI 去重。
 - 引用標籤顯示圖示和完整 URI，空間不足時省略並在標題中保留完整路徑；只顯示前 5 個，其餘收進 `+N`，懸停、聚焦或點選 `+N` 展開。
-- 引用只出現在 `VikingBotDraft.references`，不會寫進草稿文本。切換帳號或會話時，宿主需要同時重置 `references.selected` 和 `attachments`。
-- 待確認互動是宿主狀態，不是後端暫停：宿主根據自己的流生成問題，答案發回後清除 `interaction`。元件只渲染表單，並通過 `onSubmit` 上報答案。
-- 訊息列表、輸入區和待確認互動區在首次渲染時才載入 `@ark-design/ui`，載入期間先顯示空容器。匯入 VikingBot 本身不會載入它，因此模組在沒有 `window` 的環境中也能匯入。
+- 引用只出現在 `VikingBotDraft.references`，不會寫進草稿文字。切換帳號或會話時，宿主需要同時重置 `references.selected` 和 `attachments`。
+- 待確認互動是宿主狀態，不是後端暫停：宿主根據自己的流生成問題，答案發回後清除 `interaction`。元件只渲染表單，並透過 `onSubmit` 上報答案。
+- 內建待確認表單在對應欄位下方顯示校驗提示，修改輸入會清除本地校驗錯誤和提交錯誤；`error` prop 由宿主清除。
+- 訊息列表和輸入區在首次渲染時才載入 `@ark-design/ui`，載入期間先顯示空容器。匯入 VikingBot 本身不會載入它，因此模組在沒有 `window` 的環境中也能匯入。
 - `VikingBotComposer`、`VikingBotMessageList` 和 `VikingBotSessionActions` 可以單獨使用，例如把 `VikingBotSessionActions` 放進自己的頂欄。
 - `groupMessages`、`groupByActivity` 和 `messageText` 與內建訊息列表使用同一套規則，自定義 `messageList` 時可以直接使用。
 - `DEFAULT_LABELS` 和 `DEFAULT_INTERACTION_LABELS` 是內建的英文文案，列出了各自 `labels` 的全部鍵。
@@ -515,3 +682,7 @@ import '@openviking/react/components/viking-bot/style.css';
 ## 請求與會話
 
 使用 [Console](../modules/console) 管理請求、會話和流式狀態，設定 `modes={['conversation']}` 可單獨接入對話。VikingBot 本身只接收資料與回撥。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

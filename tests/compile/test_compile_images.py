@@ -13,7 +13,6 @@ from openviking.compile.agent_loop import agent_runner
 from openviking.compile.llm import ChatResponse, CompileProvider, ToolCallRequest
 from openviking.compile.models import CompileFailure, CompileLimits
 from openviking.compile.pipeline_io import JsonModel, TaskFiles
-from openviking.compile.plan import ReviewDecision
 from openviking.compile.scratch import ScratchDir
 from openviking.compile.skill_resources import EvidenceReader
 from openviking.compile.sources import CompileSourceRange, pack_source_batches, read_source
@@ -121,11 +120,7 @@ async def test_agent_loop_sends_image_tool_results_to_the_model(tmp_path):
                 [ToolCallRequest("read", "read_evidence", {"source_range": "img-1"})],
                 "tool_calls",
             )
-        return ChatResponse(
-            None,
-            [ToolCallRequest("emit", "emit", {"action": "continue"})],
-            "tool_calls",
-        )
+        return ChatResponse("Done")
 
     model = SimpleNamespace(
         files=files,
@@ -137,9 +132,11 @@ async def test_agent_loop_sends_image_tool_results_to_the_model(tmp_path):
     )
     data = {"inputs": [{"id": "img-1", "payload": {"source_ranges": ["img-1"]}}]}
 
-    result = await agent_runner(CompileLimits())("system", data, ReviewDecision, None, model)
+    result = await agent_runner(CompileLimits())(
+        "system", data, model, runtime=SimpleNamespace(tools={}, tool_context=None)
+    )
 
-    assert result.action == "continue"
+    assert result.endswith("/output")
     tool_message = seen[1][-1]
     assert tool_message["role"] == "tool"
     assert tool_message["content"][1] == image_part()

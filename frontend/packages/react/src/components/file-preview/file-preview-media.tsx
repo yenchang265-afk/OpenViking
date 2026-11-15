@@ -1,3 +1,9 @@
+import { useImageDialogMonitoring } from './use-image-dialog-monitoring.js';
+import { opaqueIdentity } from '../../shared/monitoring/clock.js';
+import { useMediaMonitoring } from './use-media-monitoring.js';
+import { useRenderedMonitoring } from '../../shared/monitoring/context.js';
+import type { FileViewerState } from '@ark-design/ui/file-viewer/core';
+import { useExposure } from '../../shared/analytics/use-exposure.js';
 import { Button } from '../../shared/primitives/button/button.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -20,7 +26,15 @@ export function FilePreviewMedia({
   kind,
   text,
   slots,
+  reports = true,
+  onStateChange,
 }: {
+  reports?: boolean;
+  onStateChange?: (
+    state: FileViewerState,
+    error?: unknown,
+    reason?: 'retry',
+  ) => void;
   source: FilePreviewSource;
   kind: 'image' | 'video';
   text: Required<FilePreviewLabels>;
@@ -48,9 +62,11 @@ export function FilePreviewMedia({
     owner: typeof owner;
     failed?: boolean;
     loaded?: boolean;
+    error?: unknown;
   }>();
   const [attempt, setAttempt] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
+  const enabled = useRenderedMonitoring();
   // Blob URLs belong to this committed source; release them on replacement/unmount.
   // URL sources are used directly and never revoked by the component.
   useEffect(() => {
@@ -66,9 +82,31 @@ export function FilePreviewMedia({
     : source.url;
   const failed = status?.owner === owner && status.failed;
   const retry = () => {
+    onStateChange?.('loading', undefined, 'retry');
     setStatus(undefined);
     setAttempt((value) => value + 1);
   };
+  const loaded = status?.owner === owner && status.loaded;
+  const exposure = useExposure(
+    'file_preview_content_show',
+    owner,
+    undefined,
+    Boolean(loaded && !failed),
+  );
+  const sourceIdentity = useMemo(() => opaqueIdentity(owner), [owner]);
+  const identity = useMemo(
+    () => opaqueIdentity(owner, attempt),
+    [owner, attempt],
+  );
+  useMediaMonitoring(
+    kind,
+    identity,
+    !!url && reports,
+    !!loaded,
+    status?.owner === owner ? status.error : undefined,
+    { sourceIdentity, generation: attempt, bound: !!url },
+  );
+  const imageDialog = useImageDialogMonitoring(dialog, identity, reports);
   if (failed)
     return typeof slots?.errorFallback === 'function'
       ? slots.errorFallback(retry)
@@ -77,12 +115,30 @@ export function FilePreviewMedia({
         ));
   if (!blob && !url)
     return slots?.unsupportedFallback ?? <UnsupportedState text={text} />;
-  const loaded = status?.owner === owner && status.loaded;
-  const fail = () => setStatus({ owner, failed: true });
-  const ready = () => setStatus({ owner, loaded: true });
+  const fail = (reportResource = true) => {
+    const error =
+      enabled && reportResource
+        ? new Error('Media resource could not be loaded')
+        : undefined;
+    setStatus({ owner, failed: true, error });
+    onStateChange?.('error', error);
+  };
+  const open = () => {
+    const closed = !dialog.current?.open;
+    dialog.current?.showModal();
+    if (closed) imageDialog.open();
+  };
+  const ready = () => {
+    setStatus({ owner, loaded: true });
+    onStateChange?.('ready');
+  };
   return (
     <FilePreviewImageFrame>
-      <div className="ov-file-preview__media" aria-busy={!loaded}>
+      <div
+        ref={exposure}
+        className="ov-file-preview__media"
+        aria-busy={!loaded}
+      >
         {!loaded
           ? (slots?.loadingFallback ?? <LoadingState text={text} />)
           : null}
@@ -93,7 +149,7 @@ export function FilePreviewMedia({
                 className="ov-file-preview__image-button"
                 type="button"
                 aria-label={`${text.previewImage}: ${source.fileName}`}
-                onClick={() => dialog.current?.showModal()}
+                onClick={open}
               >
                 <img
                   key={`${url}:${attempt}`}
@@ -101,15 +157,26 @@ export function FilePreviewMedia({
                   src={url}
                   alt={source.fileName}
                   onLoad={ready}
-                  onError={fail}
+                  onError={() => fail()}
                 />
               </button>
               <dialog
                 ref={dialog}
+                onClose={() => imageDialog.close()}
                 className="ov-file-preview__image-dialog"
                 aria-label={source.fileName}
               >
-                <img src={url} alt={source.fileName} onError={fail} />
+                <img
+                  ref={imageDialog.image}
+                  src={url}
+                  alt={source.fileName}
+                  onLoad={() => imageDialog.load()}
+                  onError={() => {
+                    if (!dialog.current?.open) return;
+                    fail(false);
+                    imageDialog.fail();
+                  }}
+                />
                 <Button size="small" onClick={() => dialog.current?.close()}>
                   {text.closePreview}
                 </Button>
@@ -125,7 +192,7 @@ export function FilePreviewMedia({
               preload="metadata"
               aria-label={source.fileName}
               onLoadedMetadata={ready}
-              onError={fail}
+              onError={() => fail()}
             />
           )
         ) : null}

@@ -10,7 +10,7 @@
 npm install @openviking/react
 ```
 
-`react` 與 `react-dom` 是 peer 依賴（`^18.2.0 || ^19.0.0`）。FileBrowser 通過 FilePreview 展示檔案內容，FilePreview 還需要可選的 peer 依賴 `@ark-design/ui`，版本和需要配套安裝的包見 [FilePreview 頁面](../../docs/docs/zh/components/file-preview.mdx)。
+`react` 與 `react-dom` 是 peer 依賴（`^18.2.0 || ^19.0.0`）。FileBrowser 透過 FilePreview 展示檔案內容，FilePreview 還需要可選的 peer 依賴 `@ark-design/ui`，版本和需要配套安裝的包見 [FilePreview 頁面](../../docs/docs/zh/components/file-preview.mdx)。
 
 ## 快速開始
 
@@ -89,7 +89,7 @@ export function Browser({ apiKey }: { apiKey: string }) {
 | 匯入路徑                              | 提供                                                                                                                                                                              |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@openviking/react`                   | 業務元件和區塊，以及各自的主 Props 型別，例如 `FileTree` 與 `FileTreeProps`。`FilePreview` 除外，需要從它的子路徑匯入。                                                           |
-| `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制代碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                  |
+| `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制程式碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                |
 | `@openviking/react/modules/<名稱>`    | 區塊 `file-browser`、`console`、`scope-cascade`。                                                                                                                                 |
 | `@openviking/react/client`            | `OpenVikingProvider` 與請求客戶端（`createOvClient`、`OvClientError` 等）。                                                                                                       |
 | `@openviking/react/icons`             | 圖示元件與檔案型別圖示函式。                                                                                                                                                      |
@@ -97,7 +97,7 @@ export function Browser({ apiKey }: { apiKey: string }) {
 
 每個樣式入口都可以獨立使用，並包含所依賴元件的樣式。
 
-## 文件
+## 檔案
 
 - [快速開始](../../docs/docs/zh/guide/getting-started.mdx)
 - [國際化](../../docs/docs/zh/guide/i18n.mdx)：`locale` 與 `labels`
@@ -107,4 +107,4 @@ export function Browser({ apiKey }: { apiKey: string }) {
 
 ## 許可證
 
-`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal、Drawer 與 Notification 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。
+`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal、Drawer、Notification 與 TimePicker 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。

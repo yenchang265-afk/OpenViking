@@ -158,8 +158,7 @@ import '@openviking/react/components/directory-tour/style.css';
 - `locateTarget` 可以返回一組連續的目錄行：第一行決定卡片位置，仍在文件裡的行組成高亮範圍。摺疊後移除的行退出高亮，新載入的行需要宿主重新定位（更新 `locateTarget` 或重新開啟引導）。
 - 位置隨滾動、視窗縮放和目錄行尺寸變化更新，卡片限制在可視視口內，包括縮放和軟鍵盤的影響；目錄行滾出可見區域時，卡片和高亮一起隱藏。
 - 卡片是非模態 `dialog`：顯示後獲得焦點，按 Escape 觸發 `onClose`，關閉時焦點回到原來的元素（該元素仍在文件裡時）。宿主控制元件已用 `preventDefault()` 處理的 Escape，卡片不再響應。
-- 卡片通過瀏覽器的 Popover API 渲染在頂層，不需要設定 `z-index`，也不會建立全屏遮罩或 SVG，需要瀏覽器支援該 API。
-- 服務端渲染時不建立浮層；初始 `open` 為 `true` 時，在 hydration 完成後才建立。
+- 卡片透過瀏覽器的 Popover API 渲染在頂層，不需要設定 `z-index`，也不會建立全屏遮罩或 SVG，需要瀏覽器支援該 API。
 - 預設步驟的文案是英文，其他語言需要自己提供 `title` 和 `description`。六個預設 `target` 的插畫隨 JS 打包，不需要託管圖片。
 - 包根入口只匯出 `DirectoryTour` 和 `DirectoryTourProps`；`DirectoryTourIntro`、`openVikingDirectoryTourSteps` 和其餘型別從 `@openviking/react/components/directory-tour` 匯入。
 
@@ -175,3 +174,7 @@ import '@openviking/react/components/directory-tour/style.css';
 | `--ov-ui-directory-tour-secondary`  | `description` 和 `features` 的文字色     | `--ov-ui-color-text-2`   |
 | `--ov-ui-directory-tour-muted`      | 進度和 `DirectoryTourIntro` 說明的文字色 | `--ov-ui-color-text-3`   |
 | `--ov-ui-directory-tour-border`     | 卡片描邊色                               | `--ov-ui-color-border-3` |
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

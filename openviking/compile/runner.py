@@ -395,7 +395,7 @@ class CompileRunner:
                 )
                 async with asyncio.timeout(self.limits.salvage_grace_seconds):
                     rendered = await finalize_op.run(
-                        pipeline, list(dict.fromkeys(pipeline.artifacts))
+                        pipeline, pipeline.artifacts
                     )
             # Cancellation must stop the attempt before any target write.
             if await cancelled():
