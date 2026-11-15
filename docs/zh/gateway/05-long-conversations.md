@@ -108,7 +108,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 
 ## 副作用 {#side-effects}
 
-**不再生成 Working Memory 摘要。** 摘要由對話所用的模型生成，不使用 OpenViking 的會話摘要。閘道器新建的 OpenViking 會話都關閉了 Working Memory：提交時照常歸檔訊息、提取記憶，只是不生成會話摘要。
+**不再生成 Working Memory 摘要。** 摘要由閘道器使用的模型生成。在 OpenViking Server 0.5.0 及以上版本，閘道器提交設定 `enable_working_memory=false`，仍按解析後的記憶策略歸檔訊息、提取記憶。新建的閘道器會話繼承使用者策略，除非 `capture_memory_types` 顯式設定了會話策略。舊版服務繼續使用會話級 Working Memory 關閉策略。已有會話保留原來儲存的策略；要繼承使用者策略，請開始新對話。
 
 **記憶預算重新計算。** 每壓縮一次，**單個上下文視窗預算**（見[召回記憶](08-context-profiles.md#recall-memory)）就重新計算，截斷點之前補充過的記憶可能再次補充。
 

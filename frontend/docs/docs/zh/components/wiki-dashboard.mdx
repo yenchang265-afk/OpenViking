@@ -31,19 +31,20 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 
 ### WikiDashboard
 
-| 引數             | 說明                                                                   | 型別                                                                                                                            | 預設值                   |
-| ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| kind             | 展示模式，資料載入中也能確定                                           | `'directory' \| 'file'`                                                                                                         | 必填                     |
-| data             | 與 `kind` 對應的展示資料，未提供時顯示載入或錯誤狀態                   | `WikiDirectoryData`（目錄）、`WikiFileData`（檔案）                                                                             | -                        |
-| loading          | 列表為空時顯示載入狀態                                                 | `boolean`                                                                                                                       | `false`                  |
-| error            | 列表為空時顯示錯誤狀態                                                 | `Error \| null`                                                                                                                 | -                        |
-| onRetry          | 點選重試時觸發，元件不自行發起請求                                     | `() => void`                                                                                                                    | -                        |
-| onOpenUri        | 目錄檢視：點選檔案時觸發，引數為該檔案的 URI；檔案檢視：點選路徑時觸發 | `(uri: string) => void`（目錄）、`() => void`（檔案）                                                                           | -                        |
-| onOpenDashboard  | 目錄檢視：開啟該檔案的看板時觸發，未提供時回退到 `onOpenUri`           | `(uri: string) => void`                                                                                                         | -                        |
-| defineActions    | 為每一行定義操作按鈕，省略或返回空陣列時不顯示操作區                   | `(uri: string) => readonly WikiDashboardAction[]`（目錄）、`(conflict: WikiConflict) => readonly WikiDashboardAction[]`（檔案） | -                        |
-| labels           | 覆蓋介面文案                                                           | `Partial<WikiDashboardLabels>`                                                                                                  | -                        |
-| locale           | 介面語言，規則見[國際化](../guide/i18n)                                | `'zh-CN' \| 'en-US'`                                                                                                            | 繼承上級，預設 `'en-US'` |
-| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                 | HTML 屬性                                                                                                                       | -                        |
+| 引數             | 說明                                                                              | 型別                                                                                                                            | 預設值                   |
+| ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| kind             | 展示模式，資料載入中也能確定                                                      | `'directory' \| 'file'`                                                                                                         | 必填                     |
+| data             | 與 `kind` 對應的展示資料，未提供時顯示載入或錯誤狀態                              | `WikiDirectoryData`（目錄）、`WikiFileData`（檔案）                                                                             | -                        |
+| loading          | 列表為空時顯示載入狀態                                                            | `boolean`                                                                                                                       | `false`                  |
+| error            | 列表為空時顯示錯誤狀態                                                            | `Error \| null`                                                                                                                 | -                        |
+| onRetry          | 點選重試時觸發，元件不自行發起請求                                                | `() => void`                                                                                                                    | -                        |
+| onOpenUri        | 目錄檢視：點選檔案時觸發，引數為該檔案的 URI；檔案檢視：點選路徑時觸發            | `(uri: string) => void`（目錄）、`() => void`（檔案）                                                                           | -                        |
+| onOpenDashboard  | 目錄檢視：開啟該檔案的看板時觸發，未提供時回退到 `onOpenUri`                      | `(uri: string) => void`                                                                                                         | -                        |
+| defineActions    | 為每一行定義操作按鈕，省略或返回空陣列時不顯示操作區                              | `(uri: string) => readonly WikiDashboardAction[]`（目錄）、`(conflict: WikiConflict) => readonly WikiDashboardAction[]`（檔案） | -                        |
+| slots            | 替換渲染異常的展示內容，見[錯誤展示插槽](../guide/getting-started#自定義錯誤展示) | `{ errorFallback?: ReactNode \| ((reset: () => void) => ReactNode) }`                                                           | -                        |
+| labels           | 覆蓋介面文案                                                                      | `Partial<WikiDashboardLabels>`                                                                                                  | -                        |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                           | `'zh-CN' \| 'en-US'`                                                                                                            | 繼承上級，預設 `'en-US'` |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                            | HTML 屬性                                                                                                                       | -                        |
 
 ### WikiDirectoryData
 

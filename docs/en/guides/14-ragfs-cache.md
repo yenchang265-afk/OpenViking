@@ -10,8 +10,9 @@ CachedFileSystem assumptions:
 - Every instance sees the same backend, and a backend write is visible to every instance once it returns. S3 or SeaweedFS and the MariaDB small-file tier qualify; separate local disks per pod do not.
 - After a cache Provider successfully writes or deletes one key, later reads of that key do not return the old value.
 
-These assumptions apply to the read-cache layer. QueueFS and PathLock also use
-CacheRuntime, but define their own consistency rules.
+These assumptions apply to the read-cache layer. QueueFS and PathLock use
+CacheRuntime when their cache backend is selected, with their own consistency rules.
+PostgreSQL PathLock uses a separate database connection.
 
 ## Quick Start
 
@@ -91,6 +92,12 @@ locking does not replace `storage.agfs.cachefs.multi_instance` when several
 instances share CacheFS.
 Cache-backed PathLock only supports the built-in Redis Provider.
 
+Distributed PathLock can also use `provider="postgres"` to coordinate through a
+shared PostgreSQL primary without Redis or CacheRuntime. It is configured separately
+from `cache.provider` and does not enable CacheFS or change QueueFS. See
+[PostgreSQL PathLock configuration](../configuration/01-server.md#postgresql-pathlock). CachedFileSystem retains
+its single-writer requirement with either PathLock backend.
+
 Redis HASH keys are partitioned by logical path scope:
 
 ```text
@@ -167,7 +174,8 @@ The top-level `cache` section is a sibling of `storage`:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `provider` | str | `"filesystem"` | `filesystem`, `memory`, `sqlite`, or `cache`; see [SQLite setup](../configuration/01-server.md#storage) |
+| `provider` | str | `"filesystem"` | `filesystem`, `memory`, `sqlite`, `postgres`, or `cache`; see [SQLite setup](../configuration/01-server.md#storage) and [PostgreSQL setup](../configuration/01-server.md#postgresql-pathlock) |
+| `postgres_dsn_env` | str / null | `null` | Required for `postgres`; name of the server environment variable containing its DSN |
 | `lock_expire_secs` | float | `30.0` | Lock stale timeout; must be at least `1.0` |
 
 Redis configuration:

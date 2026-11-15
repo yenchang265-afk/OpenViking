@@ -28,6 +28,24 @@ from openviking_cli.utils.config.vectordb_config import VectorDBBackendConfig
 from openviking_cli.utils.config.vlm_config import VLMConfig
 
 
+def test_postgres_pathlock_binding_without_redis(tmp_path):
+    config = AGFSConfig(
+        path=str(tmp_path),
+        pathlock={"provider": "postgres", "postgres_dsn_env": "OV_POSTGRES_DSN"},
+    )
+    binding = RagfsBindingConfig(agfs=config, service_name="pg-community").to_binding_dict()
+    assert binding["pathlock"]["provider"] == "postgres"
+    assert binding["pathlock"]["postgres_dsn_env"] == "OV_POSTGRES_DSN"
+    assert binding["service_name"] == "pg-community"
+    assert not binding["cache"]["enabled"]
+
+
+@pytest.mark.parametrize("value", [None, "", "  ", 42])
+def test_postgres_pathlock_requires_dsn_environment_name(value):
+    with pytest.raises(ValueError):
+        AGFSConfig(pathlock={"provider": "postgres", "postgres_dsn_env": value})
+
+
 def test_agfs_validation():
     """Test AGFS config validation"""
     print("=" * 60)
@@ -1399,7 +1417,7 @@ def test_removed_vectordb_backends_are_rejected(backend):
 
     message = str(exc_info.value)
     assert f"'{backend}'" in message
-    assert "Must be one of: ['local', 'cuvs', 'http', 'opengauss', 'elasticsearch']" in message
+    assert "Must be one of: ['local', 'cuvs', 'http', 'opengauss', 'elasticsearch', 'pgvector']" in message
 
 
 def test_opengauss_backend_is_accepted_with_defaults():

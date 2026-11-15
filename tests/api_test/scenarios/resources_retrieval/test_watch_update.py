@@ -23,6 +23,7 @@ class TestWatchUpdate:
         test_file_path, temp_dir = create_test_file(
             content=f"測試檔案 {random_id}\n這是一個用於監聽更新測試的檔案。\n包含唯一關鍵詞：{unique_keyword}、test、監聽、更新。"
         )
+        resource_uri = None
 
         try:
             # 2. 新增該檔案到資源
@@ -49,7 +50,8 @@ class TestWatchUpdate:
                     print("資源狀態驗證成功")
 
             # 5. 執行搜尋驗證
-            response = api_client.find(unique_keyword)
+            # 驗證本資源的索引，不依賴它在其他用例資源中的全域 Top-K 排名。
+            response = api_client.find(unique_keyword, target_uri=resource_uri)
             assert response.status_code == 200
 
             search_data = response.json()
@@ -79,6 +81,8 @@ class TestWatchUpdate:
 
             print("✓ 定時監聽更新測試通過，資源已被正確索引")
         finally:
+            if resource_uri is not None:
+                api_client.fs_rm(resource_uri, recursive=True)
             # 清理臨時檔案
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)

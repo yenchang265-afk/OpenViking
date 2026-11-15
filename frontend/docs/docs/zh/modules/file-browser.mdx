@@ -76,26 +76,29 @@ import '@openviking/react/modules/file-browser/style.css';
 
 ### FileBrowser
 
-| 引數                  | 說明                                                                                                               | 型別                                                                    | 預設值                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ------------------------ |
-| uri                   | 受控的當前資源 URI：傳入（包括空字串）後由宿主決定，空字串表示不選中資源                                           | `string`                                                                | -                        |
-| defaultUri            | 非受控時的初始資源 URI，省略時不選中資源                                                                           | `string`                                                                | -                        |
-| onUriChange           | 選中的資源變化後觸發，引數是新的 URI；沒有取消選中的操作，不會收到 `null`                                          | `(uri: string \| null) => void`                                         | -                        |
-| rootUri               | 目錄樹的根，把瀏覽和搜尋的範圍限定在這個子樹內                                                                     | `string`                                                                | `'viking://'`            |
-| defaultExpandedUri    | 首次載入後自動展開到的路徑，逐級載入；省略時只展開根目錄                                                           | `string`                                                                | -                        |
-| readOnly              | 禁止編輯、匯入和刪除，編譯配置只能檢視；不影響許可權管理彈窗，授權只讀請用 `acl.readOnly`                          | `boolean`                                                               | `false`                  |
-| acl                   | 開啟共享資源的許可權顯示與授權管理，型別見下方 `FileBrowserAclOptions`                                             | `boolean \| FileBrowserAclOptions`                                      | `false`                  |
-| agentConnect          | 顯示「連線 Agent」按鈕，點選後從右側開啟接入抽屜，引數見 [AgentConnect](../components/agent-connect)；省略時不顯示 | `AgentConnectProps`                                                     | -                        |
-| onImportResources     | 點選「匯入資源」按鈕時觸發，傳入後顯示該按鈕                                                                       | `() => void`                                                            | -                        |
-| renderImportResources | 包裝或替換「匯入資源」按鈕，返回 `null` 隱藏，用法見 [FileBrowserActionBar](../components/file-browser-action-bar) | `(trigger: ReactElement<ComponentPropsWithRef<'button'>>) => ReactNode` | -                        |
-| previewActions        | 顯示或隱藏內建的預覽操作，型別見下方 `FileBrowserPreviewActions`                                                   | `FileBrowserPreviewActions`                                             | -                        |
-| previewSlots          | 追加、替換或隱藏預覽操作區，看板頁籤不受影響，型別見下方 `FileBrowserPreviewSlots`                                 | `FileBrowserPreviewSlots`                                               | -                        |
-| dashboardKinds        | 啟用的看板型別，空陣列關閉看板；例如 `['experience']` 只保留經驗看板，並且不再讀取編譯配置                         | `readonly ('wiki' \| 'experience')[]`                                   | `['wiki', 'experience']` |
-| renderDashboard       | 自定義看板頁籤的內容，返回 `null` 或 `undefined` 時使用內建看板，型別見下方 `FileBrowserDashboard`                 | `(dashboard: FileBrowserDashboard) => ReactNode`                        | -                        |
-| labels                | 覆蓋介面文案，型別見下方 `FileBrowserLabels`                                                                       | `FileBrowserLabels`                                                     | -                        |
-| locale                | 介面語言，規則見[國際化](../guide/i18n)                                                                            | `'zh-CN' \| 'en-US'`                                                    | 繼承上級，預設 `'en-US'` |
-| requestOptions        | 覆蓋請求配置，規則見[區塊概覽](./)                                                                                 | `OvRequestOptions`                                                      | -                        |
-| className、style      | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                             | HTML 屬性                                                               | -                        |
+| 引數                     | 說明                                                                                                               | 型別                                                                    | 預設值                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ------------------------ |
+| uri                      | 受控的當前資源 URI：傳入（包括空字串）後由宿主決定，空字串表示不選中資源                                           | `string`                                                                | -                        |
+| defaultUri               | 非受控時的初始資源 URI，省略時不選中資源                                                                           | `string`                                                                | -                        |
+| onUriChange              | 選中的資源變化後觸發，引數是新的 URI；沒有取消選中的操作，不會收到 `null`                                          | `(uri: string \| null) => void`                                         | -                        |
+| rootUri                  | 目錄樹的根，把瀏覽和搜尋的範圍限定在這個子樹內                                                                     | `string`                                                                | `'viking://'`            |
+| defaultExpandedUri       | 首次載入後自動展開到的路徑，逐級載入；省略時只展開根目錄                                                           | `string`                                                                | -                        |
+| readOnly                 | 禁止編輯、匯入和刪除，編譯配置只能檢視；不影響許可權管理彈窗，授權只讀請用 `acl.readOnly`                          | `boolean`                                                               | `false`                  |
+| acl                      | 開啟共享資源的許可權顯示與授權管理，型別見下方 `FileBrowserAclOptions`                                             | `boolean \| FileBrowserAclOptions`                                      | `false`                  |
+| agentConnect             | 顯示「連線 Agent」按鈕，點選後從右側開啟接入抽屜，引數見 [AgentConnect](../components/agent-connect)；省略時不顯示 | `AgentConnectProps`                                                     | -                        |
+| agentConnectOpen         | 傳入 `agentConnect` 後可從外層控制內建抽屜；見[受控示例](../components/file-browser-action-bar#從其他入口開啟)     | `boolean`                                                               | -                        |
+| onAgentConnectOpenChange | 使用者請求開啟或關閉內建抽屜時觸發；宿主直接改屬性時不觸發                                                         | `(open: boolean) => void`                                               | -                        |
+| onImportResources        | 點選「匯入資源」按鈕時觸發，傳入後顯示該按鈕                                                                       | `() => void`                                                            | -                        |
+| renderImportResources    | 包裝或替換「匯入資源」按鈕，返回 `null` 隱藏，用法見 [FileBrowserActionBar](../components/file-browser-action-bar) | `(trigger: ReactElement<ComponentPropsWithRef<'button'>>) => ReactNode` | -                        |
+| previewActions           | 顯示或隱藏內建的預覽操作，型別見下方 `FileBrowserPreviewActions`                                                   | `FileBrowserPreviewActions`                                             | -                        |
+| previewSlots             | 追加、替換或隱藏預覽操作區，看板頁籤不受影響，型別見下方 `FileBrowserPreviewSlots`                                 | `FileBrowserPreviewSlots`                                               | -                        |
+| dashboardKinds           | 啟用的看板型別，空陣列關閉看板；例如 `['experience']` 只保留經驗看板，並且不再讀取編譯配置                         | `readonly ('wiki' \| 'experience')[]`                                   | `['wiki', 'experience']` |
+| renderDashboard          | 自定義看板頁籤的內容，返回 `null` 或 `undefined` 時使用內建看板，型別見下方 `FileBrowserDashboard`                 | `(dashboard: FileBrowserDashboard) => ReactNode`                        | -                        |
+| slots                    | 替換渲染異常的展示內容，見[錯誤展示插槽](../guide/getting-started#自定義錯誤展示)                                  | `{ errorFallback?: ReactNode \| ((reset: () => void) => ReactNode) }`   | -                        |
+| labels                   | 覆蓋介面文案，型別見下方 `FileBrowserLabels`                                                                       | `FileBrowserLabels`                                                     | -                        |
+| locale                   | 介面語言，規則見[國際化](../guide/i18n)                                                                            | `'zh-CN' \| 'en-US'`                                                    | 繼承上級，預設 `'en-US'` |
+| requestOptions           | 覆蓋請求配置，規則見[區塊概覽](./)                                                                                 | `OvRequestOptions`                                                      | -                        |
+| className、style         | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                             | HTML 屬性                                                               | -                        |
 
 ### FileBrowserPreviewActions
 
@@ -108,7 +111,7 @@ import '@openviking/react/modules/file-browser/style.css';
 | edit        | 編輯按鈕；只在可寫且格式可編輯的檔案上顯示，經驗檔案、`viking://system` 下的資源和 L0/L1 摘要不可編輯                                         | `boolean` | `true` |
 | copyContent | 「複製內容」操作，複製當前預覽的文本或目錄摘要，超過預覽行數上限時只複製已顯示的部分；二進位制媒體和 `viking://system` 下的目錄不顯示         | `boolean` | `true` |
 | download    | 「下載」操作，下載檔案的原始內容；只在檔案上顯示                                                                                              | `boolean` | `true` |
-| history     | 「檢視歷史版本」操作；在使用者 `memories/experiences` 下直接的經驗檔案，以及 Wiki 裡的檔案和目錄上顯示                                        | `boolean` | `true` |
+| history     | 「檢視歷史版本」操作；在支援的文本檔案和 Wiki 目錄上顯示                                                                                      | `boolean` | `true` |
 | configure   | 「編譯配置」操作；只在 Wiki 編譯目標的根目錄上顯示，只讀時仍可檢視                                                                            | `boolean` | `true` |
 | importPack  | 「匯入 .ovpack」操作；只在可寫的目錄上顯示，且目錄位於 `viking://user`（含 `viking://~`）或 `viking://resources` 下                           | `boolean` | `true` |
 | exportPack  | 「匯出 .ovpack」操作；在 `viking://user`（含 `viking://~`）或 `viking://resources` 下的檔案和目錄上顯示，`.relations.json` 等內部控制檔案除外 | `boolean` | `true` |
@@ -140,12 +143,12 @@ import '@openviking/react/modules/file-browser/style.css';
 
 `acl` 傳入物件時的配置，全部可選；傳入 `true` 等同於不設定任何選項。
 
-| 引數              | 說明                                                                                                                   | 型別                                                                                                                                          | 預設值   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| readOnly          | 禁止修改授權，仍可檢視                                                                                                 | `boolean`                                                                                                                                     | `false`  |
-| resolvePermission | 返回當前使用者在資源上的有效許可權，未知時返回 `undefined`；省略時讀取 `fs/stat` 的 `permission`，缺失時探測管理許可權 | `(uri: string, context: FileBrowserAclContext) => Promise<FileBrowserAclLevel \| undefined>`                                                  | 內建實現 |
-| listPrincipals    | 返回可新增的 User 或 Group，`page` 從 1 開始；省略時呼叫帳號的使用者和使用者組介面，不讀取憑證                         | `(query: { type: 'user' \| 'group'; keyword: string; page: number }, context: FileBrowserAclContext) => Promise<FileBrowserAclPrincipalPage>` | 內建實現 |
-| onChange          | 授權儲存成功後觸發，儲存失敗時不觸發；回撥丟擲的錯誤不影響儲存結果                                                     | `(report: FileBrowserAclReport) => void`                                                                                                      | -        |
+| 引數              | 說明                                                                                                               | 型別                                                                                                                                          | 預設值   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| readOnly          | 禁止修改授權，仍可檢視                                                                                             | `boolean`                                                                                                                                     | `false`  |
+| resolvePermission | 返回當前使用者在資源上的有效許可權，未知時返回 `undefined`；省略時讀取 `fs/stat` 的 `access`，缺失時探測管理許可權 | `(uri: string, context: FileBrowserAclContext) => Promise<FileBrowserAclLevel \| undefined>`                                                  | 內建實現 |
+| listPrincipals    | 返回可新增的 User 或 Group，`page` 從 1 開始；省略時呼叫帳號的使用者和使用者組介面，不讀取憑證                     | `(query: { type: 'user' \| 'group'; keyword: string; page: number }, context: FileBrowserAclContext) => Promise<FileBrowserAclPrincipalPage>` | 內建實現 |
+| onChange          | 授權儲存成功後觸發，儲存失敗時不觸發；回撥丟擲的錯誤不影響儲存結果                                                 | `(report: FileBrowserAclReport) => void`                                                                                                      | -        |
 
 ### FileBrowserAclContext
 
@@ -239,7 +242,7 @@ import '@openviking/react/modules/file-browser/style.css';
 | searchIgnoreCase        | 忽略大小寫                                                                                    | `string`                             | `'忽略大小寫'`                             |
 | searchFilterUnsupported | 某個篩選在當前檢索方式下不可用的原因                                                          | `string`                             | `'當前檢索方式不支援此篩選'`               |
 | searchResultCount       | 檢索結果數量，引數為條數                                                                      | `(count: number) => string`          | `'檢索到 N 條結果'`                        |
-| searchVia               | 結果數量與模式之間的分隔說明                                                                  | `string`                             | `'向量檢索方式'`                           |
+| searchVia               | 模式 chip 之後的檢索方式說明                                                                  | `string`                             | `'向量檢索方式'`                           |
 | searchSwitchMode        | 切換檢索方式的入口                                                                            | `string`                             | `'切換'`                                   |
 | searchAdvancedLabel     | 高階篩選按鈕的無障礙名稱                                                                      | `string`                             | `'高階篩選'`                               |
 | previewMode             | 「預覽 / 原始碼」切換裡的「預覽」                                                             | `string`                             | `'預覽'`                                   |
@@ -261,7 +264,9 @@ import '@openviking/react/modules/file-browser/style.css';
 | l1Overview              | 目錄預覽裡 L1 總覽的頁簽名                                                                    | `string`                             | `'L1 總覽'`                                |
 | summaryEmpty            | 目錄某一級摘要尚未生成時的提示；預覽目前不顯示它，覆蓋不會生效                                | `string`                             | `'暫無生成內容'`                           |
 | summaryFailed           | 某一級摘要讀取失敗且服務端沒有返回訊息時的提示                                                | `string`                             | `'摘要載入失敗。'`                         |
-| formatCharacterCount    | 預覽底部字元數的文案                                                                          | `(count: number) => string`          | 按 `locale` 格式化，如 `'1,234 個字元'`    |
+| formatCharacterCount    | 預覽底部字元數的文案                                                                          | `(count: number) => string`          | 按 `locale` 格式化，如 `'1,234 字元數'`    |
+| formatPreviewUpdatedAt  | 預覽底部更新時間的文案                                                                        | `(time: string) => string`           | `'更新於 {time}'`                          |
+| previewModelNotice      | 資源預覽右側的模型解析提示，傳空字串可隱藏                                                    | `string`                             | `'內容解析由 內容理解大模型 提供'`         |
 | actionBar               | 傳給 [FileBrowserActionBar](../components/file-browser-action-bar) 操作欄的文案，包括接入抽屜 | `FileBrowserActionBarLabels`         | -                                          |
 | tree                    | 傳給 [FileTree](../components/file-tree) 檔案樹的文案                                         | `FileTreeLabels`                     | -                                          |
 | preview                 | 傳給 [FilePreview](../components/file-preview) 檔案預覽的文案，優先於上面同名的項             | `FilePreviewLabels`                  | -                                          |
@@ -374,7 +379,7 @@ import '@openviking/react/modules/file-browser/style.css';
 - 目錄按需展開，每頁載入 200 項，目錄末尾的「載入更多」繼續載入。
 - 根目錄 `viking://` 下按使用者、會話、Agent、資源的順序顯示，其餘目錄隨後；`rootUri` 為其他值時保持介面返回的順序。
 - 點選檔案預覽正文；點選目錄展開並選中它，預覽區顯示該目錄的 L0 摘要和 L1 總覽。
-- `viking://system` 下的目錄不顯示摘要。
+- `viking://system` 下的目錄保留頁籤和路徑，不顯示摘要；目錄中的檔案仍可預覽。
 - 設定 `uri` 只切換預覽的資源，不會展開目錄樹；需要初始就展開到某個位置時使用 `defaultExpandedUri`。
 - 文本檔案最多讀取 2000 行，超出時提示內容被截斷。
 - 圖片、影片、音訊、PDF、Office 文件和壓縮包按副檔名通過內容下載介面讀取。
@@ -388,11 +393,31 @@ import '@openviking/react/modules/file-browser/style.css';
 - 所有 YAML 頭、普通 HTML 註釋和 Markdown 程式碼圍欄中的示例保留；已確認作用域的 Markdown 檔案中，獨佔一行的未閉合保留尾註隱藏至檔案末尾；YAML 頭、程式碼圍欄和行內示例中的標記保留。
 - 重新整理按鈕重新載入已展開的目錄和當前預覽。
 
+### 開啟並定位資源
+
+`FileBrowser` 支援 React 18/19 的 ref。匯入結果、搜尋結果或檔案連結可呼叫 `openResource`：模組開啟預覽，逐級展開祖先目錄，按需載入後續頁找到目標，選中並滾動到該行。其他分支的展開狀態保留；重複開啟同一 URI 也會再次滾動定位。
+
+```tsx
+import { useRef } from 'react';
+import { FileBrowser } from '@openviking/react/modules/file-browser';
+import type { FileBrowserHandle } from '@openviking/react/modules/file-browser';
+
+const browserRef = useRef<FileBrowserHandle>(null);
+
+<FileBrowser ref={browserRef} />;
+
+await browserRef.current?.openResource(resultUri, { reveal: true });
+```
+
+傳入以 `/.abstract.md` 或 `/.overview.md` 結尾的連結時，模組開啟父目錄並分別切換到 L0 摘要或 L1 總覽；樹定位與 `onUriChange` 使用父目錄 URI。同一目錄內重複開啟連結也會切換到指定層級，之後仍可手動切換。
+
+`reveal` 預設 `true`；傳 `{ reveal: false }` 只發出開啟預覽的請求，發出後返回 `true`。普通 `uri` 屬性變化不會展開或滾動目錄樹。受控模式需要宿主在 `onUriChange` 中更新 `uri` 接受開啟意圖。目標行選中並滾動後 Promise 返回 `true`；目標不存在、不可訪問、不在 `rootUri` 下、被後續操作替代或元件解除安裝時返回 `false`。根目錄本身沒有樹行，開啟其預覽後返回 `false`。目錄列表請求或必要的當前使用者別名解析失敗會 reject，宿主可捕獲並展示提示。服務端明確不支援別名解析時，按原 URI 寫法匹配。呼叫方主動取消時返回 `false`。Promise 不等待預覽正文載入完成。內建搜尋複用同一導航入口。
+
 ### 搜尋
 
 - 左欄頂部的搜尋框開啟模組內建的搜尋彈窗；`⌘K` 是真實快捷鍵，同一頁面掛多個例項時只有最近互動過的那個響應。
 - 輸入停頓 400ms 後自動請求，沒有提交按鈕。關閉彈窗會取消在途請求並清空輸入與篩選。
-- 四種檢索方式共用一套輸入與結果列表，可在結果區頂部的「切換」裡改：
+- 四種檢索方式共用一套輸入與結果列表。有匹配結果時，可在結果區頂部點「切換」：
 
 | 方式     | 介面                    | 輸入解釋   | 可用篩選                     |
 | -------- | ----------------------- | ---------- | ---------------------------- |
@@ -404,7 +429,8 @@ import '@openviking/react/modules/file-browser/style.css';
 - 結果按 URI 去重；`grep` 例外——同一檔案的多行命中是不同結果，各帶自己的行號。
 - `glob` 的模式不含 `/` 時自動補 `**/` 字首；目錄命中去掉尾斜槓後再參與導航，目錄這一事實記在 `isDir` 上。
 - 高階面板的篩選項按當前方式啟用或停用，停用的分割槽保留可見並置灰，標題旁說明原因。目錄候選從 `rootUri` 派生，使用者根用 `~` 別名；切換根時失效的已選目錄會被丟棄。
-- 點選結果關閉彈窗、在樹中定位該資源並開啟預覽。
+- 進階選項可勾選常用目錄，或通過「選擇目錄」繼續瀏覽子目錄。選擇建立時間或更新時間後顯示日期範圍；忽略大小寫只在 `grep` 中顯示。
+- 按 **↑ / ↓** 切換當前結果，點選或按 **Enter** 關閉彈窗、開啟資源並在樹中定位。
 
 ### 預覽操作區
 
@@ -413,7 +439,8 @@ import '@openviking/react/modules/file-browser/style.css';
 - `readOnly` 禁止所有寫入，包括儲存編譯配置；開啟 `acl` 後，編輯、匯入和儲存編譯配置要求 `write` 或 `manage`，刪除要求 `manage`。
 - 複製內容、下載、匯出、歷史版本和檢視編譯配置不受 `readOnly` 和 ACL 的限制。
 - 沒有開啟 `acl`，或資源不在 `viking://resources/` 下時，區塊不探測許可權，由服務端鑑權。
-- 歷史版本：`GET /api/v1/snapshot/log` 讀取該資源最近最多 500 條快照；Wiki 裡的編譯產物檔案改用 `GET /api/v1/snapshot/versions`，最多 100 個保留版本。點選文本版本通過 `GET /api/v1/snapshot/show` 檢視內容，不提供恢復版本。
+- 儲存普通檔案時會彈出版本備註。確認後，FileBrowser 先儲存正文，再為當前檔案建立快照。若未建立快照，正文仍保留，預覽會顯示提示。Wiki 檔案直接儲存。
+- 歷史版本：`GET /api/v1/snapshot/log` 讀取該資源最近最多 500 條快照；Wiki 編譯產物用 `GET /api/v1/snapshot/versions` 讀取最多 100 個保留版本。可預覽或複製歷史正文，並與當前檔案對比。歷史彈窗為只讀。
 - 編譯配置：`GET /api/v1/compile/config` 讀取，`POST /api/v1/compile/config/update` 儲存來源目錄、技能、指令、自動更新和每天或每週的定時更新。
 - 匯入 .ovpack：先通過 `POST /api/v1/resources/temp_upload` 上傳檔案，再呼叫 `POST /api/v1/pack/import` 匯入到當前目錄；失敗時保留所選檔案，重試會重新上傳。
 - 匯出 .ovpack：呼叫 `POST /api/v1/pack/export`，把返回的內容儲存為 `<名稱>.ovpack`；下載使用 `GET /api/v1/content/download`。
@@ -423,7 +450,7 @@ import '@openviking/react/modules/file-browser/style.css';
 ### 許可權（ACL）
 
 - `acl` 只作用於 `viking://resources/` 下的非根節點；其他位置不顯示許可權標籤，也不受 ACL 限制。
-- 有效許可權先讀 `GET /api/v1/fs/stat` 返回的 `permission`；沒有該欄位時呼叫 `GET /api/v1/acl` 探測，成功視為 `manage`，403 視為未知。
+- 有效許可權先讀 `GET /api/v1/fs/stat` 返回的 `access`；沒有該欄位時呼叫 `GET /api/v1/acl` 探測，成功視為 `manage`，403 視為未知。
 - 許可權未知時不顯示許可權標籤，編輯和刪除不可用；許可權讀取失敗時標題旁顯示「重試」。
 - 許可權標籤顯示有效許可權，`manage` 的標籤詳情裡有「管理許可權」按鈕，點選開啟授權彈窗。
 - `read` 不能編輯，`write` 可以編輯和匯入，`manage` 還可以刪除和管理授權。
@@ -433,7 +460,7 @@ import '@openviking/react/modules/file-browser/style.css';
 - 儲存期間不能重複提交或關閉彈窗；儲存失敗時保留上次成功的授權並顯示服務端的原因。
 - 儲存成功後重新整理目錄和預覽；服務端的索引更新可能非同步完成，以服務端的鑑權結果為準。
 - 目錄列表（`fs/ls`）裡 `access: 'denied'` 的節點不能選中或展開，`access: 'container'` 的節點只能展開以訪問有許可權的子節點、不能預覽自身。
-- `permission: 'read'` 的節點顯示只讀標記。
+- `access: 'read'` 的節點顯示只讀標記。
 - 以上節點標記來自目錄列表，不依賴 `acl`。
 - 授權呼叫 `GET`、`PUT`、`DELETE /api/v1/acl`；成員目錄呼叫帳號的使用者和使用者組介面（使用者每頁 20 條，`include_credentials=false`），需要在 Provider 或 `requestOptions` 裡提供 `accountId`。
 - 使用者組目錄需要帳號管理許可權，資源管理者無權讀取時會顯示失敗和重試，可以用 `acl.listPrincipals` 接入自己的目錄。
@@ -445,7 +472,7 @@ import '@openviking/react/modules/file-browser/style.css';
 - 帶有 `compile_target=true` 標籤或屬於編譯配置的目錄顯示 Wiki 看板，目錄下的檔案和子目錄也有各自的 Wiki 看板。
 - 標籤優先於編譯配置：配置裡缺少該目標時仍顯示看板。
 - 編譯配置（`GET /api/v1/compile/configs`）按需讀取：開啟 Wiki 看板，或正文中的 Wiki 保留尾註需要確認歸屬時才請求，普通瀏覽不請求。
-- `dashboardKinds` 不含 `'wiki'` 時，不再識別 Wiki，也不讀取編譯配置，Wiki 資源隨之沒有歷史版本和編譯配置操作。
+- `dashboardKinds` 不含 `'wiki'` 時，不再識別 Wiki，也不讀取編譯配置，Wiki 資源不再提供編譯配置和編譯版本索引。
 - 檔案樹裡帶看板的行顯示看板圖示，點選直接開啟；Wiki 有待處理衝突時圖示不同。
 - 預覽區的頁籤可以在正文和看板之間切換。
 - 普通資源沒有 Wiki 頁籤，已識別的 Wiki 即使沒有衝突也保留看板。
@@ -461,6 +488,8 @@ import '@openviking/react/modules/file-browser/style.css';
 - 搜尋失敗時，彈窗保留介面返回的原因，可以再次提交同一個關鍵詞重試。
 
 ### 目錄樹寬度
+
+- 容器小於 521px 時，目錄樹和預覽上下排列，隱藏橫向分隔條。
 
 - 樹與預覽之間有可拖拽的分隔條：拖動，或聚焦後用左右方向鍵（每次 16px）調整樹寬；分隔條的無障礙名稱來自 `labels.resizeTree`。
 - 預設 352px，最小 200px，最大為 520px 與「容器寬度減去 321px」（預覽區至少 320px，加 1px 分隔線）中的較小值，因此放進窄欄時樹會收窄，不會擠沒預覽區。

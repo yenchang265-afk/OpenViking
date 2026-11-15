@@ -11,6 +11,7 @@ from .elasticsearch_adapter import ElasticsearchCollectionAdapter
 from .http_adapter import HttpCollectionAdapter
 from .local_adapter import CuVSCollectionAdapter, LocalCollectionAdapter
 from .opengauss_adapter import OpenGaussCollectionAdapter
+from .pgvector_adapter import PgvectorCollectionAdapter
 
 _ADAPTER_REGISTRY: dict[str, type[CollectionAdapter]] = {
     "local": LocalCollectionAdapter,
@@ -18,6 +19,7 @@ _ADAPTER_REGISTRY: dict[str, type[CollectionAdapter]] = {
     "http": HttpCollectionAdapter,
     "opengauss": OpenGaussCollectionAdapter,
     "elasticsearch": ElasticsearchCollectionAdapter,
+    "pgvector": PgvectorCollectionAdapter,
 }
 
 

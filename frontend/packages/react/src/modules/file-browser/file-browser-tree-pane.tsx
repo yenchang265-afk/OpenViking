@@ -1,4 +1,7 @@
+import { useRenderErrors } from './file-browser-labels.js';
+import { ErrorBoundary } from '../../shared/error-boundary/error-boundary.js';
 import { Button } from '../../shared/primitives/button/button.js';
+import type { Ref } from 'react';
 import type { Locale } from '../../shared/locale.js';
 import { dashboardLabels as resolveDashboardLabels } from './dashboard-labels.js';
 
@@ -7,6 +10,7 @@ import type { FileBrowserActionBarProps } from '../../components/file-browser-ac
 import { FileTree } from '../../components/file-tree/index.js';
 import type {
   FileTreeEntryRow,
+  FileTreeHandle,
   FileTreeLabels,
 } from '../../components/file-tree/index.js';
 import { FileBrowserToolbar } from './file-browser-toolbar.js';
@@ -28,9 +32,15 @@ import type { FileBrowserApi, FileBrowserDashboardLabels } from './types.js';
  * truncating names into ellipses.
  */
 export interface FileBrowserTreePaneProps {
+  treeRef?: Ref<FileTreeHandle>;
   entries: Pick<
     FileBrowserActionBarProps,
-    'agentConnect' | 'onImportResources' | 'renderImportResources' | 'labels'
+    | 'agentConnect'
+    | 'agentConnectOpen'
+    | 'onAgentConnectOpenChange'
+    | 'onImportResources'
+    | 'renderImportResources'
+    | 'labels'
   >;
   locale: Locale;
   dashboardLabels?: FileBrowserDashboardLabels;
@@ -47,7 +57,8 @@ export interface FileBrowserTreePaneProps {
   retryLabel: string;
 }
 
-export function FileBrowserTreePane({
+function FileBrowserTreePaneContent({
+  treeRef,
   entries,
   locale,
   dashboardLabels,
@@ -102,6 +113,7 @@ export function FileBrowserTreePane({
           </div>
         ) : null}
         <FileTree
+          ref={treeRef}
           search={false}
           refresh={false}
           locale={locale}
@@ -117,7 +129,7 @@ export function FileBrowserTreePane({
               fileTypeIcon(row.name)
             )
           }
-          renderDashboard={(row) => {
+          renderRowTrailing={(row) => {
             const dashboard = browser.dashboards.get(row.uri);
             return dashboard ? (
               <DashboardIndicator
@@ -137,5 +149,17 @@ export function FileBrowserTreePane({
         />
       </div>
     </>
+  );
+}
+
+export function FileBrowserTreePane(props: FileBrowserTreePaneProps) {
+  return (
+    <ErrorBoundary
+      message={useRenderErrors(props.locale).tree}
+      locale={props.locale}
+      resetKeys={[props.rootUri]}
+    >
+      <FileBrowserTreePaneContent {...props} />
+    </ErrorBoundary>
   );
 }
