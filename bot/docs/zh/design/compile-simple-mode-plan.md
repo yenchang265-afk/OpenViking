@@ -1,5 +1,8 @@
 # VikingBot Compile simple 模式實施計劃
 
+> 上游設計文件。本分支透過 Server 的持久任務佇列執行 Compile，不使用 Bot simple 執行器；請參閱[分支相容性](../../../../docs/zh/configuration/03-fork.md)。以下 Bot Compile 原始碼連結指向同步時的上游版本。
+
+
 ## 1. 目標與完成標準
 
 文件狀態為待評審。目標讀者為 VikingBot、Compile 和商業版 Runtime 的維護者。交付目標是在 VikingBot 內增加預設的 simple 執行模式，使用一個 AgentLoop，根據 Skill 和 instruction 讀取輸入，並透過 OV 單檔案 write 逐次寫入目標目錄。
@@ -21,18 +24,18 @@
 
 | 已確認事實 | 證據路徑 | 結論與建議範圍 |
 |---|---|---|
-| Runtime 建立介面將請求交給 `BotCompileService.create_task` | [compile/router.py](../../../vikingbot/compile/router.py) | mode 分流放在 service，繼續使用現有建立、狀態和取消入口 |
+| Runtime 建立介面將請求交給 `BotCompileService.create_task` | [compile/router.py](https://github.com/volcengine/OpenViking/blob/f9bf90b398df1c0ee6732d257dcdba793f02e2b5/bot/vikingbot/compile/router.py) | mode 分流放在 service，繼續使用現有建立、狀態和取消入口 |
 | `CompileConfig` 已集中儲存 Map、Shuffle、Reduce 引數 | [config/schema.py](../../../vikingbot/config/schema.py) | 在該模型增加 mode 預設值與列舉校驗 |
-| service 已負責身份、冪等、目標鎖、任務狀態、沙箱和模型併發 | [compile/service.py](../../../vikingbot/compile/service.py) | simple 複用該生命週期 |
+| service 已負責身份、冪等、目標鎖、任務狀態、沙箱和模型併發 | [compile/service.py](https://github.com/volcengine/OpenViking/blob/f9bf90b398df1c0ee6732d257dcdba793f02e2b5/bot/vikingbot/compile/service.py) | simple 複用該生命週期 |
 | 底層 `_run_agent_loop` 支援獨立提示詞、工具集和終止工具 | [agent/loop/loop.py](../../../vikingbot/agent/loop/loop.py) | simple 可直接呼叫現有迴圈 |
 | `run_structured_task` 的提交檢查繫結 `submit_wiki_bundle` | [agent/loop/loop_tools.py](../../../vikingbot/agent/loop/loop_tools.py) | simple 使用底層 loop，按最終回覆或預算耗盡的退出分支判定結果 |
 | Bot 的 `write_file` 寫入任務工作區 | [agent/tools/filesystem.py](../../../vikingbot/agent/tools/filesystem.py) | simple 需要把 SDK 的 OV write 暴露為任務工具 |
 | OV SDK 已提供單檔案 `write(uri, content, mode)` | [SDK client.py](../../../../sdk/python/openviking_sdk/client.py) | Bot 增加薄適配，繼續呼叫已有 HTTP 單檔案介面 |
 | OV diff 工具已有分頁；list 的模型引數沒有 offset | [agent/tools/ov_file.py](../../../vikingbot/agent/tools/ov_file.py) | 複用 diff；補充目錄分頁並保留已有呼叫的預設行為 |
-| 當前 Skill 目標透過整包校驗及 `add_skill` / `update_skill` 釋出 | [compile/service.py](../../../vikingbot/compile/service.py) | Skill 產物的支援範圍列為評審項，避免把普通寫入等同於完整安裝 |
+| 當前 Skill 目標透過整包校驗及 `add_skill` / `update_skill` 釋出 | [compile/service.py](https://github.com/volcengine/OpenViking/blob/f9bf90b398df1c0ee6732d257dcdba793f02e2b5/bot/vikingbot/compile/service.py) | Skill 產物的支援範圍列為評審項，避免把普通寫入等同於完整安裝 |
 | 核心管理開始/結束快照與失敗回滾 | [compile_targets.py](../../../../openviking/service/compile_targets.py) | simple 提供真實 Runtime 狀態，由核心完成收尾 |
 
-核心在成功收尾時將本次輸入快照儲存為 `source_commit`，將請求的全部 `from` 儲存為 `processed_roots`。下次增量按源快照間的變化選取輸入。Runtime 的 warnings 不參與這兩個判斷。現有 complex 已有將部分產出作為 completed 並附 warnings 的路徑。詳見 [核心增量計劃與基線](../../../../openviking/service/compile_targets.py) 和 [Bot 完成分支](../../../vikingbot/compile/service.py)。
+核心在成功收尾時將本次輸入快照儲存為 `source_commit`，將請求的全部 `from` 儲存為 `processed_roots`。下次增量按源快照間的變化選取輸入。Runtime 的 warnings 不參與這兩個判斷。現有 complex 已有將部分產出作為 completed 並附 warnings 的路徑。詳見 [核心增量計劃與基線](../../../../openviking/service/compile_targets.py) 和 [Bot 完成分支](https://github.com/volcengine/OpenViking/blob/f9bf90b398df1c0ee6732d257dcdba793f02e2b5/bot/vikingbot/compile/service.py)。
 
 ### 2.1 待確認的邊界
 

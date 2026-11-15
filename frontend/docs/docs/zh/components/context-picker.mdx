@@ -44,7 +44,7 @@ import '@openviking/react/components/context-picker/style.css';
 | value             | 當前選中條目，按 URI 匹配可見樹行        | `readonly ContextPickerEntry[]`                                     | 必填                 |
 | multiple          | 使用獨立多選，父子目錄互不關聯           | `boolean`                                                           | `false`              |
 | query             | 受控搜尋詞                               | `string`                                                            | `''`                 |
-| loading           | 表達搜尋或重新整理狀態                       | `boolean`                                                           | `false`              |
+| loading           | 表達搜尋或重新整理狀態                   | `boolean`                                                           | `false`              |
 | isReady           | 首次載入是否完成                         | `boolean`                                                           | `true`               |
 | confirming        | 確認期間禁用選擇、搜尋和關閉             | `boolean`                                                           | `false`              |
 | disabled          | 禁用選擇、搜尋和關閉                     | `boolean`                                                           | `false`              |
@@ -74,20 +74,20 @@ import '@openviking/react/components/context-picker/style.css';
 
 ### ContextPickerEntry
 
-| 引數 | 說明                         | 型別                    | 預設值 |
-| ---- | ---------------------------- | ----------------------- | ------ |
+| 引數 | 說明                           | 型別                    | 預設值 |
+| ---- | ------------------------------ | ----------------------- | ------ |
 | uri  | 條目身份，可在非同步載入前提供 | `string`                | 必填   |
-| name | 條目名稱                     | `string`                | 必填   |
-| type | 條目型別                     | `'directory' \| 'file'` | 必填   |
+| name | 條目名稱                       | `string`                | 必填   |
+| type | 條目型別                       | `'directory' \| 'file'` | 必填   |
 
 ### ContextPickerSlots
 
-| 引數        | 說明                                     | 型別                                  | 預設值             |
-| ----------- | ---------------------------------------- | ------------------------------------- | ------------------ |
-| footerStart | 左下角操作或說明，`null` 隱藏預設內容    | `ReactNode`                           | 多選時顯示已選數量 |
+| 引數        | 說明                                       | 型別                                  | 預設值             |
+| ----------- | ------------------------------------------ | ------------------------------------- | ------------------ |
+| footerStart | 左下角操作或說明，`null` 隱藏預設內容      | `ReactNode`                           | 多選時顯示已選數量 |
 | content     | 樹下方的補充內容，例如許可權狀態和上傳面板 | `ReactNode`                           | -                  |
-| selection   | 替換頂部已選條目，`null` 隱藏預設內容    | `ReactNode`                           | 已選條目           |
-| confirm     | 包裝確認按鈕                             | `(button: ReactElement) => ReactNode` | -                  |
+| selection   | 替換頂部已選條目，`null` 隱藏預設內容      | `ReactNode`                           | 已選條目           |
+| confirm     | 包裝確認按鈕                               | `(button: ReactElement) => ReactNode` | -                  |
 
 ### ContextPickerLabels
 
