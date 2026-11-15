@@ -24,7 +24,7 @@
 
 ### 刪除共享資源
 
-`DELETE /api/v1/resources` 接受查詢參數：
+`DELETE /api/v1/resources?uri=viking://resources/example` 接受查詢參數：
 
 | 參數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|

@@ -24,7 +24,7 @@ Vector records are copied with the resource. Parent semantic indexes refresh in 
 
 ### Delete a shared resource
 
-`DELETE /api/v1/resources` accepts query parameters:
+`DELETE /api/v1/resources?uri=viking://resources/example` accepts query parameters:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
