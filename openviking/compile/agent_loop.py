@@ -2,7 +2,7 @@
 
 Upstream runs children through VikingBot's AgentLoop (see pipeline_agent.py there).
 In-server Compile runs them here, with scratch-confined file tools and no command
-execution; assignments and the emit tool come from pipeline_agent.py unchanged.
+execution. Only naturally completed workers expose their output directories.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Any
 
 from openviking.compile.media import MultimodalToolResult
 from openviking.compile.models import COMPILE_DRAFT_ROOT
-from openviking.compile.pipeline_agent import EmitResult, prepare_assignment
+from openviking.compile.pipeline_agent import TargetReader
 from openviking.compile.pipeline_io import retry_allowed
 from openviking.compile.renderer import validate_relative_file_path
 from openviking.compile.skill_resources import EvidenceReader
@@ -63,7 +63,14 @@ class ScratchFileTool(Tool):
         ),
     }
 
-    def __init__(self, name: str, sandbox: Any, root: str, write_prefix: str | None = None):
+    def __init__(
+        self,
+        name: str,
+        sandbox: Any,
+        root: str,
+        write_prefix: str | None = None,
+        readonly_paths: dict[str, str] | None = None,
+    ):
         description, properties, required = self._SCHEMAS[name]
         self.name, self.description = name, description
         self.parameters = {
@@ -73,6 +80,7 @@ class ScratchFileTool(Tool):
             "additionalProperties": False,
         }
         self.sandbox, self.root, self.write_prefix = sandbox, root, write_prefix
+        self.readonly_paths = readonly_paths or {}
 
     def _path(self, path: str) -> str:
         if str(path).startswith("viking://"):
@@ -80,6 +88,10 @@ class ScratchFileTool(Tool):
         if self.name == "list_dir" and str(path).strip() in {"", "."}:
             return self.root
         relative = validate_relative_file_path(path)
+        if relative in self.readonly_paths:
+            if self.name != "read_file":
+                raise ValueError("Assigned input files are read-only")
+            return self.readonly_paths[relative]
         if (
             self.write_prefix is not None
             and self.name in {"write_file", "edit_file"}
@@ -122,73 +134,96 @@ class ScratchFileTool(Tool):
 
 
 _AGENT_INSTRUCTIONS = (
-    "\nUse emit to submit. Supplied Skill attachments are complete; "
-    "they fulfill the Skill's reading requirements without a tool call. Do not reread them. "
-    "read_skill_resource is available for additional references. "
-    "Use assigned evidence, Skill attachments and your scratch files for this job. "
-    "Prefer one inline emit for small finished results; scratch writing and rereading "
-    "are optional, not mandatory verification steps. "
-    "Write large/multiple files using write_file, then emit content_ref paths "
-    "relative to your scratch root, without repeating their content. Runtime hashes "
-    "the files and validates paths, revisions and source coverage before acceptance. "
-    "For a large record collection, build a JSON result file incrementally with file "
-    "tools, then emit only result_ref pointing to that file. Finished independent Map "
-    "files may use ready_path plus ready_content_ref and concise routing payloads. "
-    "Use edit_file to repair existing JSON."
+    "\nRead assignment.json with read_file. Read all assigned materials. "
+    "assignment.json and inputs/ paths are read-only. "
+    "Use write_file and edit_file for deliverable Markdown, with paths relative "
+    "to the publication destination. Read and edit outputs using the same paths. "
+    "Write only deliverables, without scratch files. Read existing target files "
+    "with read_target_file before updating them. "
+    "Finish with a brief completion message after all writes succeed. "
+    "A completion message alone does not produce files."
 )
 
 
 def agent_runner(limits):
-    """Bind an isolated child loop; queueing/cancellation remain owned by Pipeline.
+    """Bind isolated file workers with bounded calls and natural completion.
 
-    Each call has fresh history, a private scratch root and its stage's iteration
-    limit. Large files are submitted by reference, then hashed and checked. Every
-    model request goes through the task's bounded, metered JsonModel.call.
+    Inputs are immutable and separate from outputs; failed or exhausted workers
+    never return an output root for publication.
     """
 
-    async def run(system, data, schema, validate, model, *, stage="agent"):
+    async def run(system, data, model, *, stage="agent", runtime):
         sandbox = model.files.sandbox
         root = f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
-        evidence = EvidenceReader(model.files, data)
-        submit = EmitResult(schema, validate, sandbox, root, data, model.metrics)
-        assignment = data
-        if not model.fits(system, data, schema):
-            assignment = await prepare_assignment(data, sandbox, root)
-            evidence.delivered.clear()
-        tools: dict[str, Tool] = {"emit": submit}
+        output_root = f"{root}/output"
+        assignment = dict(data)
+        assignment["documents"] = []
+        readonly_paths = {"assignment.json": f"{root}/assignment.json"}
+        for index, document in enumerate(data.get("documents", [])):
+            path = f"inputs/{index}.md"
+            await sandbox.write_file(
+                f"{root}/{path}", await sandbox.read_file_bytes(document["workspace_path"])
+            )
+            assignment["documents"].append({"path": document["path"], "content_file": path})
+            readonly_paths[path] = f"{root}/{path}"
+        await sandbox.write_file(
+            f"{root}/assignment.json", json.dumps(assignment, ensure_ascii=False)
+        )
+        tools: dict[str, Tool] = {}
         if model.resources:
             tools[model.resources.name] = model.resources
-        if evidence.allowed - evidence.delivered:
+        evidence = EvidenceReader(model.files, data)
+        if evidence.allowed:
             tools[evidence.name] = evidence
+        target_reader = TargetReader(runtime)
+        tools[target_reader.name] = target_reader
+        search = runtime.tools.get("openviking_search")
+        if search is not None and runtime.tool_context is not None:
+            from copy import copy
+
+            async def search_target(tool_context=None, **arguments):
+                arguments["target_uri"] = runtime.target
+                return await search.execute(runtime.tool_context, **arguments)
+
+            scoped = copy(search)
+            scoped.execute = search_target
+            tools[scoped.name] = scoped
         for name in ("read_file", "write_file", "edit_file"):
-            tools[name] = ScratchFileTool(name, sandbox, root)
+            tools[name] = ScratchFileTool(name, sandbox, output_root, readonly_paths=readonly_paths)
         schemas = [tool.to_schema() for tool in tools.values()]
         messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system + _AGENT_INSTRUCTIONS},
             {
-                "role": "system",
-                # Map defines its own file access and submission rules.
-                "content": system + ("" if stage == "map_agent" else _AGENT_INSTRUCTIONS),
+                "role": "user",
+                "content": "Process assignment.json and write the requested Markdown files.",
             },
-            {"role": "user", "content": json.dumps(assignment, ensure_ascii=False)},
         ]
         failures: Counter = Counter()
         for _ in range(limits.subagent_iterations):
             response = await model.call(stage, messages, schemas, max_tokens=model.max_tokens)
             if response.finish_reason in {"length", "max_tokens"}:
-                # Never execute incomplete tool calls from truncated output.
-                error = "Agent output was truncated; use smaller writes or content_ref and complete tool calls"
+                error = "Agent output was truncated; use smaller writes and complete tool calls"
                 if not retry_allowed(failures, error):
                     raise ValueError(error)
                 model.metrics["repairs"] += 1
                 messages.append({"role": "user", "content": error})
                 continue
+            if getattr(response, "error_kind", None) or response.finish_reason not in {
+                "stop",
+                "end_turn",
+                "tool_calls",
+                "tool_use",
+                "function_call",
+            }:
+                raise ValueError(response.content or "Compile worker model failed")
             calls = response.tool_calls or []
             if not calls:
-                messages.append({"role": "assistant", "content": response.content or ""})
-                messages.append(
-                    {"role": "user", "content": "Submit the result with the emit tool."}
-                )
-                continue
+                if (
+                    response.finish_reason not in {"stop", "end_turn"}
+                    or not (response.content or "").strip()
+                ):
+                    raise ValueError("Compile worker ended without natural completion")
+                return output_root
             messages.append(
                 {
                     "role": "assistant",
@@ -214,16 +249,8 @@ def agent_runner(limits):
                     result = await tool.execute(None, **call.arguments)
                 except (ValueError, TypeError, KeyError, OSError) as exc:
                     result = "Error: " + str(exc)[:800]
-                # Image evidence keeps its content parts; the provider adapts the transport.
                 content = result.content if isinstance(result, MultimodalToolResult) else result
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
-            if submit.result is not None:
-                return submit.result
-            if not submit.can_retry:
-                break
-        raise ValueError(
-            "Required agent transform ended without validated output: "
-            + (submit.last_error or "No emit result was submitted")
-        )
+        raise ValueError("Compile worker exhausted its tool rounds before completion")
 
     return run

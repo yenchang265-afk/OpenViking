@@ -13,7 +13,7 @@ VikingBot 是 OpenViking 內建的多渠道 AI Agent。它可以在命令列中�
 
 ## 安裝
 
-> **OpenViking Server 要求**：VikingBot 通過 `viking://~` Home 別名訪問呼叫方自己的上下文空間（例如 `viking://~/memories/`），因此需要一個支援 `viking://~` 的 Server。不帶 uid 的舊寫法 `viking://user/memories` 已不再產生，且會被新版 Server 拒絕。
+> **OpenViking Server 要求**：VikingBot 透過 `viking://~` Home 別名訪問呼叫方自己的上下文空間（例如 `viking://~/memories/`），因此需要一個支援 `viking://~` 的 Server。不帶 uid 的舊寫法 `viking://user/memories` 已不再產生，且會被新版 Server 拒絕。
 
 ### 從 PyPI 安裝
 
@@ -91,11 +91,11 @@ ov find "我的回答偏好"
 
 - `ovcli.conf.api_key` 是當前呼叫者身份；
 - OpenViking Server 校驗該身份後，將 request-scoped 連線傳給 Bot；
-- 該請求身份優先於任何程序級預設身份，避免多個呼叫者共享同一個 Bot 使用者。
+- 該請求身份優先於任何程式級預設身份，避免多個呼叫者共享同一個 Bot 使用者。
 
 ### 場景 B：本地除錯 Agent
 
-適合快速試用 VikingBot，或者開發 Agent、Tool、Skill。`vikingbot chat` 在當前程序內啟動 Agent，不需要先啟動 Gateway，也不讀取 `ovcli.conf` 作為 Bot 配置。
+適合快速試用 VikingBot，或者開發 Agent、Tool、Skill。`vikingbot chat` 在當前程式內啟動 Agent，不需要先啟動 Gateway，也不讀取 `ovcli.conf` 作為 Bot 配置。
 
 #### 1. 配置模型
 
@@ -278,7 +278,7 @@ VikingBot 與 OpenViking 共用 `~/.openviking/ov.conf`。連線優先順序和�
 |------------------------|----------|----------------|
 | `dev` | 本地使用 | Gateway 必須監聽 localhost |
 | `api_key` | `bot.ov_server.api_key` 必須是 User/Admin Key | Chat 呼叫者也必須提供有效 User/Admin Key；Root Key 不可用於資料介面 |
-| `trusted` | 顯式連線使用 Root Key；繼承連線可讀取 `server.root_api_key` | 非本地入口還必須先通過 Gateway Token |
+| `trusted` | 顯式連線使用 Root Key；繼承連線可讀取 `server.root_api_key` | 非本地入口還必須先透過 Gateway Token |
 
 Gateway 會在啟動時校驗 upstream 和 Bot 憑證，並在每個請求中檢查 OpenViking 當前鑑權模式。執行時模式發生變化時會 fail closed，要求修正配置或重啟 Gateway。
 
@@ -294,7 +294,7 @@ VikingBot 使用 OpenViking 完成：
 
 ## 配置說明
 
-配置檔案預設為 `~/.openviking/ov.conf`，可通過環境變數指定：
+配置檔案預設為 `~/.openviking/ov.conf`，可透過環境變數指定：
 
 ```bash
 export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
@@ -317,10 +317,16 @@ export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 | `bot.gateway.port` | `18790` | Gateway 監聽埠 |
 | `bot.sandbox.backend` | `direct` | 執行後端 |
 | `bot.sandbox.mode` | `shared` | 工作區隔離方式 |
-| `bot.sandbox.backends.direct.allow_exec` | `true` | 是否允許 Agent 通過內建 `exec` 工具在宿主機執行命令；關閉後也禁止子 Agent 和 Compile 使用該工具 |
+| `bot.sandbox.backends.direct.allow_exec` | `true` | 是否允許 Agent 透過內建 `exec` 工具在宿主機執行命令；關閉後也禁止子 Agent 和 Compile 使用該工具 |
 | `bot.heartbeat.enabled` | `true` | 是否週期檢查 `HEARTBEAT.md` |
 | `bot.heartbeat.interval_seconds` | `600` | 心跳間隔 |
 | `bot.mode` | `normal` | 可選 `normal`、`readonly`、`debug` |
+
+### Compile 執行
+
+本分支透過 OpenViking Server 的持久任務佇列執行 Compile。
+`bot.compile` 僅保留設定相容性，不影響執行；`bot.compile.mode` 不會切換執行器。
+請參閱[分支相容性](../docs/zh/configuration/03-fork.md)。
 
 ### OpenViking 召回配置
 
@@ -336,7 +342,7 @@ export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 
 ## Workspace 與 Agent 定製
 
-Workspace 是 VikingBot 的本地工作目錄。它儲存 Agent 啟動指令、Skill、Heartbeat 任務以及檔案和 Shell 工具操作的內容；OpenViking Workspace 則通過 `openviking_*` 工具訪問 Resource、Memory 和 Skill，兩者不是同一個目錄。
+Workspace 是 VikingBot 的本地工作目錄。它儲存 Agent 啟動指令、Skill、Heartbeat 任務以及檔案和 Shell 工具操作的內容；OpenViking Workspace 則透過 `openviking_*` 工具訪問 Resource、Memory 和 Skill，兩者不是同一個目錄。
 
 ### 找到當前 Workspace
 
@@ -529,13 +535,13 @@ Docker Desktop + WSL2，並在 WSL2 內執行 Bot），然後在實際使用的 
 `vikingbot gateway --config /path/to/ov.conf` 和 OpenViking `--with-bot` 共用啟動流程：
 檢查 SDK、Server、Docker 服務及 Linux 容器模式 → 準備映象 → 生成服務配置和管理金鑰 →
 啟動 OpenSandbox Server → 驗證命令執行和檔案往返 → Gateway 就緒。初始化失敗會退出，
-不會回退到 `direct`。`--with-bot` 等待真實就緒，不再把子程序存活當作啟動成功。
+不會回退到 `direct`。`--with-bot` 等待真實就緒，不再把子程式存活當作啟動成功。
 
 使用者不需要維護 `~/.sandbox.toml`。生成檔案及日誌位於
 `{storage.workspace}/bot/runtime/opensandbox/gateway-*/`；生成的配置檔案在正常退出時刪除，
 日誌保留。管理服務預設只監聽本機 `127.0.0.1:18792`，金鑰不傳入工作負載容器。
-Bot 託管的服務程序還會將 Docker 釋出的沙箱埠限制為 `127.0.0.1`；這是對
-OpenSandbox Server 0.1.6 預設繫結所有網絡卡的適配，不會修改外部 Server。
+Bot 託管的服務程式還會將 Docker 釋出的沙箱埠限制為 `127.0.0.1`；這是對
+OpenSandbox Server 0.1.6 預設繫結所有網路卡的適配，不會修改外部 Server。
 
 可選引數位於 `bot.sandbox.backends.opensandbox`：
 
@@ -549,7 +555,7 @@ OpenSandbox Server 0.1.6 預設繫結所有網絡卡的適配，不會修改外�
 | `default_image` | `opensandbox/code-interpreter:v1.0.1` | 執行映象，需包含 shell、Python 3 |
 | `execd_image` | `opensandbox/execd:v1.0.6` | 執行服務映象 |
 | `egress_image` | `opensandbox/egress:v1.0.1` | 出站網路策略元件映象 |
-| `pids_limit` | `256` | 託管 Docker 沙箱的程序數限制 |
+| `pids_limit` | `256` | 託管 Docker 沙箱的程式數限制 |
 | `runtime.cpu` / `runtime.memory` | `500m` / `1Gi` | 每個執行沙箱的資源限制 |
 | `runtime.timeout` | `300` | 沙箱生命週期（秒），再次使用時續期 |
 | `network.allowed_domains` | `[]` | 預設拒絕出站，按需允許依賴下載或業務域名 |
@@ -572,7 +578,7 @@ OpenSandbox Server 0.1.6 預設繫結所有網絡卡的適配，不會修改外�
 ```
 
 Mac 上可在 Finder 直接檢視這些工作檔案，宿主機和容器的修改立即作用於同一目錄。
-聊天沙箱銷燬或過期後文件保留，重建時複用；首次建立目錄時初始化引導檔案和本地 Skill，
+聊天沙箱銷燬或過期後檔案保留，重建時複用；首次建立目錄時初始化引導檔案和本地 Skill，
 之後不會覆蓋使用者修改。Compile 仍按原有任務生命週期清理任務目錄。
 舊的 `bot/workspace/shared` 不自動遷移；啟用後應在上面的新工作目錄編輯引導檔案。
 
@@ -642,10 +648,10 @@ Gateway 的 Bot API 字首為 `/bot/v1`：
 - 非 localhost Gateway 必須配置高強度隨機 Token，並在網路層啟用 HTTPS。
 - `X-Gateway-Token` 只保護 Gateway，不能代替 OpenViking 使用者身份。
 - `allow_from: []` 表示不限制傳送者；對外服務建議配置明確白名單。
-- `direct` 後端會以 Bot 程序使用者許可權執行檔案和 Shell 操作，不適合不可信呼叫者。
+- `direct` 後端會以 Bot 程式使用者許可權執行檔案和 Shell 操作，不適合不可信呼叫者。
 - `openviking_connection` 只能來自可信 Server 代理或本地可信鏈路，不應接受公網請求體自行宣告。
 
-## 更多文件
+## 更多檔案
 
 - [VikingBot 架構](docs/zh/concepts/01-architecture.md)
 - [Agent 能力體系](docs/zh/concepts/02-agent-capabilities.md)

@@ -325,6 +325,13 @@ Restart `vikingbot gateway` after changing the configuration.
 | `bot.heartbeat.interval_seconds` | `600` | Heartbeat interval |
 | `bot.mode` | `normal` | One of `normal`, `readonly`, or `debug` |
 
+### Compile execution
+
+This fork runs Compile on the OpenViking server through its durable task queue.
+`bot.compile` is retained only for configuration compatibility and is ignored;
+`bot.compile.mode` does not select an executor in this fork. See
+[fork compatibility](../docs/en/configuration/03-fork.md).
+
 ### OpenViking Recall Settings
 
 | Setting | Default | Description |

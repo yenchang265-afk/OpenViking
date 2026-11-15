@@ -27,6 +27,14 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 
 示例使用固定資料。操作圖示和點選反饋由示例提供，勾選「隱藏宿主操作」可以移除。
 
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，元件顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/wiki-dashboard-crash.tsx" preview
+
+```
+
 ## API
 
 ### WikiDashboard
@@ -59,7 +67,7 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 | 引數      | 說明                                   | 型別                      | 預設值 |
 | --------- | -------------------------------------- | ------------------------- | ------ |
 | conflicts | 檔案裡的衝突                           | `readonly WikiConflict[]` | 必填   |
-| path      | 要展示的文件路徑，省略時不顯示路徑區域 | `string`                  | -      |
+| path      | 要展示的檔案路徑，省略時不顯示路徑區域 | `string`                  | -      |
 
 ### WikiConflict
 
@@ -119,6 +127,10 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 ## 注意
 
 - 元件沒有預設操作。`defineActions` 在渲染時呼叫，只根據當前行返回配置，不要在裡面發請求或更新狀態；可以按衝突狀態返回不同的操作。
-- 元件沒有頂層 `uri` 屬性。請求和定位需要的 URI 通過 `onOpenUri`、`defineActions` 的閉包傳入。
-- 切換文件時要重置篩選和展開狀態，在外層給元件設定 `key={documentId}`。
+- 元件沒有頂層 `uri` 屬性。請求和定位需要的 URI 透過 `onOpenUri`、`defineActions` 的閉包傳入。
+- 切換檔案時要重置篩選和展開狀態，在外層給元件設定 `key={documentId}`。
 - 型別從 `@openviking/react/components/wiki-dashboard` 匯出，包根入口只匯出元件和 `WikiDashboardProps`。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

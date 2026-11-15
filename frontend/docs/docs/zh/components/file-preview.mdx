@@ -381,16 +381,16 @@ import '@openviking/react/components/file-preview/style.css';
 
 - 編輯器：首次進入編輯時載入 CodeMirror 6；Prism 語言包按 `source.fileType`、副檔名或檔名識別後加載，未知格式保持純文本編輯。
 - 高亮依賴：編輯器與 FileViewer 使用同一個 `prismjs` 包；消費端解析到同一版本時可共用核心和語言模組，不額外載入 CodeMirror 的語言語法包。
-- 高亮更新：輸入後延遲 100 毫秒重新計算全文高亮；高亮失敗不影響草稿編輯和儲存，可點選重試。
+- 高亮更新：輸入後延遲 100 毫秒重新計算全文高亮；編輯器或高亮載入失敗時保留草稿，通知關閉後仍可點選重試。
 
 - 操作的呈現：沒有操作時不顯示入口，一個操作顯示為圖示按鈕，兩個及以上收進「…」選單。
 - 分組：連續的單個操作合併成一組，每個非空陣列單獨成組，空陣列被忽略且不打斷相鄰的單個操作，組之間顯示分隔線。
 - 函式形式：`actions` 和 `slots.actions` 可以是函式，在渲染時呼叫，只根據上下文返回內容，不要在裡面發請求或更新狀態。
-- 失敗：失敗提示顯示在該資源的工具欄旁，再次點選即可重試。
 - 鎖定：同一資源的注入操作在執行期間保持鎖定，切換頁籤、層級或替換 `slots.actions` 不會重置，其他資源和其他元件例項互不影響；資源以 `source.path` 標識，沒有路徑時用頁籤的 `key` 和 `fileName`。
 - 編輯時：注入的操作與 `slots.extraActions` 暫時隱藏，工具欄顯示儲存和取消，檢視切換停用。
 - 替換工具欄：設定 `slots.actions` 後，預設工具欄連同儲存和取消一起被替換，用上下文裡的 `startEditing`、`saveEditing`、`cancelEditing` 自己渲染。
-- 編輯流程：點選編輯進入原始碼檢視並顯示文本框，儲存或取消後回到預覽；儲存期間禁止切換頁籤、層級和重複提交，儲存失敗時保留草稿並顯示 `labels.saveFailed`。
+- 操作反饋：操作回撥拋錯或拒絕時，透過可手動關閉的 Notification 展示操作名稱與錯誤原因；正文和工具欄保留原有佈局。通知支援[複製錯誤資訊](../guide/getting-started#複製錯誤資訊)。路徑複製失敗使用 Toast。
+- 編輯流程：點選編輯進入原始碼檢視並顯示文字框，儲存或取消後回到預覽；儲存期間禁止切換頁籤、層級和重複提交，儲存失敗時保留草稿，透過 Notification 展示 `labels.saveFailed` 和原始原因。
 
 ### 文案與狀態
 
@@ -461,3 +461,7 @@ import '@openviking/react/components/file-preview/style.css';
 | `--ov-ui-font-mono`                 | 路徑與編輯區的字型          | `ui-monospace, monospace`     |
 
 正文由 `@ark-design/ui` 渲染，顏色主要取自 Arco 的 `--color-*`、`--primary-*` 變數。在應用入口載入一份 Arco 顏色主題，例如 `@ark-design/ui/styles/aml-theme.css` 或 `@arco-design/web-react/dist/css/arco.css`；未載入時這些變數沒有值，正文的顏色樣式不會生效。暗色下還要在 `<body>` 上設定 `arco-theme="dark"`，與 `<html>` 上的 `.dark` 同時生效。
+
+## 埋點
+
+透過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

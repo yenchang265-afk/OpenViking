@@ -42,9 +42,15 @@ Git may reuse conflict resolutions, but they still need review and staging.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: branch `claude/dazzling-thompson-ijelq8`, through
-upstream `90f4edc` (previous: PR #132, merge `4fac34c20`, through `51f0e8e`). Confirm ancestry with
-Git; update this note after each accepted sync.
+Last documented upstream sync: through upstream `f9bf90b398df`
+(2026-11-15; previous: `90f4edc`). Confirm ancestry with Git; update this note
+after each accepted sync.
+
+This sync ports upstream's isolated Markdown Compile workers into the server-owned
+runtime. It retains durable queueing, task-private scratch without command
+execution, and publication after completion. The upstream bot-only simple executor
+stays excluded. Studio keeps fork batch deletion, reindexing, author metadata and
+Compile graphs alongside upstream shared-resource actions.
 
 ## Chinese text conventions
 
@@ -58,6 +64,8 @@ there. Exception: `frontend/` zh docs and `README_CN.md` files use plain `s2twp`
 (only 賬→帳; they keep 回撥, 全域性); realign their tables with prettier 3.6.
 The generated `frontend/docs/docs/zh/guide/changelog.md` stays Simplified, byte-identical
 to upstream (`npm run check:release-notes` regenerates it from `CHANGELOG.md`).
+Generated analytics and monitoring catalogue blocks also stay Simplified so their
+generator checks remain reproducible; surrounding prose is Traditional Chinese.
 Frontend React sources, demos, tests and site config stay Simplified.
 
 Merge sync PRs with a merge commit, never squash. Squashing #120 dropped the

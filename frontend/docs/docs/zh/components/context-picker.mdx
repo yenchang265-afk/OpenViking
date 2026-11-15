@@ -1,0 +1,116 @@
+# ContextPicker 檔案與目錄選擇
+
+在彈窗中搜尋和選擇檔案或目錄，支援單選、獨立多選、已選條目展示和自定義操作。
+
+## 何時使用
+
+- 從檔案樹中選擇一個輸出目錄或檔案。
+- 選擇多個源目錄，並在搜尋和翻頁時保留已選項。
+- 在選擇介面接入新建目錄、新增 Skill 等宿主操作。
+
+## 引入
+
+```tsx
+import { ContextPicker } from '@openviking/react/components/context-picker';
+import '@openviking/react/components/context-picker/style.css';
+```
+
+## 程式碼演示
+
+### 受控選擇
+
+切換源目錄多選、輸出目錄單選和 Skill 單選，檢查非同步載入後的選中回顯、搜尋、禁用和失敗重試；新建與新增操作為離線模擬。
+
+```tsx file="../../_demos/context-picker-basic.tsx" preview
+
+```
+
+### HITL 外部接管
+
+由宿主控制彈窗和目錄資料，確認後透過 `select` 將目錄寫回自定義答案。
+
+```tsx file="../../_demos/viking-bot-custom-directory.tsx" preview
+
+```
+
+## API
+
+### ContextPicker
+
+| 引數              | 說明                                     | 型別                                                                | 預設值               |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------------- | -------------------- |
+| open              | 控制彈窗是否展示                         | `boolean`                                                           | 必填                 |
+| rows              | 當前可見的樹行，由宿主處理展開和分頁     | `readonly FileTreeRow[]`                                            | 必填                 |
+| value             | 當前選中條目，按 URI 匹配可見樹行        | `readonly ContextPickerEntry[]`                                     | 必填                 |
+| multiple          | 使用獨立多選，父子目錄互不關聯           | `boolean`                                                           | `false`              |
+| query             | 受控搜尋詞                               | `string`                                                            | `''`                 |
+| loading           | 表達搜尋或重新整理狀態                   | `boolean`                                                           | `false`              |
+| isReady           | 首次載入是否完成                         | `boolean`                                                           | `true`               |
+| confirming        | 確認期間禁用選擇、搜尋和關閉             | `boolean`                                                           | `false`              |
+| disabled          | 禁用選擇、搜尋和關閉                     | `boolean`                                                           | `false`              |
+| confirmDisabled   | 額外禁用確認按鈕                         | `boolean`                                                           | `false`              |
+| autoReveal        | 首次開啟時請求展開和翻頁，並定位已選行   | `boolean`                                                           | `true`               |
+| showSelection     | 顯示頂部已選條目                         | `boolean`                                                           | 單選為 `true`        |
+| title             | 彈窗標題                                 | `string`                                                            | 選擇檔案或目錄       |
+| error             | 顯示錯誤，保留現有行和選中項             | `ReactNode`                                                         | -                    |
+| operations        | 宿主提供展開、載入更多和重試操作         | `Pick<FileTreeOperations, 'toggleExpand' \| 'loadMore' \| 'retry'>` | -                    |
+| rootOrder         | 根節點排序方式                           | `'input' \| 'context'`                                              | `'input'`            |
+| loadingFallback   | 首次載入替代內容                         | `ReactNode`                                                         | FileTree 預設載入態  |
+| errorFallback     | 首次載入錯誤替代內容                     | `ReactNode`                                                         | -                    |
+| emptyFallback     | 空結果替代內容                           | `ReactNode`                                                         | 沒有匹配的檔案或目錄 |
+| triggerRef        | 主題錨點，關閉後恢復觸發元素焦點         | `RefObject<HTMLElement \| null>`                                    | -                    |
+| className         | 附加到彈窗根節點的類名                   | `string`                                                            | -                    |
+| locale            | 介面語言                                 | `'zh-CN' \| 'en-US'`                                                | -                    |
+| onChange          | 點選條目後上報完整選擇                   | `(value: ContextPickerEntry[]) => void`                             | -                    |
+| onQueryChange     | 輸入搜尋詞時觸發，提供後顯示搜尋框       | `(query: string) => void`                                           | -                    |
+| onConfirm         | 確認當前選擇，由宿主完成儲存和關閉       | `(value: readonly ContextPickerEntry[]) => void`                    | -                    |
+| onCancel          | 取消、關閉按鈕或 Escape 觸發，由宿主關閉 | `() => void`                                                        | -                    |
+| onOpenEntry       | 點選頂部已選條目時觸發                   | `(entry: ContextPickerEntry) => void`                               | -                    |
+| renderRowIcon     | 自定義檔案圖示                           | `(row: FileTreeEntryRow) => ReactNode`                              | FileTree 預設圖示    |
+| renderRowTooltip  | 自定義行浮層                             | `(row: FileTreeEntryRow) => ReactNode`                              | FileTree 預設浮層    |
+| renderRowTrailing | 自定義行尾內容                           | `(row: FileTreeEntryRow) => ReactNode`                              | -                    |
+| slots             | 替換操作和補充內容                       | `ContextPickerSlots`                                                | -                    |
+| labels            | 覆蓋內建文案                             | `ContextPickerLabels`                                               | -                    |
+
+### ContextPickerEntry
+
+| 引數 | 說明                           | 型別                    | 預設值 |
+| ---- | ------------------------------ | ----------------------- | ------ |
+| uri  | 條目身份，可在非同步載入前提供 | `string`                | 必填   |
+| name | 條目名稱                       | `string`                | 必填   |
+| type | 條目型別                       | `'directory' \| 'file'` | 必填   |
+
+### ContextPickerSlots
+
+| 引數        | 說明                                       | 型別                                  | 預設值             |
+| ----------- | ------------------------------------------ | ------------------------------------- | ------------------ |
+| footerStart | 左下角操作或說明，`null` 隱藏預設內容      | `ReactNode`                           | 多選時顯示已選數量 |
+| content     | 樹下方的補充內容，例如許可權狀態和上傳面板 | `ReactNode`                           | -                  |
+| selection   | 替換頂部已選條目，`null` 隱藏預設內容      | `ReactNode`                           | 已選條目           |
+| confirm     | 包裝確認按鈕                               | `(button: ReactElement) => ReactNode` | -                  |
+
+### ContextPickerLabels
+
+| 引數          | 說明               | 型別                        | 預設值               |
+| ------------- | ------------------ | --------------------------- | -------------------- |
+| title         | 預設標題           | `string`                    | 選擇檔案或目錄       |
+| search        | 搜尋框標籤與佔位符 | `string`                    | 搜尋名稱             |
+| selected      | 已選條目標籤       | `string`                    | 已選：               |
+| unselected    | 尚未選擇時的提示   | `string`                    | 未選擇               |
+| clearSearch   | 清空搜尋按鈕       | `string`                    | 清空搜尋             |
+| selectedCount | 多選計數           | `(count: number) => string` | `已選 ${count} 個`   |
+| cancel        | 取消按鈕           | `string`                    | 取消                 |
+| confirm       | 確認按鈕           | `string`                    | 確定                 |
+| empty         | 空結果提示         | `string`                    | 沒有匹配的檔案或目錄 |
+
+## 注意
+
+- `value`、`query`、`open` 均由宿主維護。取消時由宿主恢復草稿，確認成功後由宿主關閉；非同步儲存期間傳入 `confirming`，失敗時保留草稿並提供 `error`。
+- 條目的 `selectable: false` 禁止選擇但允許展開，`disabled: true` 同時禁用選擇和展開。許可權判斷和提交前複核由宿主完成。
+- 已選項獨立於當前行列表，搜尋和分頁不會自動清空選擇。首次開啟的自動定位在手動搜尋、選擇、展開或翻頁後停止。
+- 首次定位會呼叫 `operations.toggleExpand` 和 `operations.loadMore`；宿主更新 `rows` 並提供錯誤與重試狀態，元件不發起請求。
+- 上傳與新建操作透過插槽接入，元件不限定檔案型別、目錄許可權或上傳協議。`FileTreeRow` 與樹操作的詳細定義見 [FileTree](./file-tree)。
+
+## 主題變數
+
+`--ov-ui-context-picker-tree-height` 控制樹面板高度，單選預設 `416px`，多選預設 `544px`。

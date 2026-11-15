@@ -9,6 +9,7 @@ import pytest
 from openviking.compile.agent_loop import ScratchFileTool
 from openviking.compile.models import CompileFailure
 from openviking.compile.ov_client import InProcessVikingClient
+from openviking.compile.results import Document
 from openviking.compile.scratch import ScratchDir
 from openviking.service.compile_service import _validate_changes
 from openviking.service.external_task_service import ExternalTaskSnapshot
@@ -266,24 +267,18 @@ def _finalize_runtime(files):
         warnings=[],
         old={},
         metrics={},
-        client=SimpleNamespace(),
+        client=SimpleNamespace(
+            stat=AsyncMock(
+                side_effect=__import__(
+                    "openviking_cli.exceptions", fromlist=["NotFoundError"]
+                ).NotFoundError("missing")
+            )
+        ),
     )
 
 
 async def _store_artifact(files, body: str) -> None:
-    from openviking.compile.hashing import content_hash
-
-    await files.put(
-        "artifacts/a1",
-        {
-            "path": "notes/topic.md",
-            "owner": "group-1",
-            "content": body,
-            "sha256": content_hash(body.encode()),
-            "base_hash": None,
-            "source_refs": ["r1"],
-        },
-    )
+    await files.sandbox.write_file("artifacts/topic.md", body)
 
 
 @pytest.mark.asyncio
@@ -298,7 +293,10 @@ async def test_finalize_publishes_validated_artifacts_without_a_review_agent(tmp
     await _store_artifact(files, body)
     runtime = _finalize_runtime(files)
 
-    rendered = await finalize_op.run(runtime, ["artifacts/a1"])
+    rendered = await finalize_op.run(
+        runtime,
+        [Document("notes/topic.md", "artifacts/topic.md", ["r1"])],
+    )
 
     runtime.model.agent_runner.assert_not_awaited()
     assert not runtime.warnings, runtime.warnings
@@ -317,8 +315,11 @@ async def test_finalize_rejects_empty_artifacts_before_publication(tmp_path):
     files = TaskFiles(scratch)
     await _store_artifact(files, "  \n")
 
-    with pytest.raises(ValueError, match="Empty output: notes/topic.md"):
-        await finalize_op.run(_finalize_runtime(files), ["artifacts/a1"])
+    with pytest.raises(ValueError, match="nonempty UTF-8 Markdown"):
+        await finalize_op.run(
+            _finalize_runtime(files),
+            [Document("notes/topic.md", "artifacts/topic.md")],
+        )
 
 
 @pytest.mark.asyncio
