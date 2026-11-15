@@ -367,6 +367,9 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/uploads/{upload_id}/complete` | 完成上傳工作階段 |
 | DELETE | `/api/v1/uploads/{upload_id}` | 中止上傳工作階段 |
 | POST | `/api/v1/resources` | 從 URL 或臨時檔案新增資源 |
+| POST | `/api/v1/resources/cp` | 複製共享資源及其向量記錄 |
+| POST | `/api/v1/resources/mv` | 移動或重新命名共享資源 |
+| DELETE | `/api/v1/resources` | 刪除共享資源並清理索引 |
 | GET | `/api/v1/fs/ls` | 列出目錄 |
 | GET | `/api/v1/fs/tree` | 獲取目錄樹 |
 | GET | `/api/v1/fs/stat` | 獲取資源狀態 |

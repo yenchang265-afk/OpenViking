@@ -372,6 +372,9 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | POST | `/api/v1/uploads/{upload_id}/complete` | Complete an upload session |
 | DELETE | `/api/v1/uploads/{upload_id}` | Abort an upload session |
 | POST | `/api/v1/resources` | Add a resource from a URL or temporary upload |
+| POST | `/api/v1/resources/cp` | Copy a shared resource and its vector records |
+| POST | `/api/v1/resources/mv` | Move or rename a shared resource |
+| DELETE | `/api/v1/resources` | Delete a shared resource and clean up its index |
 | GET | `/api/v1/fs/ls` | List a directory |
 | GET | `/api/v1/fs/tree` | Get a directory tree |
 | GET | `/api/v1/fs/stat` | Get resource status |

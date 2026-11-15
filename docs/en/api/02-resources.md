@@ -2,6 +2,38 @@
 
 Resources are external knowledge that agents can reference. This page covers resource import, scheduled updates, and temporary uploads. See the [data organization guide](../guides/23-data-organize.md) for directory conventions and [OVPack](14-ovpack.md) for package export and import.
 
+## Shared-resource copy, move and deletion
+
+These endpoints operate only on children of `viking://resources/`. The shared root and private resource paths are rejected. They use the same authorization, vector updates, scheduled-sync handling and response contracts as the corresponding [filesystem operations](03-filesystem.md).
+
+### Copy a shared resource
+
+`POST /api/v1/resources/cp` accepts a JSON body:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `from_uri` | string | Required | Existing shared resource |
+| `to_uri` | string | Required | Destination below the shared resources root |
+| `recursive` | boolean | `false` | Copy a directory recursively |
+
+Vector records are copied with the resource. Parent semantic indexes refresh in the background.
+
+### Move or rename a shared resource
+
+`POST /api/v1/resources/mv` accepts a JSON body with required string fields `from_uri` and `to_uri`, both below the shared resources root. The old URI stops working after a successful move. Vector records, scheduled syncs and Compile configuration follow the filesystem move rules.
+
+### Delete a shared resource
+
+`DELETE /api/v1/resources` accepts query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `uri` | string | Required | Shared resource to delete |
+| `recursive` | boolean | `false` | Delete a directory and its contents |
+| `wait` | boolean | `true` | Wait for semantic index cleanup |
+
+Deletion requires MANAGE permission, removes vector records and associated scheduled syncs, and refreshes parent metadata. With `wait=false`, the existing filesystem deletion task runs asynchronously. Deletion is permanent.
+
 ## Core Concepts
 
 ### Resource Types
