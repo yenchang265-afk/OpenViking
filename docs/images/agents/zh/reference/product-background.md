@@ -1,6 +1,6 @@
 # OpenViking 擴充參考
 
-[接入引導](https://docs.openviking.net/agents/zh/onboarding.md)已包含普通接入需要的解釋。本檔案用於回答使用者追問或處理擴充目標，無需在開始接入時通讀；只查與當前問題有關的部分。知識不代表當前工具一定支援，也不授予執行額外任務的許可。
+[接入引導](https://docs.openviking.net/agents/zh/onboarding.md)（團隊版是 [onboarding-team.md](https://docs.openviking.net/agents/zh/onboarding-team.md)）已包含普通接入需要的解釋。本檔案用於回答使用者追問或處理擴充目標，無需在開始接入時通讀；只查與當前問題有關的部分。知識不代表當前工具一定支援，也不授予執行額外任務的許可。
 
 ## 內容型別與處理狀態
 
@@ -40,3 +40,19 @@ OpenViking 通過目錄和 URI 保留內容歸屬與來源。L0 摘要幫助識�
 經驗保留有效做法、糾正和適用條件。說明它為什麼適合當前任務，避免機械照搬；是否啟用提取、是否可檢索需核對，不能承諾每輪自動產生經驗。
 
 知識整理／Compile 適合基於多份材料形成有來源的主題知識或 Wiki，通過 `ov` 命令列的 `ov compile` 執行（安裝器的 `cli` 一項裝的就是 `ov`），由服務端的 Compile Runtime 執行，結果寫回 OpenViking。先檢查服務是否支援、來源範圍和輸出位置，再按使用者授權執行；用法見 https://docs.openviking.net/zh/context-compilation/01-overview 。安裝外掛、匯入歷史或生成普通摘要都不等於已執行 Compile。
+
+## 團隊共享目錄與許可權
+
+團隊成員屬於同一個 account，各自是其中的一個 user。每個成員的記憶、會話、個人資料和私有技能都在 `viking://user/<自己的 user_id>/` 下，按 user 隔離，其他成員讀不到。account 內共享的有兩處：`viking://resources/`（共享資料）和 `viking://agent/skills/`（共享技能）。外掛每次提問前的自動召回，範圍包括他自己的空間和這兩處。
+
+共享資料的許可權由團隊決定。帳號沒有開啟許可權控制（ACL，預設不開）時，所有成員都能讀、寫、刪 `viking://resources/` 下的任何內容；開啟後，預設仍是所有成員都能管理，管理員可以把某個目錄設為受限（restricted），只授權給指定的成員或使用者組。管理員對共享資料始終有管理權。寫入被拒時返回 `PERMISSION_DENIED`。複製、移動不帶走原來的許可權：新位置繼承目標目錄的許可權，移進個人空間就不再共享。
+
+他想讓自己的目錄只有自己能改、別人只能看時，帳號開啟了許可權控制才有效，這時可以對他自己的目錄執行：
+
+```bash
+ov acl set viking://resources/<user_id> --acl-mode restricted --entry user:<user_id>=manage --entry 'user:*=read'
+```
+
+只在他明確要求時做，只改他自己的目錄。沒開啟許可權控制時，普通成員執行這條命令會返回 `PERMISSION_DENIED … ACL management denied … manage permission required`。這說明團隊沒開許可權控制，不是他的許可權出了問題，也不影響他讀寫共享目錄；想保護自己的目錄，請他找團隊管理員。
+
+共享技能用 `add_skill`（或 `ov add-skill <目錄> -p viking://agent/skills`）安裝，其他成員的 Agent 會在合適的任務裡發現並使用它；不加 `target_uri` 時裝進他自己的私有技能。

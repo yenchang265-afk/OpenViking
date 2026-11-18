@@ -1,0 +1,415 @@
+# 監控事件目錄
+
+每個事件只對應一個目標和一個結果。接入、開關、元件定位和鏈路欄位見[前端監控](./monitoring)。欄位組用於描述 `params`，通過 `OpenVikingMonitoringEventMap[事件名]['params']` 獲取公開型別。
+
+{/* monitoring-events:start */}
+
+## 渲染異常
+
+| 事件                                       | source.component           | region         | params 欄位組 | 觸發口徑                                                                                                                           |
+| ------------------------------------------ | -------------------------- | -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `file_browser_action_bar_render_error`     | `FileBrowserActionBar`     | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 FileBrowserActionBar 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。     |
+| `file_tree_render_error`                   | `FileTree`                 | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 FileTree 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。                 |
+| `context_picker_render_error`              | `ContextPicker`            | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ContextPicker 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。            |
+| `file_preview_render_error`                | `FilePreview`              | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 FilePreview 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。              |
+| `command_console_render_error`             | `CommandConsole`           | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 CommandConsole 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。           |
+| `scope_switcher_render_error`              | `ScopeSwitcher`            | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ScopeSwitcher 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。            |
+| `scope_selector_render_error`              | `ScopeSelector`            | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ScopeSelector 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。            |
+| `agent_connect_render_error`               | `AgentConnect`             | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 AgentConnect 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。             |
+| `viking_bot_render_error`                  | `VikingBot`                | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 VikingBot 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。                |
+| `directory_tour_render_error`              | `DirectoryTour`            | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 DirectoryTour 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。            |
+| `wiki_dashboard_render_error`              | `WikiDashboard`            | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 WikiDashboard 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。            |
+| `experience_dashboard_render_error`        | `ExperienceDashboard`      | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ExperienceDashboard 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。      |
+| `email_login_form_render_error`            | `EmailLoginForm`           | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 EmailLoginForm 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。           |
+| `api_key_login_form_render_error`          | `ApiKeyLoginForm`          | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ApiKeyLoginForm 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。          |
+| `password_reset_request_form_render_error` | `PasswordResetRequestForm` | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 PasswordResetRequestForm 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。 |
+| `password_setup_form_render_error`         | `PasswordSetupForm`        | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 PasswordSetupForm 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。        |
+| `login_method_selector_render_error`       | `LoginMethodSelector`      | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 LoginMethodSelector 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。      |
+| `invitation_confirmation_render_error`     | `InvitationConfirmation`   | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 InvitationConfirmation 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。   |
+| `file_browser_render_error`                | `FileBrowser`              | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 FileBrowser 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。              |
+| `console_render_error`                     | `Console`                  | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 Console 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。                  |
+| `scope_cascade_render_error`               | `ScopeCascade`             | `所屬元件區域` | `RenderFault` | 最近的庫內錯誤邊界捕獲 ScopeCascade 所負責區域的渲染異常；同次捕獲只報一次；不會因此捕獲普通事件回撥或任意非同步異常。             |
+
+## 程式碼與可視資源
+
+| 事件                                     | source.component | region          | params 欄位組 | 觸發口徑                                                                                                                   |
+| ---------------------------------------- | ---------------- | --------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `file_preview_viewer_load_ready`         | `FilePreview`    | `viewer-loader` | `CodeReady`   | 當前載入嘗試取得可用的預覽渲染器程式碼匯出；耗時從呼叫 import 到匯出可用，不代表內容呈現。                                 |
+| `file_preview_viewer_load_fail`          | `FilePreview`    | `viewer-loader` | `CodeFault`   | 當前預覽渲染器程式碼載入拒絕或缺少所需匯出；後續錯誤邊界沿用該 incident，不再另立故障。                                    |
+| `file_preview_editor_load_ready`         | `FilePreview`    | `editor-loader` | `CodeReady`   | 當前載入嘗試取得可用的程式碼編輯器程式碼匯出；耗時從呼叫 import 到匯出可用，不代表內容呈現。                               |
+| `file_preview_editor_load_fail`          | `FilePreview`    | `editor-loader` | `CodeFault`   | 當前程式碼編輯器程式碼載入拒絕或缺少所需匯出；後續錯誤邊界沿用該 incident，不再另立故障。                                  |
+| `viking_bot_composer_load_ready`         | `VikingBot`      | `composer`      | `CodeReady`   | 當前載入嘗試取得可用的輸入器程式碼匯出；耗時從呼叫 import 到匯出可用，不代表內容呈現。                                     |
+| `viking_bot_composer_load_fail`          | `VikingBot`      | `composer`      | `CodeFault`   | 當前輸入器程式碼載入拒絕或缺少所需匯出；後續錯誤邊界沿用該 incident，不再另立故障。                                        |
+| `viking_bot_message_list_load_ready`     | `VikingBot`      | `message-list`  | `CodeReady`   | 當前載入嘗試取得可用的訊息列表程式碼匯出；耗時從呼叫 import 到匯出可用，不代表內容呈現。                                   |
+| `viking_bot_message_list_load_fail`      | `VikingBot`      | `message-list`  | `CodeFault`   | 當前訊息列表程式碼載入拒絕或缺少所需匯出；後續錯誤邊界沿用該 incident，不再另立故障。                                      |
+| `file_preview_image_load_ready`          | `FilePreview`    | `image`         | `MediaReady`  | 當前正文圖片可用（load）；從為當前資源繫結 src 計時。快取命中仍須確認當前元素有效。                                        |
+| `file_preview_image_load_fail`           | `FilePreview`    | `image`         | `MediaFault`  | 當前正文圖片元素觸發 error；關閉的大圖彈窗、過渡後臺層和過期資源不報；不據此推斷 HTTP 狀態。                               |
+| `file_preview_video_metadata_load_ready` | `FilePreview`    | `video`         | `MediaReady`  | 當前影片後設資料可用（loadedmetadata）；從為當前資源繫結 src 計時。快取命中仍須確認當前元素有效；影片不代表可連續播放。    |
+| `file_preview_video_metadata_load_fail`  | `FilePreview`    | `video`         | `MediaFault`  | 當前影片後設資料元素觸發 error；關閉的大圖彈窗、過渡後臺層和過期資源不報；不據此推斷 HTTP 狀態。                           |
+| `file_preview_image_dialog_ready`        | `FilePreview`    | `image-dialog`  | `MediaReady`  | 當前大圖彈窗圖片可用（complete && naturalWidth > 0）；從開啟彈窗計時。快取命中仍須確認當前元素有效；影片不代表可連續播放。 |
+| `file_preview_image_dialog_fail`         | `FilePreview`    | `image-dialog`  | `MediaFault`  | 當前大圖彈窗圖片元素觸發 error；關閉的大圖彈窗、過渡後臺層和過期資源不報；不據此推斷 HTTP 狀態。                           |
+
+## 前端請求
+
+| 事件                     | source.component | region         | params 欄位組  | 觸發口徑                                                                                                                          |
+| ------------------------ | ---------------- | -------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `client_request_success` | `ComponentName`  | `所屬元件區域` | `RequestReady` | Provider 管理的單次非流式 Client 請求完成響應體讀取和現有業務錯誤判定；JSON/envelope/blob 共用一次嘗試，不在 fetch 返回時提前報。 |
+| `client_request_fail`    | `ComponentName`  | `所屬元件區域` | `RequestFault` | 同次請求在配置解析、傳輸、讀體或既有業務錯誤判定失敗；HTTP 200 錯誤外殼也失敗。呼叫中止不報，合法非 JSON 響應不額外改判。         |
+
+## 流連線與讀取
+
+| 事件                          | source.component | region         | params 欄位組        | 觸發口徑                                                                                                   |
+| ----------------------------- | ---------------- | -------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `client_stream_connect_ready` | `ComponentName`  | `所屬元件區域` | `StreamConnectReady` | SSE 響應通過 HTTP、錯誤外殼、Content-Type 和 body 檢查；從呼叫 stream 到連線可讀，不代表首內容或正常結束。 |
+| `client_stream_connect_fail`  | `ComponentName`  | `所屬元件區域` | `StreamConnectFault` | 連線階段拒絕或協議條件不滿足；主動取消排除。                                                               |
+| `client_stream_read_complete` | `ComponentName`  | `所屬元件區域` | `StreamReadReady`    | 消費者實際讀流並正常到達 EOF；從首次迭代到 EOF，包含消費者背壓。正常終止事件後主動結束消費時不偽造 EOF。   |
+| `client_stream_read_fail`     | `ComponentName`  | `所屬元件區域` | `StreamReadFault`    | 已建立流在讀取中丟擲非取消異常；與連線錯誤分開。                                                           |
+
+## 後臺輪詢
+
+| 事件                      | source.component | region         | params 欄位組       | 觸發口徑                                                                                                |
+| ------------------------- | ---------------- | -------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `task_poll_request_fail`  | `ComponentName`  | `所屬元件區域` | `PollRequestFault`  | 一次任務查詢故障連續期內，每個請求類故障類別首次出現時記錄；後續同類別失敗累計，不每 3 秒再報同一故障。 |
+| `task_poll_protocol_fail` | `ComponentName`  | `所屬元件區域` | `PollProtocolFault` | 查詢結果 task id 不匹配或狀態不在既有協議集合；同連續期同類別隻記錄首次，不改寫任務狀態。               |
+| `task_poll_recovered`     | `ComponentName`  | `所屬元件區域` | `PollRecovered`     | 連續查詢故障後第一次取得有效響應；即使狀態仍是 running 也算查詢恢復。                                   |
+
+## 區塊與正文處理
+
+| 事件                                            | source.component | region                 | params 欄位組       | 觸發口徑                                                                                                                                           |
+| ----------------------------------------------- | ---------------- | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file_browser_directory_load_ready`             | `FileBrowser`    | `directory`            | `DirectoryReady`    | 首輪或展開目錄就緒；從實際發起目錄載入，到當前目錄結果規範化完成，首批行或空目錄狀態提交到對應 FileTree。                                          |
+| `file_browser_directory_load_fail`              | `FileBrowser`    | `directory`            | `OperationFault`    | 首輪或展開目錄在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                 |
+| `file_browser_preview_load_ready`               | `FileBrowser`    | `preview`              | `PreviewReady`      | 資源預覽就緒；從接受一次資源開啟操作，到目標正文獲取完成且前臺 FilePreview 內容就緒。                                                              |
+| `file_browser_preview_load_fail`                | `FileBrowser`    | `preview`              | `OperationFault`    | 資源預覽在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `file_browser_search_find_ready`                | `FileBrowser`    | `search`               | `SearchReady`       | find 檢索就緒；從發起 find 查詢，到當前 find 結果規範化並提交，零結果有效。                                                                        |
+| `file_browser_search_find_fail`                 | `FileBrowser`    | `search`               | `OperationFault`    | find 檢索在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                      |
+| `file_browser_search_query_ready`               | `FileBrowser`    | `search`               | `SearchReady`       | 上下文檢索就緒；從發起 search/query 查詢，到當前上下文檢索結果規範化並提交。                                                                       |
+| `file_browser_search_query_fail`                | `FileBrowser`    | `search`               | `OperationFault`    | 上下文檢索在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                     |
+| `file_browser_search_grep_ready`                | `FileBrowser`    | `search`               | `SearchReady`       | grep 檢索就緒；從發起 grep 查詢，到當前 grep 結果規範化並提交。                                                                                    |
+| `file_browser_search_grep_fail`                 | `FileBrowser`    | `search`               | `OperationFault`    | grep 檢索在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                      |
+| `file_browser_search_glob_ready`                | `FileBrowser`    | `search`               | `SearchReady`       | glob 檢索就緒；從發起 glob 查詢，到當前 glob 匹配結果規範化並提交。                                                                                |
+| `file_browser_search_glob_fail`                 | `FileBrowser`    | `search`               | `OperationFault`    | glob 檢索在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                      |
+| `file_browser_wiki_dashboard_load_ready`        | `FileBrowser`    | `wiki-dashboard`       | `DashboardReady`    | Wiki 看板就緒；從發起當前 Wiki 看板取數，到讀取、既有格式檢查與看板提交完成。                                                                      |
+| `file_browser_wiki_dashboard_load_fail`         | `FileBrowser`    | `wiki-dashboard`       | `OperationFault`    | Wiki 看板在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                      |
+| `file_browser_experience_dashboard_load_ready`  | `FileBrowser`    | `experience-dashboard` | `DashboardReady`    | 經驗看板就緒；從發起當前經驗看板取數，到目錄或單經驗結果及統計提交完成。                                                                           |
+| `file_browser_experience_dashboard_load_fail`   | `FileBrowser`    | `experience-dashboard` | `OperationFault`    | 經驗看板在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `file_browser_experience_trajectory_load_ready` | `FileBrowser`    | `trajectory`           | `TrajectoryReady`   | 經驗軌跡就緒；從發起所選經驗的軌跡取數，到軌跡規範化並提交到當前軌跡檢視。                                                                         |
+| `file_browser_experience_trajectory_load_fail`  | `FileBrowser`    | `trajectory`           | `OperationFault`    | 經驗軌跡在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `console_session_list_load_ready`               | `Console`        | `sessions`             | `SessionListReady`  | 會話列表就緒；從發起列表載入，到當前會話列表或空列表提交完成。                                                                                     |
+| `console_session_list_load_fail`                | `Console`        | `sessions`             | `OperationFault`    | 會話列表在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `console_session_create_success`                | `Console`        | `sessions`             | `SessionReady`      | 會話建立完成；從內部建立會話呼叫開始，到按服務契約確認建立成功並安裝當前會話身份，不等待後續重新整理。                                             |
+| `console_session_create_fail`                   | `Console`        | `sessions`             | `OperationFault`    | 會話建立在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `console_session_history_load_ready`            | `Console`        | `sessions`             | `HistoryReady`      | 會話歷史就緒；從接受會話切換並開始載入歷史，到當前會話歷史轉換並提交完成。                                                                         |
+| `console_session_history_load_fail`             | `Console`        | `sessions`             | `OperationFault`    | 會話歷史在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `console_session_delete_success`                | `Console`        | `sessions`             | `SessionReady`      | 會話刪除完成；從內部刪除會話呼叫開始，到服務按契約返回成功且本地列表處理完成，不因後續重新整理失敗改判。                                           |
+| `console_session_delete_fail`                   | `Console`        | `sessions`             | `OperationFault`    | 會話刪除在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `scope_cascade_libraries_load_ready`            | `ScopeCascade`   | `libraries`            | `OptionsReady`      | 庫選項就緒；從呼叫 loadLibraries，到當前祖先作用域下的庫選項或空選項提交完成。                                                                     |
+| `scope_cascade_libraries_load_fail`             | `ScopeCascade`   | `libraries`            | `OperationFault`    | 庫選項在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                         |
+| `scope_cascade_spaces_load_ready`               | `ScopeCascade`   | `spaces`               | `OptionsReady`      | 空間選項就緒；從呼叫 loadSpaces，到當前庫下的空間選項或空選項提交完成。                                                                            |
+| `scope_cascade_spaces_load_fail`                | `ScopeCascade`   | `spaces`               | `OperationFault`    | 空間選項在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                       |
+| `scope_cascade_users_load_ready`                | `ScopeCascade`   | `users`                | `OptionsReady`      | 使用者選項就緒；從呼叫 loadUsers，到當前庫和空間下的使用者選項或空選項提交完成。                                                                   |
+| `scope_cascade_users_load_fail`                 | `ScopeCascade`   | `users`                | `OperationFault`    | 使用者選項在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。                     |
+| `file_preview_content_prepare_ready`            | `FilePreview`    | `content \| source`    | `ContentReady`      | 前臺預覽內容準備就緒；從當前有效來源進入正文渲染路徑，到當前前臺層收到明確 ready 且載入遮罩結束；空檔案可就緒，錯誤、unsupported、cleanup 均不算。 |
+| `file_preview_content_prepare_fail`             | `FilePreview`    | `content \| source`    | `OperationFault`    | 前臺預覽內容準備在上述嘗試中發生可觀察的非取消失敗；已有底層故障時沿用 incident 和 causeEventId；純展示宿主 error props 不另立故障。               |
+| `console_chat_first_content_ready`              | `Console`        | `chat`                 | `FirstContentReady` | 從接受傳送到收到並轉換首段非空 text/reasoning/tool 內容；complete 攜帶首段正文也算。每次回覆最多一次，不等於瀏覽器 paint。                         |
+| `console_chat_reply_complete`                   | `Console`        | `chat`                 | `ReplyReady`        | 收到協議終態 complete 併合並回復完成；從接受傳送計時。成功持久化不是前置條件；正常空回覆不偽造首內容樣本。                                         |
+| `console_chat_reply_fail`                       | `Console`        | `chat`                 | `ReplyFault`        | 會話準備、事件轉換或回覆協議失敗，包括 EOF 先於終態；已有傳輸故障時僅關聯傳播。主動取消和 interrupted 排除。                                       |
+| `console_chat_history_save_fail`                | `Console`        | `persistence`          | `PersistenceFault`  | 庫本來會捕獲的歷史持久化失敗；回覆已完成仍保持完成。宿主接管的未知持久化不推斷。                                                                   |
+
+## params 欄位組
+
+`Ready` 包含 `durationMs`（毫秒）和 `visibility`。`Fault` 包含 `errorKind`、配對的 `code`、`observedAt`、`incidentId`、`faultRole`、`causeEventId`、`elapsedMs` 和 `traceSnapshot`。公共欄位含義見[前端監控](./monitoring)。
+
+### Ready
+
+```ts
+{
+  readonly durationMs: number;
+  readonly visibility: 'visible' | 'hidden';
+};
+```
+
+### RenderFault
+
+```ts
+Fault<'render'>;
+```
+
+### CodeReady
+
+```ts
+Ready & {
+  readonly cacheState: 'cached' | 'uncached' | 'unknown';
+};
+```
+
+### CodeFault
+
+```ts
+Fault<'resource-load' | 'configuration' | 'unknown'>;
+```
+
+### MediaReady
+
+```ts
+Ready & {
+  readonly cacheState: 'cached' | 'uncached' | 'unknown';
+};
+```
+
+### MediaFault
+
+```ts
+Fault<'resource-load' | 'unknown'>;
+```
+
+### OperationFault
+
+```ts
+Fault<ErrorKind>;
+```
+
+### DirectoryReady
+
+```ts
+Ready & {
+  readonly entryCount: number;
+  readonly empty: boolean;
+};
+```
+
+### PreviewReady
+
+```ts
+Ready & {
+  readonly contentKind: 'text' | 'image' | 'video' | 'document' | 'other';
+  readonly empty: boolean;
+};
+```
+
+### SearchReady
+
+```ts
+Ready & {
+  readonly resultCount: number;
+  readonly hasMore: boolean | null;
+};
+```
+
+### DashboardReady
+
+```ts
+Ready & { empty: boolean };
+```
+
+### TrajectoryReady
+
+```ts
+Ready & { itemCount: number };
+```
+
+### SessionListReady
+
+```ts
+Ready & { sessionCount: number };
+```
+
+### SessionReady
+
+```ts
+Ready;
+```
+
+### HistoryReady
+
+```ts
+Ready & { messageCount: number };
+```
+
+### OptionsReady
+
+```ts
+Ready & { optionCount: number };
+```
+
+### ContentReady
+
+```ts
+Ready & {
+  readonly empty: boolean;
+  readonly viewMode: 'source' | 'preview';
+};
+```
+
+### FirstContentReady
+
+```ts
+Ready & {
+  readonly contentKind: 'text' | 'reasoning' | 'tool';
+};
+```
+
+### ReplyReady
+
+```ts
+Ready & { firstContentObserved: boolean };
+```
+
+### ReplyFault
+
+```ts
+Fault<
+  | 'configuration'
+  | 'network'
+  | 'http'
+  | 'business'
+  | 'response-read'
+  | 'protocol'
+  | 'host-service'
+  | 'renderer'
+  | 'unknown'
+>;
+```
+
+### PersistenceFault
+
+```ts
+Fault<'storage' | 'host-service' | 'unknown'>;
+```
+
+### RequestSummary
+
+```ts
+{
+  readonly method:
+    'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+  readonly routeKey: NativeRouteKey | 'custom';
+  readonly requestAttemptId: string;
+  readonly requestId: string | null;
+  readonly httpStatus: number | null;
+  readonly nativeEventId?: string;
+};
+```
+
+### RequestReady
+
+```ts
+Ready &
+  RequestSummary & {
+    readonly httpStatus: number;
+    readonly responseType: 'json' | 'blob';
+  };
+```
+
+### RequestFault
+
+```ts
+Fault<
+  | 'configuration'
+  | 'network'
+  | 'http'
+  | 'business'
+  | 'response-read'
+  | 'unknown'
+> &
+  RequestSummary & {
+    readonly phase:
+      'resolve-config' | 'send' | 'read-body' | 'business-envelope';
+    readonly responseType: 'json' | 'blob';
+  };
+```
+
+### StreamConnectReady
+
+```ts
+Ready & RequestSummary & { httpStatus: number };
+```
+
+### StreamConnectFault
+
+```ts
+Fault<
+  'configuration' | 'network' | 'http' | 'business' | 'protocol' | 'unknown'
+> &
+  RequestSummary & {
+    readonly phase: 'resolve-config' | 'send' | 'validate-response';
+  };
+```
+
+### StreamReadReady
+
+```ts
+Ready &
+  RequestSummary & { readonly frameCount: number; readonly bytesRead: number };
+```
+
+### StreamReadFault
+
+```ts
+Fault<'network' | 'response-read' | 'unknown'> & RequestSummary;
+```
+
+### PollFields
+
+```ts
+{
+  readonly taskRef: string;
+  readonly outageId: string;
+  readonly queryAttempt: number;
+  readonly consecutiveFailures: number;
+};
+```
+
+### PollRequestFault
+
+```ts
+Fault<
+  | 'network'
+  | 'http'
+  | 'business'
+  | 'configuration'
+  | 'response-read'
+  | 'host-service'
+  | 'unknown'
+> & PollFields;
+```
+
+### PollProtocolFault
+
+```ts
+Fault<'protocol'> & PollFields;
+```
+
+### PollRecovered
+
+```ts
+Ready &
+  Omit<PollFields, 'consecutiveFailures'> & {
+    readonly consecutiveFailures: 0;
+    readonly outageDurationMs: number;
+    readonly failureCount: number;
+    readonly failedCategories: readonly ('request' | 'protocol')[];
+  };
+```
+
+### ErrorCodeByKind
+
+```ts
+{
+  render: 'RENDER_ERROR';
+  network: 'NETWORK_ERROR';
+  http: 'HTTP_ERROR';
+  business: 'BUSINESS_ERROR';
+  configuration: 'REQUEST_CONFIG_ERROR' | 'RESOURCE_EXPORT_INVALID';
+  'response-read': 'RESPONSE_READ_ERROR';
+  protocol:
+    'STREAM_PROTOCOL_ERROR' | 'TASK_RESPONSE_INVALID' | 'DATA_RESPONSE_INVALID';
+  'resource-load': 'RESOURCE_LOAD_ERROR';
+  renderer: 'RENDERER_ERROR';
+  'host-service': 'HOST_SERVICE_ERROR';
+  storage: 'STORAGE_ERROR';
+  unknown: 'UNKNOWN_ERROR';
+};
+```
+
+{/* monitoring-events:end */}

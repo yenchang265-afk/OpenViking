@@ -33,8 +33,10 @@ const enums = {
   captureStatus: {
     active: '正常',
     disabled: '已關閉',
+    failed: '儲存失敗',
     retrying: '重試中',
     paused: '已暫停',
+    lost: '已丟失',
   },
   captureReason: {
     history_changed:
@@ -47,6 +49,12 @@ const enums = {
     delivery_recovered: '儲存已恢復正常',
     delivery_failed: '儲存到 Business Context Platform 失敗',
     invalid_archive_id: 'Business Context Platform 返回了無法識別的歸檔',
+    gateway_key_missing: '金鑰記錄缺失',
+    stage_failed: '一輪已完成的對話沒能排入儲存佇列',
+    save_timeout: '儲存到 Business Context Platform 超時',
+    save_failed: '儲存到 Business Context Platform 失敗',
+    delivered: '已儲存到 Business Context Platform',
+    committed: '已在 Business Context Platform 中提交',
   },
   recallReason: {
     recalled: '已補充記憶',
@@ -80,6 +88,9 @@ const enums = {
   },
   openviking: {
     unavailable: 'Business Context Platform 無法訪問或響應超時',
+    timeout: 'Business Context Platform 響應超時',
+    circuitOpen: 'Business Context Platform 對這個帳號持續無響應，暫時跳過',
+    budgetExhausted: '分配給 Business Context Platform 呼叫的時間已用完',
     unauthorized:
       'Business Context Platform 拒絕了這個金鑰，它可能填錯了或已被吊銷。',
     httpStatus: 'Business Context Platform 返回了 HTTP {{status}}',

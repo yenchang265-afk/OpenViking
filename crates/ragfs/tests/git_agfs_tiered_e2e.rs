@@ -299,6 +299,7 @@ async fn log_oids(svc: &GitService, account: &str) -> Vec<String> {
         account: account.to_string(),
         branch: "main".to_string(),
         limit: 100,
+        offset: 0,
         paths: None,
     })
     .await

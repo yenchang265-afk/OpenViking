@@ -32,7 +32,7 @@
 |------|----------|
 | `show(path=...)` / `diff` / `log` | `read` |
 | `diff_paths` | 來源目錄和每個變化檔案的 `read`；任一子節點無權則整次失敗，且不暴露該 URI |
-| `commit` | `write`；目錄會遞迴檢查當前全部子節點，任一子節點無權則整次失敗 |
+| `commit` | `read`；目錄會遞迴檢查當前全部子節點，任一子節點無權則整次失敗 |
 | `restore` 覆蓋已有檔案 | 檔案的 `write` |
 | `restore` 新建檔案 | 父目錄的 `write` |
 | `restore` 刪除檔案 | 檔案的 `write` |
@@ -121,7 +121,7 @@ ov snapshot commit -m "v1 initial import" --paths viking://resources/my_md.md -o
 }
 ```
 
-`changed` 為本次提交中新增/修改/刪除的路徑數；`ignored` 為本次被帳號 `.ovgitignore` 規則排除的候選路徑數（系統內建剪枝不計入）。當工作區相對上一次提交沒有任何變化時返回 `noop`，`commit_oid` 為當前 HEAD（`noop` 同樣返回 `ignored`，但不含 `changed`）：
+`changed` 為本次提交中新增/修改/刪除的路徑數；`ignored` 為本次被帳號 `.ovgitignore` 規則排除的候選路徑數（系統內建剪枝不計入）。分支首次提交即使未選中檔案或檔案全部被排除，也建立有效快照，返回 `created`、`changed=0`；空目錄本身不被記錄。當工作區相對上一次提交沒有任何變化時返回 `noop`，`commit_oid` 為當前 HEAD（`noop` 同樣返回 `ignored`，但不含 `changed`）：
 
 ```json
 {
@@ -138,28 +138,43 @@ ov snapshot commit -m "v1 initial import" --paths viking://resources/my_md.md -o
 
 ### log()
 
-從某個分支的 HEAD 開始，沿首個父提交（`parents[0]`）逐層回溯歷史，按時間從新到舊返回提交列表。
+從某個分支的 HEAD 開始，沿首個父提交（`parents[0]`）逐層回溯歷史，按提交鏈從新到舊返回，不按時間戳重新排序。
 
 **引數**
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| branch | str | 否 | `main` | 要回溯的分支 |
+| branch | str | 否 | `main` | 回溯起點，可傳分支或提交 ID |
 | limit | int | 否 | 20 | 最多返回的提交數量。HTTP 介面限制範圍為 1–500 |
+| offset | int | 否 | 0 | 跳過前多少條匹配的提交，必須為非負整數。例如每頁 10 條，第二頁傳 `offset=10` |
 | paths | List[str] | 否 | null | 只返回修改了任一指定 `viking://` URI 的提交；USER/ADMIN 必須顯式傳入。本地 ROOT 模式可省略以查詢全域歷史。最多接受 32 條路徑，每條 account-relative 路徑最多包含 64 個層級。HTTP 介面通過重複 `paths` 查詢引數傳入多個 URI |
 
-過濾發生在限制返回數量之前，因此 `limit=10` 和 `paths=[X]` 表示最多返回 10 條與 X 有關的提交，而不是先取最近 10 條提交再過濾。
+對於 `paths` 中的每個 URI，服務端比較當前提交樹和 `parents[0]` 提交樹中該精確路徑的條目。合併提交也只與首個父提交比較。沒有父提交時與空樹比較。
+
+路徑過濾和提交去重發生在 `offset`、`limit` 之前。
+`paths=[X]`、`offset=10`、`limit=10` 表示返回與 X 有關的第 11–20 條提交。
+無關提交不計入 `offset`，同時命中多條路徑的提交只計一次。
+遍歷到歷史末尾後，`offset` 超過匹配提交數量時返回空列表。
 
 當傳入 `paths` 時，服務端可使用 `ov.conf` 中的 `git.snapshot.log`
-路徑歷史索引。該索引從快照提交派生，不改變本 API 的請求或響應格式。
+路徑歷史索引。該索引從快照提交派生，不改變響應格式：
 
-為限制儲存開銷，過濾請求最多檢查 1,000 條提交。如果尚未收集到請求數量的匹配結果，並且仍存在未檢查的更早歷史，介面將返回 `INVALID_ARGUMENT` 錯誤，而不是返回不完整的歷史列表。非過濾請求不受該掃描預算限制，因為每檢查一條提交都會推進返回數量限制。
+- 索引已追平 HEAD：直接查詢匹配的提交。
+- 索引落後於 HEAD：掃描較新的提交，再與索引歷史合併。這段尾部掃描沒有 1,000 條上限。
+- 沒有可用索引：舊版過濾掃描仍最多檢查 1,000 條候選提交。無關提交和被 `offset` 跳過的匹配提交都計入掃描預算。
+- 舊版掃描尚未湊齊請求頁，且仍有未檢查的更早歷史時，返回 `INVALID_ARGUMENT`，不返回部分結果。
+
+不傳 `paths` 時，查詢不受上述 1,000 條掃描限制。
+
+每頁 10 條時，第一頁省略 `offset`，下一頁使用 `offset=10`，示例如下。
+每次請求都從當前分支 HEAD 開始，兩次請求之間新增提交可能使頁邊界移動。
 
 **Python SDK (HTTP)**
 
 ```python
 history = client.snapshot.log(
     limit=10,
+    offset=10,
     paths=["viking://resources/a.md", "viking://resources/docs"],
 )
 for commit in history:
@@ -170,23 +185,24 @@ for commit in history:
 
 ```typescript
 console.log(
-  await client.gitLog("main", 20, [
+  await client.gitLog("main", 10, [
     "viking://resources/a.md",
     "viking://resources/docs",
-  ]),
+  ], 10),
 );
 ```
 
 **HTTP API**
 
 ```
-GET /api/v1/snapshot/log?branch={branch}&limit={limit}&paths={uri1}&paths={uri2}
+GET /api/v1/snapshot/log?branch={branch}&limit={limit}&offset={offset}&paths={uri1}&paths={uri2}
 ```
 
 ```bash
 curl --get "http://localhost:1933/api/v1/snapshot/log" \
   --data-urlencode "branch=main" \
   --data-urlencode "limit=10" \
+  --data-urlencode "offset=10" \
   --data-urlencode "paths=viking://resources/a.md" \
   --data-urlencode "paths=viking://resources/docs" \
   -H "X-API-Key: your-key"
@@ -195,7 +211,7 @@ curl --get "http://localhost:1933/api/v1/snapshot/log" \
 **CLI**
 
 ```bash
-ov snapshot log --limit 10 \
+ov snapshot log --limit 10 --offset 10 \
   --paths viking://resources/a.md,viking://resources/docs \
   -o json
 ```
@@ -280,10 +296,16 @@ curl -X GET "http://localhost:1933/api/v1/snapshot/show?target_ref=3f2a1b9c&path
   -H "X-API-Key: your-key"
 ```
 
-不帶 `path` 時返回提交後設資料 JSON；帶 `path` 時返回原始位元組流（`Content-Type: application/octet-stream`），並附帶兩個響應頭：
+不帶 `path` 時返回提交後設資料 JSON；帶 `path` 時返回原始位元組流（`Content-Type: application/octet-stream`），並附帶以下響應頭：
 
 - `X-Snapshot-Oid`：blob 物件的 OID
-- `X-Snapshot-Size`：blob 位元組數
+- `X-Snapshot-Size`：返回的正文位元組數
+- `X-Snapshot-Commit-Oid`：`target_ref` 解析得到的完整 commit OID，與 blob OID 不同
+- `X-Snapshot-Time-Seconds`：該 commit 的 `committer.time_seconds`，整數 Unix 秒時間戳
+
+時間戳表示請求的快照提交時間，不是檔案最後修改時間或 run 完成時間。分支和標籤只解析一次，確保正文與 commit 響應頭對應同一快照。`raw=false` 時也返回 commit 響應頭，去除記憶欄位僅影響正文及其位元組數。
+
+如果提交樹中沒有請求的檔案路徑，服務端返回 HTTP 404，並設定 `error.code: "NOT_FOUND"`、`error.details.type: "git_blob"` 和 `error.details.reason: "path_not_found"`。如果首個父提交（`parents[0]`）中同一精確路徑存在檔案，布林欄位 `error.details.deleted_file` 為 `true`。如果首個父提交中的該路徑是目錄或沒有條目，或當前提交沒有父提交，該欄位為 `false`。請求的檔案在底層儲存中缺少物件時，不會返回 `path_not_found`。閘道器可通過透傳錯誤詳情保留這些區別。
 
 **CLI**
 
@@ -585,19 +607,36 @@ ov snapshot restore 3f2a1b9c viking://resources/my_project -m "restore to v1" -o
 
 ---
 
-### 單檔案版本恢復（HTTP API）
+### 單檔案版本恢復
 
-`POST /api/v1/snapshot/restore` 也支援恢復 Compile 產物檔案的歷史內容。該模式使用以下三個必填欄位，不與 `project_dir`、`source_commit` 混用：
+`POST /api/v1/snapshot/restore` 可恢復任意有許可權檔案路徑的歷史內容，不要求 Compile 配置或產物歸屬。該模式接受以下欄位，不與 `project_dir`、`source_commit` 混用：
 
 | 引數 | 型別 | 說明 |
 |------|------|------|
-| path | str | Compile 產物檔案的 `viking://` URI，也是歷史快照中的讀取路徑 |
-| restore_commit_id | str | 提供恢復內容的完整 commit ID（40 位小寫十六進位制） |
-| current_commit_id | str | 呼叫方觀察到的該檔案在 `main` 上最後一次變更的完整 commit ID；不匹配時返回 `409 CONFLICT`，`error.details.resource` 為 `VERSION_CONFLICT` |
+| path | str | 檔案 URI，同時用作歷史快照中的讀取路徑 |
+| restore_commit_id | str | 來源 commit ID，40 位小寫十六進位制 |
+| current_commit_id | str | 可選。省略時直接恢復；傳入時須匹配該檔案在 `main` 上最後一次變更的 commit ID，否則返回 `409 CONFLICT`，resource 為 `VERSION_CONFLICT` |
+| dry_run | bool | 可選；僅校驗，不修改內容或建立快照 |
 
-`GET /api/v1/snapshot/versions?uri=<檔案 URI>` 用於查詢版本歷史。每條版本記錄包含 `version_id`（完整 UUID4 十六進位制字串）和正整數 `version_number`。客戶端在分頁時原樣傳遞版本 ID，使用 `version_number` 展示 `v1`、`v2` 等編號。版本列表按從新到舊的順序返回。編號在檔案的一輪生命週期內遞增，跨分頁和歷史清理保持不變。新版本索引從 1 開始編號；檔案刪除重建後版本 ID 不復用，舊版本 UUID 不會匹配重建檔案。
+```bash
+ov snapshot restore <restore_commit_id> --file viking://resources/wiki/entity/project.md
+ov snapshot restore <restore_commit_id> --file viking://resources/wiki/entity/project.md --current-commit-id <current_commit_id>
+```
 
-響應中的 `to` 是檔案所屬的 Compile 目標目錄，可與版本記錄的 `meta.operation_id` 一起用於查詢操作詳情。`total` 表示當前保留的可查詢版本總數，不受 `limit`、`before_version` 影響，不等於最新版本編號。將 `next_before_version` 原樣作為 `before_version` 傳入可繼續載入更舊版本。該遊標和 `current_version` 都使用 UUID ID；不要根據 ID 或頁面內位置排序或推算展示編號。
+`GET /api/v1/snapshot/versions?uri=<檔案 URI>&limit=20` 返回原生 Git 歷史，從新到舊排列：
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "uri": "viking://resources/wiki/entity/project.md",
+    "versions": [{"oid": "54c71fb7bf134b71a9b7ed604c21f5b412345678", "message": "content write"}],
+    "next_before_snapshot": null
+  }
+}
+```
+
+每項是包含 `oid` 的原生 commit 元資訊，不維護額外版本索引、UUID 或版本編號。`limit` 為 1–100，預設 20；將 `next_before_snapshot` 作為 `before_snapshot` 原樣傳入，從該 commit 之後繼續翻頁，null 表示結束。歷史與 Compile 配置及 run 無關。
 
 ```bash
 curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
@@ -610,9 +649,10 @@ curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
   }'
 ```
 
-例如，當前為第 2 版且第 1 版內容不同時，恢復第 1 版會生成第 3 版，並保留前兩版的歷史。響應包含新的 UUID `version_id`、`version_number: 3`，`meta.restored_from` 為來源 commit ID。內容相同時返回當前 ID 和編號，以及 `result: "noop"`、`meta.restored_from: null`，不新增版本，也不遞增編號。
+響應包含 `uri`、`snapshot_id` 和 `result`（`created`、`noop` 或 `dry_run`）。內容變化會生成新的 forward snapshot，並執行正常索引維護；內容相同時可返回已有快照和 `noop`。dry run 不寫內容、不建立快照。省略 `current_commit_id` 時，dry run 返回的 `snapshot_id` 為 null。
 
-恢復先校驗該檔案最新變更的 commit，再讀取歷史 commit 中的同一路徑，並在寫入鎖內再次校驗。`current_commit_id` 過期時返回 `409 VERSION_CONFLICT`；當前 commit 匹配但歷史 commit 或路徑不存在時返回 `404`。不自動追蹤重新命名或移動前的路徑。
+傳入 `current_commit_id` 時，恢復前校驗檔案最新 commit，在內容寫鎖內再次校驗。存在未提交編輯時也返回 `409`；省略 `current_commit_id` 可直接恢復。過期請求返回 `409`，缺失歷史或路徑返回 `404`。保留 ACL 和索引維護，按同一路徑恢復，不自動追蹤重新命名。檔案及目錄回滾都不寫 Compile state/run；目錄回滾已經產生 forward commit，不額外重複提交。
+
 ---
 
 ## ignore 管理

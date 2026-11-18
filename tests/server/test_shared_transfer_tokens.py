@@ -138,7 +138,7 @@ async def test_lifespan_closes_client_without_deleting_peer_tokens(monkeypatch):
         open_viking_config,
         "get_openviking_config",
         lambda: SimpleNamespace(
-            cache=SimpleNamespace(provider="redis", params={}),
+            cache=SimpleNamespace(instance=lambda name="default": SimpleNamespace(provider="redis", params={})),
             service_name="test",
         ),
     )
@@ -161,7 +161,7 @@ async def test_lifespan_rejects_redis_tokens_without_shared_cache(monkeypatch):
             cache=None,
         ),
     )
-    with pytest.raises(ValueError, match="requires cache.provider=redis"):
+    with pytest.raises(ValueError, match="requires the default cache"):
         async with transfer_token_lifespan(ServerConfig(transfer_tokens={"provider": "redis"})):
             pytest.fail("startup must fail")
 

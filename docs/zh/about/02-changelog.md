@@ -19,17 +19,18 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
     或共享 Redis 的多副本部署。在包含這些功能的版本釋出之前，需要顯式設定 `image.tag`，
     見[運維指南](../guides/22-gateway-operations.md#helm)。
   - 新增可選設定：`storage`（Redis）、`management_api`、`openviking_keys`、`tenancy`、
-    `default_upstreams` 和 `default_profile`、`request_log_sink`、`capture_concurrency` 以及 `keep_alive_seconds`。
+    `default_upstreams` 和 `default_profile`、`request_log_sink` 以及 `keep_alive_seconds`。
     預設儲存仍是 SQLite。
   - 新增 `X-OpenViking-Upstream-URL` 請求頭，按 Base URL 從允許的上游中選擇一個，
     見[按請求指定上游](../gateway/07-upstreams.md#upstream-url-header)。
   - `session_ttl_seconds`（不低於 3600）取代 `session_ttl_days`，對話可以在一天內過期；
     舊欄位會被忽略並在啟動時列印警告，升級時請改用新欄位。
+  - `session_ttl_seconds` 的預設值從 30 天改為 1 天（`86400`），Helm chart 不再把它設為 7 天（升級需操作）。閒置超過這個時長的對話會丟失閘道器狀態：再繼續時，之前補充的記憶、工具結果和摘要不會放回，完整歷史會重新儲存到一個新的 OpenViking 會話。需要更長的保留時間時，設定 `session_ttl_seconds`。
   - 無需修改配置的行為變化：獨立閘道器 keep-alive 從 5 秒提高到 75 秒；
     繫結公網地址的閘道器在啟動時遇到 OpenViking 不可達或返回 5xx 會等待並重試；
     空閒 SSE 流每 15 秒傳送一條註釋心跳；OpenViking 以 402 或 403 拒絕金鑰的請求會被拒絕，
-    不再轉發；儲存時收到 OpenViking 401、且 `/health` 也返回 401 時，會以 `gateway_key_revoked`
-    暫停儲存。
+    不再轉發。
+  - 對話儲存（升級需操作）：結束一輪的請求在回覆後立即把這一輪寫入 OpenViking，不再等下一條訊息或 10 分鐘；工具交接不儲存，結束這一輪的請求儲存整輪。重新生成、編輯或壓縮過的歷史繼續寫入同一個 OpenViking 會話，從這一輪的使用者訊息開始，新舊版本都會保留，只有重新同步對話會換新會話。閘道器不再儲存待寫入的對話文本，也不重試寫入：寫入失敗時，請求記錄的 `capture_status` 為 `failed` 並帶 `capture_reason`，下一輪結束時補上缺的內容，沒有下一輪時這一輪不會儲存。儲存狀態 `retrying`、`paused`、`lost`、`capture_retry_at` 和 `kind: capture` 記錄不再出現，儲存了一輪的請求記錄新增 `capture_messages` 和 `openviking_session`；概覽的 `capture_issues` 改為 `{"failed": n}`，狀態行的 `capture` 只含 `delivered` 和 `failed`。提交預設仍由閘道器進行：一輪結束時待提交內容達到 `commit_tokens` 就提交（保留最近 `keep_recent_messages` 條訊息），最後一輪結束 `idle_seconds` 後提交剩下的全部訊息；這段等待的到期時間記在閘道器儲存裡，儲存這一輪的閘道器程序重啟或被替換後，由任一閘道器程序在到期後一兩分鐘內補上。新增 `openviking_auto_commit`，開啟後改由 OpenViking 的會話自動提交，空閒提交需要 Server 開啟 `memory.session_auto_commit.enabled`，見[儲存對話](../gateway/08-context-profiles.md#save-conversations)。`capture_concurrency` 和 `capture_delivery_records` 已刪除，配置中仍有時會被忽略並在啟動時列印警告。升級的影響：升級時已排隊、尚未寫入的最後一輪，由這段對話的下一輪結束時寫入，不在後臺寫入；共享儲存滾動升級期間，新副本處理過的對話再由舊版本副本處理時，不帶記憶轉發，直到舊副本被替換；回退到之前的版本需要使用新的閘道器儲存。
   - 上下文配置現在預設勾選全部 OpenViking 工具，包括 `forget`、`set_acl` 等會修改資料的工具；之前的版本預設不勾選其中 8 個。已儲存的配置和進行中的對話保持原來的工具。沒有儲存 `default` 配置的帳號，以及省略 `disabled_tools` 的管理 API 請求，現在會得到全部工具；要保留原來的勾選，請設定 `default_profile.disabled_tools` 或儲存一份 `default` 配置。
   - `X-OpenViking-Context` 只能收窄工具許可權：`disabled_tools` 會追加到配置的排除列表上，`gateway_tools` 不能重新開啟工具。之前靠傳送 `{"disabled_tools":[]}` 或 `{"gateway_tools":true}` 拿到配置不提供的工具的客戶端，升級後不再拿到；請改為修改配置。
 - **火山引擎 KMS `key_file`（升級需操作）**：`encryption.volcengine_kms.key_file` 現在對服務端和閘道器

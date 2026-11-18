@@ -1,3 +1,4 @@
+import { useTrack } from '../../shared/analytics/use-track.js';
 import { useRenderErrors } from './file-preview-labels.js';
 import { ErrorBoundary } from '../../shared/error-boundary/error-boundary.js';
 import { FilePreviewCommandProvider } from './file-preview-command-state.js';
@@ -20,7 +21,6 @@ import { useFilePreviewEditing } from './use-file-preview-editing.js';
 import type {
   FilePreviewComponent,
   FilePreviewContentTab,
-  FilePreviewDirectoryTab,
   FilePreviewHandle,
   FilePreviewProps,
 } from './types.js';
@@ -53,6 +53,7 @@ export const FilePreviewContent: FilePreviewComponent = forwardRef<
   },
   ref,
 ) {
+  const track = useTrack();
   const locale = useLocale(localeProp);
   const text = resolveFilePreviewLabels(locale, labels);
   const [internalKey, setInternalKey] = useState(
@@ -91,8 +92,7 @@ export const FilePreviewContent: FilePreviewComponent = forwardRef<
 
   const tabText = mergeLabels<typeof text>(text, activeTab.labels);
   const fileTab = activeTab.kind === 'file' ? activeTab : undefined;
-  const directoryTab: FilePreviewDirectoryTab | undefined =
-    activeTab.kind === 'directory' ? activeTab : undefined;
+  const directoryTab = activeTab.kind === 'directory' ? activeTab : undefined;
   const contentTab: FilePreviewContentTab | undefined =
     fileTab || directoryTab ? undefined : (activeTab as FilePreviewContentTab);
   // 文件页签恒显示 URI 行——路径、复制、视图切换与编辑都在那一行。
@@ -124,11 +124,13 @@ export const FilePreviewContent: FilePreviewComponent = forwardRef<
         setViewModes([]);
         viewerHandle.current = null;
       }
+      track('file_preview_tab_change');
       if (activeKey === undefined) setInternalKey(key);
       onActiveKeyChange?.(key);
       return true;
     },
     [
+      track,
       activeKey,
       activeTab,
       currentKey,
@@ -208,9 +210,9 @@ export const FilePreviewContent: FilePreviewComponent = forwardRef<
         tabs={tabs}
         activeKey={activeTab.key}
         disabled={editing.saving}
+        editing={editing.loadingEdit || editing.editing || editing.editFailed}
         tabId={tabId}
         panelId={panelId}
-
         onSelect={(key) => void switchTab(key)}
       />
       <ErrorBoundary
@@ -218,7 +220,11 @@ export const FilePreviewContent: FilePreviewComponent = forwardRef<
         locale={locale}
         resetKeys={[identity]}
       >
-        <FilePreviewCommandProvider tab={selectedTab}>
+        <FilePreviewCommandProvider
+          tab={selectedTab}
+          locale={locale}
+          text={tabText}
+        >
           <FilePreviewPanels
             toolbar={toolbar}
             contentTab={contentTab}

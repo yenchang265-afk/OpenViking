@@ -864,6 +864,91 @@ curl -X DELETE http://localhost:1933/api/v1/uploads/9f1c2e7a \
 }
 ```
 
+### 共享資源操作
+
+這些 HTTP 介面將對應的[檔案系統操作](03-filesystem.md)限制在 `viking://resources/` 的子路徑中。共享根目錄本身、其他名稱空間以及包含 `.` 或 `..` 路徑段的 URI 均被拒絕。複製和移動會同時校驗源路徑與目標路徑，並執行身份認證和檔案系統 ACL 檢查。
+
+### 複製共享資源
+
+複製檔案或目錄及其向量記錄。覆蓋、合併和回滾行為與檔案系統的複製操作一致。
+
+**HTTP**
+
+```http
+POST /api/v1/resources/cp
+```
+
+| 請求體引數 | 型別 | 必填 | 預設值 | 說明 |
+|------------|------|------|--------|------|
+| `from_uri` | string | 是 | - | 源共享資源 URI |
+| `to_uri` | string | 是 | - | 目標共享資源 URI |
+| `recursive` | boolean | 否 | `false` | 複製目錄時必須為 true |
+
+```bash
+curl -X POST http://localhost:1933/api/v1/resources/cp \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  --data '{"from_uri":"viking://resources/guide.md","to_uri":"viking://resources/guide-copy.md","recursive":false}'
+```
+
+成功響應的 `status` 為 `"ok"`，`result` 包含 `from`、`to` 和
+`recursive`。
+
+### 移動或重新命名共享資源
+
+在共享資源子樹內移動資源。源 URI 和目標 URI 都必須位於
+`viking://resources/` 子樹下，名稱空間限制與複製介面一致。
+
+**HTTP**
+
+```http
+POST /api/v1/resources/mv
+```
+
+| 請求體引數 | 型別 | 必填 | 說明 |
+|------------|------|------|------|
+| `from_uri` | string | 是 | 源共享資源 URI |
+| `to_uri` | string | 是 | 目標共享資源 URI |
+
+```bash
+curl -X POST http://localhost:1933/api/v1/resources/mv \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  --data '{"from_uri":"viking://resources/guide-copy.md","to_uri":"viking://resources/guide-renamed.md"}'
+```
+
+成功響應的 `status` 為 `"ok"`，`result` 包含 `from` 和 `to`。
+
+### 刪除共享資源
+
+刪除 `viking://resources/` 下的資源。此操作要求 MANAGE 許可權，
+會刪除關聯向量記錄、重新整理父目錄語義後設資料，並同步受影響的 Watch。
+
+**HTTP**
+
+```http
+DELETE /api/v1/resources?uri={uri}
+```
+
+| 查詢引數 | 型別 | 必填 | 預設值 | 說明 |
+|----------|------|------|--------|------|
+| `uri` | string | 是 | - | 要刪除的共享資源 URI；不允許刪除共享資源根 |
+| `recursive` | boolean | 否 | `false` | 遞迴刪除目錄 |
+| `wait` | boolean | 否 | `true` | 等待語義清理和重新整理完成 |
+
+```bash
+curl -X DELETE "http://localhost:1933/api/v1/resources" \
+  -H "X-API-Key: your-key" \
+  --get \
+  --data-urlencode "uri=viking://resources/guide-renamed.md" \
+  --data-urlencode "recursive=false" \
+  --data-urlencode "wait=true"
+```
+
+成功響應的 `result` 包含被刪除的 `uri`。設定 `wait=false` 時，
+語義處理非同步執行；響應中若包含 `task_id`，可通過
+[Task API](17-tasks.md) 跟蹤完成狀態。
+
 ---
 
 ## 相關文件

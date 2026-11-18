@@ -1,162 +1,229 @@
 # Agent Runtime API
 
-應用通過 OpenViking 的 Compile API 提交 Compile 任務。OpenViking 校驗請求，把任務持久化為佇列工作，並在伺服器程序內執行，因此中斷的任務會在重啟後恢復。
+OpenViking 管理 Compile 配置、執行任務、快照和恢復。它把任務持久化為佇列工作，並在伺服器程序內執行，因此中斷的任務會在重啟後恢復。
 
 **程式碼入口**：
 
-- `openviking/server/routers/compile.py` - 建立 Compile 任務
+- `openviking/server/routers/compile.py` - Compile 配置與執行
 - `openviking/server/routers/tasks.py` - 查詢和取消任務
 - `openviking/service/compile_service.py` - 請求校驗與任務執行
 - `openviking/service/external_task_service.py` - 基於持久佇列的任務生命週期
 - `openviking/compile/` - Skill 流水線（plan、map、shuffle、reduce、finalize）
 
-## Compile 任務介面
+## Compile 配置與執行
 
-### 建立任務
+`compile_name` 由呼叫者提供，標識持久配置及其成功增量基線。名稱由漢字、ASCII 字母、數字、下劃線或連字元組成，純 ASCII 名稱最多 64 個字元，含漢字的名稱總長最多 32 個字元，首字元不能是連字元，區分大小寫，在同一 account 的同一使用者內唯一；不同使用者或不同 account 可以使用相同名稱。空白字元直接拒絕，不會自動去除。`task_id` 標識一次已受理的執行，使用 `cmp_` 字首。同一個配置可以多次執行；多個配置可以指向同一個 `to`，各自維護獨立基線和歷史。
 
-| 欄位 | 型別 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| `from` | string[] | 是 | - | 一個或多個來源目錄 |
-| `to` | string | 是 | - | 目標 Resource 目錄或受支援的 Skill namespace；Memory 目錄請使用 `--skill memory` |
-| `skill` | string | 是 | - | Skill 目錄或其 `SKILL.md` URI |
-| `instruction` | string | 否 | Skill 驅動的預設值 | 本次 Compile 的補充指令 |
-| `args` | object | 否 | - | 可選的 `last_compile_time`、`wiki_links` 與排程控制欄位（見下表） |
+普通 Compile 在建立或更新配置、手動或定時提交新執行時，統一校驗規範化後的目錄 URI：
 
-`args` 只接受以下鍵，其他鍵返回 `400 INVALID_ARGUMENT`：
+- 每個 `from` 都不能與 `to` 相同，也不能互為祖先或後代。
+- `to` 的任何嚴格祖先或後代目錄帶有 `compile_target=true` 時拒絕請求；`to` 自身已有該 tag 時允許複用。
+- `to` 不能是 `viking://user/{user_id}/memories/experiences` 或其任意層級子目錄。`~/` 別名和末尾斜槓不能繞過限制；`experiences2` 等相似名稱不被這條規則拒絕。
 
-| 鍵 | 型別 | 說明 |
-|----|------|------|
-| `last_compile_time` | ISO 8601 時間或 Unix 秒 | 增量編譯：只處理在此時間點及之後修改的來源檔案；沒有更新的檔案時，任務不呼叫模型也不寫入，直接完成 |
-| `wiki_links` | boolean | 按實際 Markdown 路徑重建 resource 的 `index.md` |
-| `auto_update` | boolean | 排程控制：儲存目標配置並註冊或移除排程更新，不立即編譯 |
-| `update_schedule` | object | 排程控制：自動更新排程（格式見[目標配置與操作歷史](#目標配置與操作歷史)） |
+建立時先取得按帳號隔離的 Compile 專用虛擬樹鎖，再檢查可見索引標籤。補標期間，嚴格父子目標拒絕建立；相同目標共享獨立持有憑證，執行仍按現有流程序列處理。鎖競爭最多等待 1 秒，不等待 Compile 或索引完成。鎖不覆蓋真實產物路徑，由現有補標佇列接管，直到 tag 可查詢或目標路徑消失。服務中斷期間租約可能過期，恢復前仍可能出現受理空窗；租約不提供永久佔位。索引檢查遵循當前請求的租戶和許可權範圍。不傳 `from` 的獨立 `skill="memory"` 就地整理模式不應用這些目錄約束或目標打標流程。
 
-Compile 使用帳號配置的 `vlm` 模型。排程控制欄位 `auto_update` 和 `update_schedule` 由 OpenViking 處理。Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時需 `await compile()`。
+### 建立配置
 
-**HTTP API**
+```http
+POST /api/v1/compile/create
+```
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| `compile_name` | string | 是 | 呼叫者指定的配置名稱，原樣返回 |
+| `from` | string[] | 是 | 非空來源目錄列表 |
+| `to` | string | 是 | 呼叫者可寫、與來源不重疊的輸出目錄 |
+| `skill` | string | 是 | 可讀的 Skill 目錄或其 `SKILL.md` URI |
+| `instruction` | string | 否 | 補充指令；null 使用 Skill 預設行為 |
+| `args` | object | 否 | 可選 `wiki_links`、`owner_user_id` 和 `auto_update` / `update_schedule` 控制；其他鍵返回 `400 INVALID_ARGUMENT` |
+
+```bash
+curl -X POST http://localhost:1933/api/v1/compile/create \
+  -H 'Content-Type: application/json' -H 'X-API-Key: your-key' \
+  -d '{
+    "compile_name": "research-summary",
+    "from": ["viking://resources/research"],
+    "to": "viking://resources/research-wiki",
+    "skill": "viking://agent/skills/llm-wiki",
+    "instruction": "整理成保留證據引用的中文知識庫。",
+    "args": {
+      "auto_update": true,
+      "update_schedule": {"frequency": "daily", "hour": 10, "minute": 0}
+    }
+  }'
+```
+
+返回 `200 OK`：
+
+```json
+{"status":"ok","result":{"compile_name":"research-summary"}}
+```
+
+缺少 `compile_name` 或名稱非法時直接報錯，服務端不會生成備用名稱。同一 account 的同一使用者重名建立（包括併發建立）返回衝突，不覆蓋配置或增量基線；不同使用者可以建立同名配置。配置名稱不支援修改。
+
+`args.owner_user_id` 可選，用於選擇當前 account 內的配置歸屬使用者，省略時使用當前認證使用者。建立、更新和按名稱執行統一使用該引數；它只決定配置歸屬或定位，不改變執行身份、不授予資料訪問許可權，也不進入儲存的 Runtime 引數。`args.owner_id` 不再用於選擇配置歸屬使用者。
+
+建立介面同步校驗輸入、許可權及可見的目錄標籤，必要時建立 `to`，並持久入隊獨立的內部補標 Task；不等待目錄索引、embedding 或 tag 可見性。`to` 是檔案或內部任務未能持久入隊時返回錯誤。QueueFS 消費者負責根目錄索引和 `compile_target=true` 補齊，失敗後重試，不遞迴標記子目錄，並保留已有內容、摘要和其他 tag。目標路徑不存在時停止該路徑的補標，不重建目錄。建立配置本身不執行 Compile、不建立 run、不拍來源快照。
+
+排程控制與 Runtime 引數分開儲存。非空計劃預設開啟自動更新，除非顯式指定 `auto_update=false`。計劃必填 `frequency`（`daily` 或 `weekly`），使用北京時間（`Asia/Shanghai`）。
+
+只傳頻率時，服務端在 00:00–03:59 中為計劃分配固定時間。每週計劃省略 `weekday` 時也會分配固定執行日（1 為週一，7 為週日）。只傳 `hour`（0–23）時，在該小時內分配固定分鐘，例如 `hour: 10` 對應 10:00–10:59。只傳 `minute`（0–59）時，小時取 0。查詢配置的 `update_schedule` 可檢視分配結果。
+
+定時執行要求開啟 `compile_api.scheduler_enabled=true` 並配置 Redis expiry 服務。憑據加密儲存，每次觸發時重新驗證憑據及當前使用者組許可權。排程未啟用或不可用時返回錯誤，不會退化為立即執行。停用計劃後 `next_triggered_slot` 為 null。
+
+### 執行編譯
 
 ```http
 POST /api/v1/compile
 ```
 
-```bash
-curl -X POST http://localhost:1933/api/v1/compile \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key" \
-  -H "Idempotency-Key: studio-compile-001" \
-  -d '{
-    "from": ["viking://resources/research"],
-    "to": "viking://resources/research-wiki",
-    "skill": "viking://user/default/skills/research-compiler",
-    "instruction": "追蹤歷史進展，並保留支撐證據。",
-    "args": {"wiki_links": true}
-  }'
-```
+只接受以下兩種互斥請求：
 
-未傳排程控制欄位時，介面立即將 Compile 任務入隊，並返回 `202 Accepted` 和 OV TaskRecord：
+```json
+{"compile_name":"research-summary"}
+```
 
 ```json
 {
-  "status": "ok",
-  "result": {
-    "task_id": "cmp_01abc",
-    "task_type": "compile",
-    "status": "pending",
-    "stage": "queued",
-    "resource_id": "viking://resources/research"
+  "from":["viking://resources/research"],
+  "to":"viking://resources/research-wiki",
+  "skill":"viking://agent/skills/llm-wiki",
+  "instruction":"整理成保留證據引用的中文知識庫。",
+  "args":{}
+}
+```
+
+執行 Compile 時傳入 `compile_name`，會複用該配置中已儲存的 `from`、`to`、`skill` 和 `instruction`。
+
+直接提交 `from`、`to` 和 Skill URI 的寫法已棄用。受理時，`Deprecation` 和 `Link` 響應頭提供棄用日期和遷移指南。請先將這些輸入連同 `compile_name` 提交到 `POST /api/v1/compile/create`，再向 `POST /api/v1/compile` 僅提交 `compile_name`。
+
+傳完整輸入時始終執行一次性全量編譯，即使同一輸出目錄已有持久配置，也不查詢、複用或更新配置。不讀寫 compile 配置和 run 檔案、不拍來源快照；目標開始/結束快照、取消和失敗恢復仍然執行。`skill="memory"` 保留不傳 `from` 的獨立就地整理行為，不支援通過建立介面儲存配置或開啟定時執行。
+
+兩種普通執行形式都先完成目標校驗、必要的目錄建立及獨立補標任務持久入隊，再提交 Compile 執行任務。後臺索引或 tag 延遲不阻塞 Compile 提交、產物寫入或收尾，也不使 Compile 因補標失敗而失敗。受理成功不代表 tag 已可查詢，補標期間由上述虛擬樹鎖保護目標。Compile 的顯式開始/結束快照、產物 `snapshot_id`、Outputs 和回滾流程保持原有語義。該 tag 是目錄檢索標記，任務完成、失敗或取消不會自動移除它。
+
+執行介面拒絕排程控制。`args.mode`、`last_compile_time`、`changes` 和 `operation_id` 不是公開執行引數；執行計劃由 OpenViking 生成。
+
+每次成功受理均返回 `202 Accepted` 和通用 TaskRecord：
+
+```json
+{
+  "status":"ok",
+  "result":{
+    "task_id":"cmp_0123456789abcdef",
+    "task_type":"compile",
+    "status":"pending",
+    "stage":"queued",
+    "resource_id":"viking://resources/research-wiki"
   }
 }
 ```
 
-當 `args` 顯式包含 `auto_update` 或 `update_schedule` 時，請求只儲存目標配置並註冊或移除排程。介面返回 `200 OK`，結果包含已儲存配置和 `next_run_at`，不包含 `task_id`；到下一計劃時間才建立並執行 Compile 任務。例如：
+執行重試可使用 `Idempotency-Key`；查詢和取消使用 `/api/v1/tasks/{task_id}`。手動執行使用當前呼叫者的許可權和連線，不借用儲存的排程憑據。
 
-```json
-{
-  "from": ["viking://resources/research"],
-  "to": "viking://resources/research-wiki",
-  "skill": "viking://user/default/skills/research-compiler",
-  "args": {
-    "auto_update": true,
-    "update_schedule": {"frequency": "daily", "hour": 0, "minute": 0}
-  }
-}
-```
+源目錄被刪除或移動後，新執行在建立任務前返回 HTTP `404` / `NOT_FOUND`。錯誤標明缺失的 Viking URI，`details.type="compile source directory"`，並提示修改配置中的源目錄後重試；許可權錯誤保持獨立。使用相同 `Idempotency-Key` 恢復已有提交時，不重新校驗源目錄。
 
-傳入非空 `update_schedule` 時會開啟自動更新，除非顯式指定 `auto_update=false`。關閉後返回 `next_run_at: null`。不傳這兩個排程控制欄位時仍立即編譯，即使目標已有定時策略。計劃按 `to` 更新，不會建立供 `GET /api/v1/compile/submissions/{key}` 查詢的任務提交記錄。
-
-**CLI**
+### CLI 與 SDK
 
 ```bash
-ov compile \
-  --from viking://resources/research \
-  --to viking://resources/research-wiki \
-  --skill viking://user/default/skills/research-compiler \
-  --instruction "追蹤歷史進展，並保留支撐證據。" \
-  --args '{"wiki_links":true}'
+ov compile create --compile-name research-summary --from viking://resources/research \
+  --to viking://resources/research-wiki --skill viking://agent/skills/llm-wiki \
+  --args '{"auto_update":true,"update_schedule":{"frequency":"daily","hour":10}}'
+ov compile --compile-name research-summary
 ```
 
-`--args` 必須是 JSON object。立即編譯返回 Task ID；儲存計劃返回下次執行時間。
-
-**SDK**
-
-Python、TypeScript 和 Go SDK 都通過各自的 Compile options 傳遞 `instruction` 和 `args`：
+`--args` 是 JSON 物件。建立必須傳入 `--compile-name` 並返回該配置名稱；兩種執行方式都返回任務 ID。
 
 ::: code-group
 
 ```python [Python]
-task = client.compile(
+created = client.create_compile_task(
     ["viking://resources/research"],
     "viking://resources/research-wiki",
-    "viking://user/default/skills/research-compiler",
-    {"args": {"wiki_links": True}},
+    "viking://agent/skills/llm-wiki",
+    compile_name="research-summary",
 )
+task = client.compile(compile_name=created["compile_name"])
 ```
 
 ```ts [TypeScript]
-const task = await client.compile(
-  ["viking://resources/research"],
-  "viking://resources/research-wiki",
-  "viking://user/default/skills/research-compiler",
-  { args: { wiki_links: true } },
-);
+const created = await client.createCompileTask({
+  compile_name: "research-summary",
+  from: ["viking://resources/research"],
+  to: "viking://resources/research-wiki",
+  skill: "viking://agent/skills/llm-wiki",
+});
+const task = await client.compile({ compile_name: created.compile_name });
 ```
 
 ```go [Go]
-task, err := client.Compile(
-    ctx,
-    []string{"viking://resources/research"},
-    "viking://resources/research-wiki",
-    "viking://user/default/skills/research-compiler",
-    &openviking.CompileOptions{
-        Args: map[string]any{"wiki_links": true},
-    },
-)
+created, err := client.CreateCompileTask(ctx, "research-summary", openviking.CompileInput{
+    FromURIs: []string{"viking://resources/research"},
+    To: "viking://resources/research-wiki",
+    Skill: "viking://agent/skills/llm-wiki",
+})
+if err != nil { return err }
+task, err := client.Compile(ctx, openviking.CompileRequest{CompileName: created["compile_name"].(string)})
 ```
 
 :::
 
-### 目標配置與操作歷史
+Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時新增 `await`。
 
-這些介面使用當前帳號和認證上下文。`to` 為已註冊目標的 `viking://` URI。查詢配置、操作歷史、操作詳情或產出需要讀許可權；更新配置需要寫許可權。目標列表僅返回有訪問許可權的目標。
+### 配置與執行歷史
 
-| HTTP API | 說明與返回結果（`status: "ok"`） |
-|----------|--------------------------|
-| `GET /api/v1/compile/config?to={to}` | `result` 包含目標配置和執行狀態 |
-| `POST /api/v1/compile/config/update` | 請求體必填 `to`，指定要更新配置的已註冊編譯產物目錄；`result` 包含更新後的配置和執行狀態 |
-| `GET /api/v1/compile/configs` | 可選查詢引數 `limit`（1–100，預設 20）和 `cursor`；`result.targets` 按 `sha256(to)` 升序返回本頁有讀取許可權的 active 目標摘要，已刪除目標在分頁前排除；`result.next_cursor` 為本頁最後一個目標 URI，原樣作為下一頁的 `cursor`，從其雜湊之後繼續讀取，末頁為 `null` |
-| `GET /api/v1/compile/operations?to={to}` | `result.operations` 按時間倒序返回操作記錄；`result.next_cursor` 用於翻頁 |
-| `GET /api/v1/compile/operations/{operation_id}?to={to}` | `result` 返回單條操作詳情，欄位與操作列表中的記錄一致，包含 `params` 和公開的 `meta`，不包含私有執行檢查點 |
-| `GET /api/v1/compile/operations/{operation_id}/outputs?to={to}` | `result.outputs` 按 URI 排序返回產出檔案及凍結版本引用；`result.next_cursor` 用於翻頁 |
+| HTTP API | 結果 |
+|----------|------|
+| `GET /api/v1/compile/config?compile_name={compile_name}` | 公開配置輸入、排程、建立與執行時間 |
+| `POST /api/v1/compile/config/update` | 按請求體 `compile_name` 替換配置 |
+| `GET /api/v1/compile/configs` | `configs` 和 `next_cursor`；按配置名稱的字典序劃分頁，每頁內部按 `last_run_time` 倒序排列（null 置後） |
+| `GET /api/v1/compile/runs?compile_name={compile_name}` | `runs` 和 `next_cursor`，按 `created_at`、`task_id` 從新到舊排序 |
+| `GET /api/v1/compile/runs/{task_id}?compile_name={compile_name}` | 本次執行凍結的 run |
+| `GET /api/v1/compile/runs/{task_id}/outputs?compile_name={compile_name}` | 由本次快照推導的變更產出，包含 `outputs` 和 `next_cursor` |
 
-更新請求體必填 `to`、`from`（非空來源 URI 陣列）、`skill` 和 `auto_update`（布林值）。`auto_update=true` 時必須提供有效的 `update_schedule`；`auto_update=false` 時可省略或傳 `null`，已儲存的規則會清空，返回值為 `null`。新目標不設定預設規則，關閉後重新開啟需要提供規則。可選 `instruction` 省略時保留已儲存的值，傳 `null` 或空字串時清空。更新配置不提交 Compile 任務。
+執行歷史查詢按當前帳號和使用者限定範圍。runs 目錄不存在時返回空列表；指定 run 不存在時，詳情和產出介面返回 404。
 
-`update_schedule` 必填 `frequency`（`daily` 或 `weekly`）。可選 `hour`（0–23）和 `minute`（0–59）預設均為 0。每週計劃還接受 `weekday`（1 為週一，7 為週日，預設 1）。計劃使用 `Asia/Shanghai` 時區。
+列表接受 `limit`（1–100，預設 20）及可選 `cursor`。原樣傳遞 `next_cursor`；null 表示結束。產出項包含 `uri`、`snapshot_id`、`latest_snapshot_id`、`change_type`。`snapshot_id` 固定為本次 run 的產出快照；`latest_snapshot_id` 為查詢時該檔案最近變更的 commit，無歷史時為 null。最近變更可能是後續刪除，此時讀取該版本正文返回 404。僅查詢本頁產出的檔案歷史，查詢失敗直接報錯。
 
-定時自動更新需要顯式配置 `compile_api.scheduler_enabled=true`（預設 `false`），並提供有效的 `expiry.service_name` 和 `expiry.redis` 配置。`compile_api.scheduler_backend` 僅接受 `redis`（預設值），配置 `local` 無效。定時請求會同步校驗：排程未啟用或缺少配置時返回 HTTP 412（`COMPILE_SCHEDULER_DISABLED`），Redis 註冊不可用時返回 HTTP 503。儲存計劃失敗不會提交 Compile 任務。編譯失敗本身不會取消後續定時執行，包括首次編譯失敗。手動增量編譯和版本管理不依賴 Redis。
+配置更新必填 `compile_name`、`from`、`skill` 和頂層 `auto_update`，可選 `instruction`、`args` 替換已儲存值。`to` 可選，省略或為 null 時沿用該配置已儲存的目標目錄；顯式傳入的 `to` 規範化後必須與已儲存的目標目錄一致，修改目標目錄返回 `400 INVALID_ARGUMENT`，配置保持不變；`from`、`skill` 等其他引數仍可修改。頂層 `update_schedule` 省略或為 null 時保留已儲存的計劃。啟用自動更新需要本次提供或已儲存的計劃；關閉時保留計劃，清除執行憑據和下次觸發時間，並取消排程註冊，是否啟用計劃由 `auto_update` 決定。更新請求的 `args` 不接受排程控制。更新配置保留上次成功執行的 `progress`。執行時比較指令、Skill 及其快照、`model_name`，不一致時全量編譯；已有源目錄計算增量，新增源目錄完整處理。更新同樣校驗目錄約束並持久入隊獨立補標任務，不等待 tag 就緒。配置更新不執行編譯、不重置呼叫時間。
 
-操作列表和產出列表介面均接受可選查詢引數 `limit`（1–100，預設 20）和 `cursor`。翻頁時原樣傳入返回的 `next_cursor`，其為 `null` 時表示最後一頁。
+建立配置時，`state.json` 的頂層欄位 `updated_by` 記錄配置歸屬使用者的 ID。更新時可在請求體頂層傳入字串 `updated_by` 指定記錄的值，省略時記錄當前認證使用者的 ID。
 
-`operation_id` 包含固定寬度的建立時間字首和唯一字尾，操作歷史按該 ID 倒序分頁；遊標對應的記錄被清理後仍可繼續翻頁。Compile 操作通過 `meta.task_id` 關聯執行任務，`operation_id` 與 `task_id` 不同；任務查詢和取消使用 `task_id`，操作詳情和產出查詢使用操作列表返回的 `operation_id`。
+巢狀 `args` 的私有欄位在公開響應中脫敏並加密儲存供執行使用：公開引數不變時保留私有值，修改含私有欄位的巢狀子樹時須重新傳入這些私有欄位，刪除子樹則同時刪除其儲存的私有值。
+
+建立與執行時間使用 Unix 秒。
+
+- `task_first_create_time` 記錄 `POST /api/v1/compile/create` 儲存配置的時間，儲存後保持固定。
+- `last_run_time` 記錄最近一次成功受理的新 task 的 `created_at`。首次受理前為 null。後續失敗或取消不回退，冪等重放不重新整理。
+
+手動與定時提交均更新 `last_run_time`。`last_triggered_slot`、`next_triggered_slot` 僅用於排程，手動執行不推進 slot。
+
+run 凍結儲存 `task_id`、`actor`、`status`、`created_at`、`started_at`、`finished_at`、`params`、`result`、`error`、`meta`。`params` 是本次受理時的完整公開輸入及排程配置；`result` 包含 `created`、`updated`、`deleted` 數量。`meta` 僅包含：
+
+| 欄位 | 含義 |
+|------|------|
+| `trigger` | 配置的第一次受理執行為 `initial`，與觸發來源和執行結果無關；後續執行為 `manual` 或 `scheduled` |
+| `mode` | 實際執行策略：`full` 或 `incremental` |
+| `base_snapshot` | 本次採用的成功源基線；完整重算時為 null |
+| `start_snapshot` | 執行開始時凍結的來源及目標狀態 |
+| `finish_snapshot` | 釋出或回滾完成後保留的目標快照；尚未提交時為 null |
+| `skill_snapshot_id` | Skill 快照；系統 Skill 為 null |
+
+無變化時可複用開始快照。失敗、取消不推進成功源基線。執行計劃及必要恢復檢查點儲存在私有 Task 狀態；公共配置、run 和 Task 不暴露執行憑據。
+
+Compile 業務檔案僅有：
+
+```text
+/local/{account_id}/_system/compile/tasks/{user_id}/{configuration_directory}/state.json
+/local/{account_id}/_system/compile/tasks/{user_id}/{configuration_directory}/runs/{task_id}.json
+```
+
+純 ASCII 名稱的小寫十六進位制編碼用作 `configuration_directory`。含漢字的名稱使用 `u-` 加上名稱 UTF-8 位元組的小寫 Base32 編碼作為目錄名，省略末尾的填充符 `=`。兩種目錄格式在不區分大小寫的儲存上都能區分名稱大小寫。
+
+配置按帳號和使用者分目錄儲存，公開 API 使用原始 `compile_name` 定位配置。
+
+state 的精確欄位為 `from`、`to`、`skill`、`instruction`、`args`、`auto_update`、`update_schedule`、`task_first_create_time`、`last_run_time`、`last_triggered_slot`、`next_triggered_slot`、`progress`、`updated_by`、`execution_context`。`progress` 儲存成功增量基線，其中 `model_name` 記錄成功執行請求的模型名，未指定時為空字串；`execution_context` 儲存內部執行上下文和加密引數。
+
+Compile 成功收尾時釋出產物快照並推進增量基線。回滾後為恢復和刪除的路徑排程索引重建，不等待重建完成。
 
 ### 檢查 Compile 可用性
 
@@ -179,15 +246,15 @@ GET /api/v1/compile/capabilities
 
 | 欄位 | 含義 |
 |------|------|
-| `configured` | 伺服器的 Compile 執行環境是否已初始化 |
-| `can_create` | 當前認證上下文是否可以提交 Compile 任務 |
-| `reason_code` | 執行環境尚未初始化時為 `NOT_CONFIGURED`；其他情況為 `null` |
+| `configured` | 是否已配置 Compile 執行端點 |
+| `can_create` | 當前認證上下文是否允許向該端點提交任務 |
+| `reason_code` | 未配置端點時為 `NOT_CONFIGURED`；遠端端點需要可轉發的 OV API Key 時為 `API_KEY_REQUIRED`；其他情況為 `null` |
 
-執行環境不可用時，在結果中返回 `can_create: false`，不會因此返回 HTTP 錯誤。此介面不探測模型健康狀態，也不校驗具體 Compile 請求。
+配置不可用時，在結果中返回 `can_create: false`，不會因此返回 HTTP 錯誤。此介面僅檢查配置和憑證，不探測執行後端的健康狀態，也不校驗具體 Compile 請求。
 
 ### Compile 路由向量
 
-`POST /api/v1/compile/embeddings` 使用當前認證上下文生成臨時路由文本的向量，不建立索引或保留文本。Compile 本身在程序內呼叫同一邏輯。
+`POST /api/v1/compile/embeddings` 使用當前認證上下文生成臨時路由文本的向量，不建立索引或保留文本。
 
 請求體：必填 `target_uri`（已存在且有讀取許可權的資源或 Skill 名稱空間目標）；可選 `texts`（字串陣列，預設 `[]`，最多 32 條，每條 1–1024 個字元且不能僅含空白）；可選 `expected_model`（模型指紋，非空值必須與當前模型一致）。
 
@@ -239,12 +306,12 @@ POST /api/v1/tasks/{task_id}/cancel
 ov task cancel cmp_01abc
 ```
 
-任務會先進入 `cancelling`，待當前程序內工作和清理完成後進入 `cancelled`。Compile 在寫入目標前會檢查取消，因此已取消的任務通常不會寫入。寫入過程中到達的取消會等寫入完成，任務變為 `cancelled` 並保留結果。已經完成的寫入不會回滾。重複取消已經 `cancelled` 的任務是冪等的。
+執行中的 Compile 任務進入 `cancelling`，直到執行停止並完成必要清理。恢復使用凍結的目標開始快照，隻影響 `to`，不恢復來源目錄。釋出或回滾完成後才能收斂終態；失敗或取消不推進成功增量基線。重複取消已經取消的任務是冪等的。
 
 | Status | 常見 Stage |
 |--------|------------|
 | `pending` | `queued` |
-| `running` | `running`、`collecting_context`、`pipeline`、`writing`；memory 模式為 `consolidating` |
+| `running` | 執行端返回的執行 Stage，例如 `agent`、`writing` |
 | `cancelling` | 收斂當前程序內工作和清理資源 |
 | `completed` | `completed`、`salvaged` |
 | `failed` | 失敗發生時的 Stage；響應包含 `error` |

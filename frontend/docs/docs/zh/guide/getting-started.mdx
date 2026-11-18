@@ -2,6 +2,8 @@
 
 `@openviking/react` 是 OpenViking 的 React 元件庫，提供檔案樹、檔案預覽、命令控制台、對話、登入表單和看板等[業務元件](../components/)，以及自帶資料載入的[區塊](../modules/)。文件裡的「宿主」指嵌入這些元件的你的應用。
 
+元件在瀏覽器中掛載，當前僅支援客戶端渲染（CSR）。
+
 ## 安裝
 
 ```bash
@@ -123,9 +125,7 @@ FilePreview、CommandConsole、VikingBot 及其訊息列表、輸入區和互動
     errorFallback: (reset) => (
       <div className="my-error" role="alert">
         檔案區域暫不可用
-        <button type="button" onClick={reset}>
-          重新顯示
-        </button>
+        <Button onClick={reset}>重新顯示</Button>
       </div>
     ),
   }}
@@ -175,3 +175,11 @@ FilePreview、CommandConsole、VikingBot 及其訊息列表、輸入區和互動
 - [業務元件總覽](../components/)：全部業務元件的簡介和用法。
 - [區塊](../modules/)：`OpenVikingProvider`、`requestOptions` 和各區塊。
 - [國際化](./i18n)：用 `locale` 切換語言，用 `labels` 覆蓋文案。
+
+操作與曝光埋點的接入方式見[埋點指南](./analytics)。
+
+## 複製錯誤資訊
+
+通過 `OpenVikingProvider` 發起的區塊請求預設由共享請求適配層釋出錯誤，檢視層統一訂閱並展示 Notification，無需逐個呼叫點配置提示。通知使用「請求失敗」標題，保留後端錯誤原文；已有區域載入狀態、任務狀態和聊天訊息錯誤繼續在所屬區域展示。
+
+操作失敗的 Notification 提供「複製錯誤資訊」，一鍵複製操作名稱、完整錯誤資訊及已有的錯誤碼、HTTP 狀態碼和 Request ID，方便提交 Oncall。複製成功後顯示「已複製」；剪貼簿訪問失敗時用 Toast 提示，可再次點選複製。

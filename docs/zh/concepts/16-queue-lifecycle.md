@@ -147,3 +147,13 @@ Task/Work 儲存異常均不 ACK，已處理的業務失敗在 Work 結算後 AC
 warning，訊息留待恢復，消費繼續。本版本 ExternalTaskService 保留基線的目標
 佔用和執行保護，並在 worker 啟動前恢復佔用，以相容未攜帶 key 的舊訊息；
 這些過渡保護計劃在下個版本移除。
+
+SessionCommit 的首次提交和恢復入隊均按帳號/使用者生成 `group_key`，
+讓同用戶的併發會話共用流式 Memory 批處理器。等待前一個 archive 時返回
+`ProcessResult.retry()`，不釋出替代訊息；原訊息回到該組隊尾，讓前一個 archive
+可繼續消費。RETRY 與 REQUEUED 都會累加持久化 Work 的 `requeue_count`，
+該計數不設重投上限。批處理及全部合併分組結束後才返回，
+失敗或取消也須等待實際寫回結束；停機取消保留未 ACK 訊息。
+取消 submit 不改變原有 count/time/close 批處理視窗；取消 flush 會傳遞給
+批處理，並將等待項結算為取消。多個合併分組失敗時，等待其他組結束後仍丟擲
+最先發生的異常。

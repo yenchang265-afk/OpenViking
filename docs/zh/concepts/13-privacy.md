@@ -8,7 +8,7 @@
 
 核心目標：
 
-- 寫入時自動提取敏感值並佔位符化
+- 啟用功能後，在寫入時自動提取敏感值並佔位符化
 - 讀取時按內容型別還原
 - 支援版本查詢、切換與審計
 
@@ -58,37 +58,54 @@ viking://user/{user_id}/privacy/{category}/{target_key}/
 
 ---
 
+## 使用方法
+
+自動脫敏預設關閉（`mode=off`，`restore=true`）。可通過[使用者 settings](../api/08-admin.md#user-settings) 設定 `privacy`，也可用 `server.user_config_defaults.privacy` 提供部署預設值；使用者設定優先。
+
+| `mode` | 新敏感值自動發現的範圍 | 已提前登記的敏感值自動匹配的範圍 |
+|---|---|---|
+| `off` （預設值）| 關閉 | 關閉 |
+| `registered` | 關閉 | Skill、Session |
+| `auto` （推薦）| Skill、Session | Skill、Session |
+| `auto_strict` | Skill、Session | Skill、Session，以及普通檔案寫入、資源匯入和預設讀取 |
+
+另外，`restore` 獨立控制 `raw=true` 時 Skill、Session 的讀取還原。`custom_rules` 可補充自定義的敏感值格式規則，`never_mask` 可按精確值排除某些特定值的自動發現與匹配
+
+> `ov privacy resolve` 不受這些開關限制。
+
+自動發現敏感值，使用的是內建憑據格式檢測器（如火山方舟、GitHub Token、JWT、常見型別的私鑰）。自定義的敏感值，可自行存入 `credential` 或通過 `custom_rules` 配置識別規則。修改設定後，對後續讀寫請求生效。
+
+---
+
 ## 技能的隱私提取與讀取還原
 
 ### 已登記值保護（寫入鏈路）
 
-當通過 `add_skill` 寫入 Skill 時，會走隱私提取與佔位符化流程。
+當通過 `add_skill` 寫入 Skill 時，會按 `mode` 執行已登記值保護和新值提取。
 
 ```
 add_skill
-  -> SkillProcessor._sanitize_skill_privacy
-    -> PrivacySanitizer（保護已登記的個人金鑰）
-    -> extract_skill_privacy_values (LLM 抽取 values)
-    -> placeholderize_skill_content_with_blocks (明文替換為佔位符)
-    -> privacy.upsert(category="skill", target_key=skill_name, values=...)
+  -> SkillProcessor.prepare_skill_privacy（檢測正文中的敏感片段）
+  -> SkillProcessor.apply_skill_privacy
+    -> PrivacySanitizer（匹配已登記值）
+    -> 複用或儲存 Skill 欄位，生成佔位符
   -> 寫入佔位符化後的 SKILL.md
 ```
 
 #### 關鍵點
 
-1. **抽取結果來源**：模型返回 JSON，讀取 `values` 欄位作為隱私鍵值。  
+1. **抽取結果來源**：預設採用規則檢測器和使用者自定義規則來抽取，可通過`OPENVIKING_SKILL_PRIVACY_EXTRACTION_METHOD=vlm` 切換為模型提取。
 2. **內容替換**：原文中命中的敏感片段會替換為佔位符：
    - <code>&#123;&#123;ov_privacy:skill:&#123;skill_name&#125;:&#123;field_name&#125;&#125;&#125;</code>
-3. **保留塊對映**：會同時記錄：
-   - `original_content_blocks`
-   - `replacement_content_blocks`
+3. **後設資料保護**：自動發現與按值匹配只處理正文，不處理 `name`、`description` 等後設資料。
 4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣。該流程處理技能正文，不等於掃描並清理所有附件。
+5. **配置保留**：更新技能時會合並新發現的欄位，並保留已有欄位及歷史；清理需顯式刪除。
 
 ---
 
 ### 載入還原（讀取鏈路）
 
-讀取 `SKILL.md` 時，預設保留佔位符；顯式指定 `raw=true` 時，`FSService.read` 會嘗試還原佔位符。
+讀取 `SKILL.md` 時，預設保留佔位符；顯式指定 `raw=true` 且 `restore=true` 時，`FSService.read` 會嘗試還原佔位符。
 
 ```
 fs.read(uri)
@@ -129,37 +146,38 @@ fs.read(uri)
 
 ---
 
-`read` 返回的是還原後的值；“額外配置”提示也會包含配置值。Privacy API 和歷史快照同樣可以返回完整值，該功能不等於響應脫敏或儲存加密。需要加密儲存時，另見[儲存加密](./10-encryption.md)。
+啟用還原時，`raw=true` 讀取返回的是敏感值原值；“額外配置”提示也會包含配置值。Privacy API 和歷史快照同樣可以返回完整值，該功能不等於儲存加密。需要加密儲存時，另見[儲存加密](./10-encryption.md)。
 
 ## 會話的隱私提取與讀取還原
 
 ### 自動提取（寫入鏈路）
 
-向 Session 寫入訊息時，會在工具輸出外接和訊息落盤前，將匹配已登記 Privacy 值的內容替換為佔位符。新敏感值的自動探測因誤報產生大量無效資料，已在程式碼中暫時禁用，後續再處理；目前沒有執行時配置開關。
+向 Session 寫入訊息時，會按 `mode` 在工具輸出外接和訊息落盤前，將已登記值和新發現的敏感值替換為佔位符。
 
 ```
 Session.add_messages_async
   -> extract_and_store_session_privacy
     -> PrivacySanitizer（保護已登記的個人金鑰）
-    -> 跳過新值探測，不新增 Session Privacy 欄位
+    -> 規則檢測器（mode 為 auto / auto_strict 時發現新值）
+    -> 儲存新增 Session Privacy 值，生成佔位符
   -> 工具輸出外接
   -> 寫入佔位符化後的訊息
 ```
 
 #### 關鍵點
 
-1. **匹配來源**：僅匹配已登記的 Privacy 值；固定規則和敏感欄位名不再觸發新值提取。
-2. **覆蓋範圍**：處理 TextPart 文本、ContextPart 摘要和 ToolPart 輸入、輸出。工具輸入遞迴匹配已登記值，不再根據欄位名整體儲存和遮罩。
+1. **匹配來源**：已登記的個人金鑰與當前 Session 的 Privacy 值；若啟用自動發現時，根據內建和使用者自定義的格式規則識別新的敏感值
+2. **覆蓋範圍**：處理 TextPart 文本、ContextPart 摘要和 ToolPart 輸入、輸出；容器中的字串逐項處理，不根據欄位名整體儲存和遮罩。
 3. **內容替換**：原文中的敏感片段會替換為佔位符：
    - 當前 Session 的敏感值統一使用以下佔位符，以 Session ID 或其雜湊對映值標識會話：<code>&#123;&#123;ov_privacy:session:&#123;session_id&#125;:&#123;field_name&#125;&#125;&#125;</code>。
-   - 若敏感片段與已登記的個人金鑰（credential）匹配，則優先使用唯一匹配欄位的佔位符，例如 <code>&#123;&#123;ov_privacy:alice:viking://~/privacy/credential/github#/values/pat&#125;&#125;</code>。
-4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣；不新增 Session Privacy 資料。歷史配置和已有佔位符的讀取還原繼續保留。
+   - 若敏感片段與已登記的個人金鑰（credential）匹配，則優先使用其欄位佔位符，例如 <code>&#123;&#123;ov_privacy:alice:viking://~/privacy/credential/github#/values/pat&#125;&#125;</code>。
+4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣；同一 Session 內重複發現的值複用欄位，已有佔位符保持原引用。
 
 ---
 
 ### 載入還原（讀取鏈路）
 
-讀取 Session 訊息或外接工具輸出時，預設保留佔位符；顯式指定 `raw=true` 時，`FSService.read` 會嘗試還原佔位符。
+讀取 Session 訊息或外接工具輸出時，預設保留佔位符；顯式指定 `raw=true` 且 `restore=true` 時，`FSService.read` 會嘗試還原佔位符。
 
 ```
 fs.read(uri)
@@ -200,10 +218,12 @@ fs.read(uri)
 ## 與 CLI/API 的關係
 
 - 管理面：通過 Privacy API/CLI 管理版本（查詢、寫入、回滾）
-- 內容面：通過 `read` 自動恢復佔位符
+- 內容面：在 `read` 時通過傳入 `raw=true` 可自動恢復佔位符
 - 兩者解耦：內容檔案負責佔位符，隱私服務負責敏感值與版本
 
 PrivacySanitizer 不根據欄位名猜測敏感性。當前 active Privacy 中長度不少於 6 個 Unicode 字元的字串值會參與正文自動掃描與引用替換；更短的值仍可儲存、引用和顯式讀取，但不會參與全文替換，以降低普通正文誤命中。Python 負責目錄、引用和快取策略，匹配器構建、最長匹配與正文重寫由 `ragfs` 的 Rust Aho-Corasick 實現完成，並通過 PyO3 複用不可變 matcher、掃描時釋放 GIL。匹配目錄按使用者和本程序 revision 快取，本程序修改會立即失效，另外設有 3600 秒快取 TTL 以覆蓋多 worker/多節點修改。
+
+上述按值匹配優先使用當前使用者的 `credential`；未命中時，僅使用當前 Skill 或 Session 中符合憑據格式的值，其他物件不參與匹配。匹配遵循詞邊界，並排除 `never_mask` 中的值。
 
 以儲存 GitHub Personal Access Token（PAT）為例：
 
@@ -238,7 +258,7 @@ ov privacy scan --uri viking://~/resources/project-a
 
 - 降低明文敏感資訊在技能正文中的暴露風險
 - 為外部金鑰輪換後的配置切換保留版本記錄
-- 對上層呼叫透明：`read` 即可拿到還原後的可執行技能文本
+- 對上層呼叫透明：`read (raw=true)` 可拿到還原後的可執行技能文本
 - 對不完整配置提供可觀測提示，便於排障
 
 ---

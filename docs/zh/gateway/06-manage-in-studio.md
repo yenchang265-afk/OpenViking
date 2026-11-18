@@ -92,7 +92,7 @@ description: Studio 中 OpenViking 閘道器頁面的使用方法：各標籤頁
 對話在第一個請求時記下當時的上下文配置並一直沿用，因為中途改變模型看到的內容會破壞服務商的[提示詞快取](01-how-it-works.md#replay)。所以客戶端多快能用上新的上下文配置，取決於它多久開始一次新對話：
 
 - 每次聊天都新開對話的客戶端，很快就能用上新設定。
-- Claude Code、Codex 以及傳送固定會話請求頭的客戶端，會把一段對話延續很多天。它們一直沿用舊設定，直到開始新對話，或者這段對話閒置滿 30 天（`session_ttl_seconds`），此時閘道器會刪除這段對話的狀態。
+- Claude Code、Codex 以及傳送固定會話請求頭的客戶端，會把一段對話延續很多天。它們一直沿用舊設定，直到開始新對話，或者這段對話閒置滿 1 天（`session_ttl_seconds`），此時閘道器會刪除這段對話的狀態。
 
 閘道器如何區分不同的對話，見[閘道器如何識別對話](03-connect-clients.md#how-conversations-are-recognized)。
 

@@ -44,7 +44,7 @@ description: 開啟 OpenViking 閘道器，簽發閘道器金鑰，傳送測試�
 
 ## 傳送測試請求 {#send-a-test-request}
 
-> **提示**：[確認記憶生效](#confirm-that-memory-works)的第 3 步要等對話停頓 10 分鐘才會提取記憶。想更快試用，可以先建一份上下文配置，把**最新回覆等待時長**調短（例如 30 秒），用它簽發一個金鑰，下面的 `GATEWAY_KEY` 就用這個金鑰。上下文配置的修改只對之後開始的對話生效（見[修改何時生效](06-manage-in-studio.md#when-changes-take-effect)）。
+> **提示**：[確認記憶生效](#confirm-that-memory-works)的第 3 步要等閘道器提交會話後才會提取記憶，預設在對話停頓 10 分鐘後提交。想更快試用，可以先建一份上下文配置，把**空閒提交時間**調短（例如 30 秒），用它簽發一個金鑰，下面的 `GATEWAY_KEY` 就用這個金鑰。上下文配置的修改只對之後開始的對話生效（見[修改何時生效](06-manage-in-studio.md#when-changes-take-effect)）。
 
 用 curl 發兩個請求：第一個列出金鑰可用的模型，第二個經閘道器向模型提一個問題。把 `GATEWAY_URL` 設為你的閘道器地址（本地服務是 `http://127.0.0.1:1933/gateway`），並把 `<model>` 換成上游提供的模型：
 
@@ -73,21 +73,8 @@ curl -s "$GATEWAY_URL/v1/chat/completions" \
 依次確認三件事：請求經過了閘道器，對話已經儲存，新對話裡能召回記憶。
 
 1. **請求經過了閘道器。** 開啟“請求日誌”標籤頁，剛才的請求應該顯示為**新訊息**，狀態 200。OpenViking 裡有相關內容時，**記憶**列會顯示補充的條數，例如 `+3`；全新帳號下這一列為空。
-2. **對話已儲存。** 用同一個 `X-OpenViking-Session` 值再發一個請求，它的 `messages` 要包含整段對話：你的第一條訊息、收到的回覆和一條新訊息。聊天客戶端會自動帶上這些內容，用 curl 時要自己補上：
-
-   ```bash
-   curl -s "$GATEWAY_URL/v1/chat/completions" \
-     -H "Authorization: Bearer $GATEWAY_KEY" \
-     -H "Content-Type: application/json" \
-     -H "X-OpenViking-Session: quickstart-1" \
-     -d '{"model": "<model>", "messages": [
-       {"role": "user", "content": "記住：我喜歡簡短的回答。"},
-       {"role": "assistant", "content": "<收到的回覆>"},
-       {"role": "user", "content": "謝謝。"}]}'
-   ```
-
-   這個請求一到，第一輪對話就會儲存（[為什麼儲存總是晚一輪](01-how-it-works.md#when-conversations-are-saved)）。開啟 Studio 的**會話**頁面，應該能看到一個 `gateway-…` 會話。會話屬於金鑰所屬的使用者：如果金鑰是為別人簽發的，需要在**連線設定**中填入該使用者的 OpenViking API 金鑰登入後才能看到。
-3. **記憶已提取。** 對話停頓達到**最新回覆等待時長**（預設 10 分鐘）後，閘道器提交會話，OpenViking 在後臺提取記憶，需要稍等片刻。然後換一個會話值開始新對話，問一個依賴這條記憶的問題，例如“你的回答應該多長？”。**記憶**列應顯示召回的條數，回覆也應該用上了這條記憶。
+2. **對話已儲存。** 回覆結束後，閘道器立即把這一輪寫入 OpenViking（見[對話什麼時候儲存](01-how-it-works.md#when-conversations-are-saved)），這條請求的**儲存**列顯示**正常**。開啟 Studio 的**會話**頁面，應該能看到一個 `gateway-…` 會話。會話屬於金鑰所屬的使用者：如果金鑰是為別人簽發的，需要在**連線設定**中填入該使用者的 OpenViking API 金鑰登入後才能看到。
+3. **記憶已提取。** 對話停頓達到**空閒提交時間**（預設 10 分鐘）後，閘道器提交會話，OpenViking 在後臺提取記憶，需要稍等片刻。然後換一個會話值開始新對話，問一個依賴這條記憶的問題，例如“你的回答應該多長？”。**記憶**列應顯示召回的條數，回覆也應該用上了這條記憶。
 
 如果**記憶**列一直為空，或者看不到會話，見[沒有補充記憶](12-troubleshooting.md#no-memory-is-added)和[OpenViking 中看不到對話](12-troubleshooting.md#conversations-do-not-appear-in-openviking)。
 

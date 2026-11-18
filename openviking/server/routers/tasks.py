@@ -135,6 +135,14 @@ async def stream_task_events(
     )
 
 
+def _list_item(task: TaskRecord) -> dict:
+    """Return a task list entry with Compile rollback bookkeeping reserved for task details."""
+    item = task.to_dict()
+    if task.task_type == "compile":
+        item["meta"].pop("rollback_lock_retries", None)
+    return item
+
+
 @router.get("/tasks/{task_id}")
 async def get_task(
     task_id: str,
@@ -256,7 +264,7 @@ async def list_tasks(
         )
         tasks = await list_call
         more = len(tasks) > limit
-        items = [t.to_dict() for t in tasks[:limit]]
+        items = [_list_item(t) for t in tasks[:limit]]
         return Response(
             status="ok",
             result={
@@ -295,4 +303,4 @@ async def list_tasks(
             user_id=_ctx.user.user_id,
             include_internal=include_internal,
         )
-    return Response(status="ok", result=[t.to_dict() for t in tasks])
+    return Response(status="ok", result=[_list_item(t) for t in tasks])

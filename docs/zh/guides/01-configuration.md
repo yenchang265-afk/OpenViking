@@ -1149,7 +1149,7 @@ Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 
 | `candidates_visible` | bool | 僅用於 Jev Noul；預設 `false`，每個候選隔離到自己的問題中。顯式 `true` 可共享候選上下文；Choice 忽略此選項。 |
 | `timeout` | float | HTTP Rerank provider（包括 Jev）的請求超時時間，單位為秒。預設：`30.0` |
 | `max_input_tokens` | int | 每個 query-document 對傳送給 reranker 的最大估算原始文本 token 數；超長輸入會保留開頭和結尾。`0` 表示不截斷。預設：`0` |
-| `log_payloads` | bool | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容。預設：`false` |
+| `log_payloads` | bool | 僅用於 Jev：在 `log.level=DEBUG` 時記錄安全的請求和響應摘要；不記錄 query、文件和響應正文。預設：`false` |
 | `threshold` | float | Rerank 分數閾值，範圍為 `0.0` 到 `1.0`。Rerank 後低於此值的結果會被過濾；它不過濾向量分數（未使用 Rerank 或 Rerank 失敗時），請求中的 `score_threshold` 優先。預設：`0.1` |
 | `extra_headers` | object | 自定義 HTTP 請求頭（OpenAI 相容 provider 可用，可選） |
 
@@ -1260,6 +1260,47 @@ Task/Work/Event 記錄，用於隔離共用同一套表的多個 OpenViking 部�
 再按順序執行變更指令碼；升級使用舊 TaskStore 表的庫前，先執行
 `openviking/service/sql/changes/0001_task_store_service_name.sql`。同一部署
 不要同時讓 FileStore 和 MySQL 表作為寫入端。
+
+也可以使用 PostgreSQL：設定 `"provider": "postgres"`，安裝
+`openviking[postgres]`，並在啟動服務前通過 `psql` 執行
+`openviking/service/sql/task_store_postgres_init.sql`。該指令碼已包含
+`service_name`，不要對 PostgreSQL 執行 MySQL 的變更指令碼。
+此後端不依賴 Redis，也不需要 pgvector 擴充套件：
+
+```json
+{
+  "service_name": "production",
+  "storage": {
+    "task_store": {
+      "provider": "postgres",
+      "params": {
+        "user": "openviking",
+        "password": "change-me",
+        "database": "openviking",
+        "host": "127.0.0.1",
+        "port": 5432,
+        "table": "ov_tasks",
+        "sslmode": "prefer"
+      }
+    }
+  }
+}
+```
+
+PostgreSQL 必填 `user` 和 `database`；資料庫認證方式允許時可省略 `password`。
+預設值為 `host=127.0.0.1`、`port=5432`、`maxsize=10`、
+`connect_timeout=10`、`sslmode=prefer`。`sslmode` 支援 libpq 的
+`disable`、`allow`、`prefer`、`require`、`verify-ca`、`verify-full`；
+按需配置 `sslrootcert`、`sslcert` 和 `sslkey`。
+需要驗證 TLS 時，使用 `verify-full` 並配置伺服器主機名和可信 CA。
+執行時資料庫角色需要三張表的 SELECT/INSERT/UPDATE/DELETE 許可權。
+
+PostgreSQL 表字首沿用相同字元規則，但最多 37 個字元，以符合其
+63 位元組識別符號限制。自定義字首含大寫字母時，建表 SQL 中的識別符號需要加雙引號。
+Task/Work/Event 更新使用 READ COMMITTED 事務，先鎖 Task 行，再修改 Work 狀態。
+持久化恢復、事件歷史、活躍任務去重、服務與使用者隔離語義與 MySQL 一致。
+共享任務的程序應使用穩定且相同的 `service_name`。切換 provider 不會自動遷移
+已有任務；生產部署切換前需安排資料遷移。
 
 #### watch_store
 
@@ -1431,18 +1472,20 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 的 QueueFS，以及使用 cache 的 PathLock、coordination 和多寫 metadata 都會從它生成
 Redis 名稱空間。
 
-全域 `cache` 與 `storage` 並列，標準配置只包含 Provider 名稱和 Provider 自有引數：
+全域 `cache` 與 `storage` 並列，儲存命名的 Provider 條目：
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `provider` | str | 全局 Cache Provider；本期支持 `redis` | 必填 |
-| `params` | object | Provider 自有引數；當 `provider=redis` 時解析為 Redis 連線引數 | `{}` |
+| `instances` | object | 命名 Runtime Provider，必須包含 `default` | 必填 |
+| `instances.<name>.provider` | str | 一個命名 Runtime 的 Provider；本期支援 `redis` 和 `dynamic` | 必填 |
+| `instances.<name>.params` | object | Provider 自有引數；Provider 為 `redis` 時解析為 Redis 連線引數 | `{}` |
 
 `storage.agfs.cachefs` 只控制 CacheFS 業務行為：
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `backend` | str | `local` 完全沿用原檔案系統；`cache` 啟用 CacheFS wrapper | `local` |
+| `instance` | str | `backend=cache` 時選擇的 Runtime | `"default"` |
 | `max_file_size_bytes` | int | CacheFS 快取完整內容的單檔案上限；部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 | `1048576` |
 | `multi_instance` | bool | 多個 OpenViking 程序共用快取 namespace 時，在每個實例上設定；CacheFS 會在每次寫入返回前刪除受影響的快取項目，並要求快取預設 TTL 大於 0。詳見 RAGFS 快取指南 | `false` |
 | `shared_redis_ttl_seconds` | int | 統一覆蓋查詢 bucket 的 TTL；`0` 表示沿用 Provider 預設 TTL。僅當 CacheFS 與 QueueFS、cache PathLock 或 expiry 排程共用同一個 Redis 服務時生效 | `0` |
@@ -1452,6 +1495,7 @@ Redis 名稱空間。
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache`；`postgres` 直連 PostgreSQL，`cache` 複用 Redis CacheRuntime | `filesystem` |
+| `instance` | str | `provider=cache` 時選擇的 Runtime，必須使用 Redis | `"default"` |
 | `sqlite_path` | str / null | 可顯式覆蓋本地共享鎖資料庫的絕對路徑。見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
 | `postgres_dsn_env` | str / null | `postgres` 必填；儲存 PostgreSQL DSN 的環境變數名。見 [PostgreSQL 配置](../configuration/01-server.md#postgresql-pathlock) | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數；不得小於 `1.0` | `30.0` |
@@ -1485,7 +1529,7 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 ```
 
 所有參與者必須連線同一可寫 PostgreSQL 主庫，使用相同的頂層 `service_name`
-和過期時長。PostgreSQL PathLock 獨立於 `cache.provider/cache.params`，
+和過期時長。PostgreSQL PathLock 獨立於 `cache.instances`，
 不會啟用 CacheFS，也不會改變 QueueFS、業務檔案儲存或向量後端的併發限制。
 特別是預設 SQLite 佇列不適合在 EFS 上跨主機共享。
 配置和驗證步驟見 [PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
@@ -1498,32 +1542,40 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 {
   "service_name": "production",
   "cache": {
-    "provider": "redis",
-    "params": {
-      "mode": "sentinel",
-      "endpoints": [
-        "redis://sentinel-1:26379",
-        "redis://sentinel-2:26379"
-      ],
-      "master_name": "mymaster",
-      "password_env": "OPENVIKING_REDIS_PASSWORD",
-      "connect_timeout_ms": 1000,
-      "command_timeout_ms": 1000
+    "instances": {
+      "default": {
+        "provider": "redis",
+        "params": {
+          "mode": "sentinel",
+          "endpoints": [
+            "redis://sentinel-1:26379",
+            "redis://sentinel-2:26379"
+          ],
+          "master_name": "mymaster",
+          "password_env": "OPENVIKING_REDIS_PASSWORD",
+          "connect_timeout_ms": 1000,
+          "command_timeout_ms": 1000
+        }
+      }
     }
   },
   "storage": {
     "agfs": {
       "cachefs": {
-        "backend": "cache"
+        "backend": "cache",
+        "instance": "default"
       },
       "queuefs": {
-        "backend": "cache"
+        "backend": "cache",
+        "instance": "default"
       },
       "coordination": {
-        "provider": "cache"
+        "provider": "cache",
+        "instance": "default"
       },
       "pathlock": {
         "provider": "cache",
+        "instance": "default",
         "lock_expire_secs": 30.0
       }
     }
@@ -1531,9 +1583,11 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 }
 ```
 
-標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不解析 `cache.params`，也不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時，會從 `cache.instances` 初始化 CacheRuntime。Cache PathLock 選擇的例項必須使用 `redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
+Python 的 `cache_runtime()` 僅能取得由這些消費者建立的 Runtime；
+只配置 `cache.instances` 不會建立獨立的 Provider 連線。
 
-請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
+請把 Provider 引數遷移到 `cache.instances.<name>`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 
 ##### QueueFS 配置
 
@@ -1541,6 +1595,7 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 |------|------|------|--------|
 | `mode` | str | QueueFS 名稱空間模式：`"shared"` 使用 `/queue`；`"worker"` 為每個 worker 隔離到 `/queue/worker-<index\|pid>` | `"shared"` |
 | `backend` | str | QueueFS 後端：`"memory"`、`"sqlite"`、`"sqlite3"` 或 `"cache"` | `"sqlite"` |
+| `instance` | str | `backend="cache"` 時選擇的 Runtime | `"default"` |
 | `db_path` | str（可選） | 當 backend 為 `"sqlite"` 或 `"sqlite3"` 時使用的 QueueFS sqlite 資料庫路徑 | `null` |
 | `recover_stale_sec` | int | 啟動時恢復超過該秒數的 `processing` 佇列訊息；`0` 表示恢復全部 stale processing 訊息 | `0` |
 | `busy_timeout_ms` | int | QueueFS sqlite 的 busy timeout，單位毫秒 | `5000` |
@@ -1551,7 +1606,7 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 - `mode=shared` 會繼續使用歷史上的全域佇列名稱空間 `/queue`；`mode=worker` 會為每個 worker 隔離到 `/queue/worker-<index|pid>`。
 - `db_path` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
 - `recover_stale_sec` 和 `busy_timeout_ms` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
-- `queuefs.backend=cache` 自動繫結頂層 `cache.provider + cache.params`，並使用頂層 `service_name` 作為 key 字首。
+- `queuefs.backend=cache` 從 `cache.instances` 選擇 `queuefs.instance`，並使用頂層 `service_name` 作為 key 字首。
 - Redis Cluster 模式的 endpoints 是初始節點，且必須配置 `db=0`；slot 路由、`MOVED`/`ASK`、拓撲更新和重連由 Fred RedisProvider 處理。
 - Redis Sentinel 模式的 endpoints 是 Sentinel 節點，並且必須配置非空 `master_name`；master 發現和故障切換後的重連由 Fred RedisProvider 處理。
 - `username` 和 `password` 用於 Redis 資料節點；`sentinel_username` 和 `sentinel_password` 僅用於 Sentinel 節點。
@@ -2155,6 +2210,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `user_config_defaults.add_targets.skill_uri` | str | `add_skill` 未傳 `target_uri` 時使用的部署級預設技能新增根目錄。僅允許 `viking://~/skills` 和 `viking://agent/skills`。 | `null` |
 | `user_config_defaults.memory_policy` | object | Session 和 User 都未顯式配置策略時使用的部署級預設記憶抽取策略。 | `null` |
 | `user_config_defaults.auto_commit_policy` | object | 新建 Session 未顯式指定策略時使用的部署級自動 Commit 預設策略。 | `null` |
+| `user_config_defaults.privacy` | object | 使用者未顯式配置時使用的部署級預設隱私處理策略。 | `mode=off`、`restore=true` |
 | `agent_evolution.enabled` | bool | Agent 進化的叢集啟動預設值，執行時可由 Account 或 Cluster Admin settings 覆蓋。開啟時，session commit 可按 session `memory_policy` 生成或更新 cases、trajectories 和 experiences；關閉後已有記憶仍可讀取和檢索。 | `false` |
 
 MySQL Provider 預設儲存高熵 API Key 的帶版本 SHA-256 摘要，並通過獨立摘要索引
@@ -2242,7 +2298,7 @@ Task、Work 和 Watch 的儲存配置分別獨立。
 `standalone`、`cluster` 和 `sentinel` 三種 Redis 部署模式。
 
 MySQL 是資料來源，Redis 快取鑑權結果、使用者資訊、組和刪除狀態。快取未命中或
-Redis 讀取失敗時會查詢 MySQL。通過 `cache.params.ttl_seconds` 配置快取有效期，
+Redis 讀取失敗時會查詢 MySQL。通過 `server.account_store.params.cache.params.ttl_seconds` 配置快取有效期，
 預設 60 秒；命中不會延長有效期。
 
 憑據、許可權和刪除狀態變更會失效相關快取。如果失效操作失敗，快取可能保持舊值
@@ -2250,9 +2306,9 @@ Redis 讀取失敗時會查詢 MySQL。通過 `cache.params.ttl_seconds` 配置�
 快取版本後設資料不會自動過期，需要計入 Redis 容量規劃。舊的 `lock_ttl_seconds`
 和 `lock_wait_seconds` 配置相容接受，但不再使用。
 
-Redis 連線和命令超時分別通過 `cache.params.connect_timeout_ms` 和
-`cache.params.command_timeout_ms` 配置，預設均為 5000 毫秒；它們不是整個請求的
-總超時。`cache.params.pool_size` 應按併發 Redis 請求數配置，預設 32，下面示例
+Redis 連線和命令超時分別通過 `server.account_store.params.cache.params.connect_timeout_ms` 和
+`server.account_store.params.cache.params.command_timeout_ms` 配置，預設均為 5000 毫秒；它們不是整個請求的
+總超時。`server.account_store.params.cache.params.pool_size` 應按併發 Redis 請求數配置，預設 32，下面示例
 使用 100；連線池耗盡會觸發連線錯誤並轉為查詢 MySQL。
 
 ```json

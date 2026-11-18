@@ -657,7 +657,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["snapshot", "restore"],
-        purpose: "Restore a project directory to a past snapshot via a forward commit.",
+        purpose: "Restore a file or directory to a past snapshot via a forward commit.",
         examples: &[
             HelpItem {
                 label: "ov snapshot restore <commit> viking://projects/acme --dry-run",
@@ -666,6 +666,10 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
             HelpItem {
                 label: "ov snapshot restore <commit> viking://projects/acme -m \"rollback\"",
                 description: "Apply the restore as a new commit.",
+            },
+            HelpItem {
+                label: "ov snapshot restore <commit> --file viking://resources/docs/spec.md",
+                description: "Restore only this file. Add --current-commit-id to require a matching file version.",
             },
         ],
         next_steps: &[HelpItem {
@@ -944,12 +948,12 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
         purpose: "Use a VikingBot Skill to transform materials into reports, JSON, Wiki pages or other Skill-defined files, or `ov compile memory` to consolidate existing memories in place.",
         examples: &[
             HelpItem {
-                label: "ov compile --from viking://resources/weekly --to viking://resources/wiki --skill viking://agent/skills/monthly_wiki",
-                description: "Compile one source directory into Wiki pages.",
+                label: "ov compile create --compile-name weekly-wiki --from viking://resources/weekly --to viking://resources/wiki --skill viking://agent/skills/monthly_wiki",
+                description: "Save the inputs for the weekly Wiki.",
             },
             HelpItem {
-                label: "ov compile --from viking://resources/weekly --to viking://agent/skills --skill viking://agent/skills/skill-creator",
-                description: "Generate or update one shared Skill package.",
+                label: "ov compile --compile-name weekly-wiki",
+                description: "Run the saved Wiki configuration.",
             },
             HelpItem {
                 label: "ov compile memory",
@@ -1971,7 +1975,7 @@ fn localized_command_purpose(spec: &CommandHelpSpec, language: Language) -> &str
         ["language"] => "選擇 Business Context Platform CLI 顯示語言。",
         ["snapshot"] => "管理工作區快照：提交、恢復、檢視、對比，以及遍歷歷史。",
         ["snapshot", "commit"] => "將當前工作區狀態提交為新的快照。",
-        ["snapshot", "restore"] => "通過一次前向提交，將專案目錄恢復到歷史快照。",
+        ["snapshot", "restore"] => "通過一次前向提交，將檔案或目錄恢復到歷史快照。",
         ["snapshot", "show"] => "檢視某次提交的後設資料，或指定路徑下的單個檔案內容。",
         ["snapshot", "log"] => "按分支遍歷提交歷史，最新的在前。",
         ["snapshot", "diff"] => "對比指定檔案在兩個快照中的內容差異。",

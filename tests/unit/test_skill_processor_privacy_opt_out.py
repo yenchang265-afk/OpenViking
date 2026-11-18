@@ -15,21 +15,23 @@ from openviking_cli.session.user_id import UserIdentifier
 SKILL = "---\nname: opt-out\ndescription: Example\n---\n\napi_key: sk-test-value\n"
 
 
+@pytest.fixture(autouse=True)
+def _no_skill_history(monkeypatch):
+    """Processor history bookkeeping is covered by its own tests."""
+    import openviking.server.skill_history as history
+
+    monkeypatch.setattr(history, "read_skill_history", AsyncMock(return_value=None))
+    monkeypatch.setattr(history, "skill_package_hash", AsyncMock(return_value="hash"))
+    monkeypatch.setattr(history, "record_skill_change", AsyncMock(return_value={}))
+
+
 @pytest.fixture
-def processor(monkeypatch):
-    extract = AsyncMock(
-        return_value=SimpleNamespace(
-            values={"api_key": "sk-test-value"},
-            sanitized_content="api_key: {{api_key}}\n",
-        )
-    )
-    monkeypatch.setattr("openviking.utils.skill_processor.extract_skill_privacy_values", extract)
-    vlm_resolver = SimpleNamespace(get_vlm=AsyncMock(return_value=object()))
-    processor = SkillProcessor(
-        vikingdb=None, privacy_config_service=object(), vlm_resolver=vlm_resolver
-    )
+def processor():
+    processor = SkillProcessor(vikingdb=None, privacy_config_service=object())
+    scan = AsyncMock(return_value=SimpleNamespace(settings=None, matches=[]))
+    processor.prepare_skill_privacy = scan
     processor.process_prepared_skill = AsyncMock(return_value={"status": "success"})
-    return processor, extract
+    return processor, scan
 
 
 @pytest.fixture
@@ -38,25 +40,25 @@ def ctx():
 
 
 async def test_opting_out_skips_the_scan_and_keeps_content(processor, ctx):
-    processor, extract = processor
+    processor, scan = processor
 
     await processor.process_skill(
         SKILL, viking_fs=None, ctx=ctx, allow_local_path_resolution=False, apply_privacy=False
     )
 
-    extract.assert_not_awaited()
+    scan.assert_not_awaited()
     preparation = processor.process_prepared_skill.await_args.args[0]
     assert "sk-test-value" in preparation.skill_dict["content"]
-    assert preparation.privacy_values == {}
+    assert preparation.privacy is None
 
 
 async def test_default_still_scans_for_privacy_values(processor, ctx):
-    processor, extract = processor
+    processor, scan = processor
 
     await processor.process_skill(
         SKILL, viking_fs=None, ctx=ctx, allow_local_path_resolution=False
     )
 
-    extract.assert_awaited_once()
+    scan.assert_awaited_once()
     preparation = processor.process_prepared_skill.await_args.args[0]
-    assert preparation.privacy_values == {"api_key": "sk-test-value"}
+    assert preparation.privacy is scan.return_value

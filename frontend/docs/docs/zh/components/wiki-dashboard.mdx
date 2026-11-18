@@ -27,6 +27,14 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 
 示例使用固定資料。操作圖示和點選反饋由示例提供，勾選「隱藏宿主操作」可以移除。
 
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，元件顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/wiki-dashboard-crash.tsx" preview
+
+```
+
 ## API
 
 ### WikiDashboard
@@ -38,9 +46,10 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 | loading          | 列表為空時顯示載入狀態                                                            | `boolean`                                                                                                                       | `false`                  |
 | error            | 列表為空時顯示錯誤狀態                                                            | `Error \| null`                                                                                                                 | -                        |
 | onRetry          | 點選重試時觸發，元件不自行發起請求                                                | `() => void`                                                                                                                    | -                        |
-| onOpenUri        | 目錄檢視：點選檔案時觸發，引數為該檔案的 URI；檔案檢視：點選路徑時觸發            | `(uri: string) => void`（目錄）、`() => void`（檔案）                                                                           | -                        |
+| onOpenUri        | 目錄檢視點選檔案時傳入檔案 URI，檔案檢視點選開啟檔案圖示時觸發。                  | `(uri: string) => void`（目錄）、`() => void`（檔案）                                                                           | -                        |
 | onOpenDashboard  | 目錄檢視：開啟該檔案的看板時觸發，未提供時回退到 `onOpenUri`                      | `(uri: string) => void`                                                                                                         | -                        |
-| defineActions    | 為每一行定義操作按鈕，省略或返回空陣列時不顯示操作區                              | `(uri: string) => readonly WikiDashboardAction[]`（目錄）、`(conflict: WikiConflict) => readonly WikiDashboardAction[]`（檔案） | -                        |
+| onEditConflict   | 編輯待確認衝突。傳入 null 時停用編輯圖示，省略時沿用開啟檔案操作。                | `((conflict: WikiConflict) => void) \| null`                                                                                    | -                        |
+| defineActions    | 為每一行追加操作按鈕                                                              | `(uri: string) => readonly WikiDashboardAction[]`（目錄）、`(conflict: WikiConflict) => readonly WikiDashboardAction[]`（檔案） | -                        |
 | slots            | 替換渲染異常的展示內容，見[錯誤展示插槽](../guide/getting-started#自定義錯誤展示) | `{ errorFallback?: ReactNode \| ((reset: () => void) => ReactNode) }`                                                           | -                        |
 | labels           | 覆蓋介面文案                                                                      | `Partial<WikiDashboardLabels>`                                                                                                  | -                        |
 | locale           | 介面語言，規則見[國際化](../guide/i18n)                                           | `'zh-CN' \| 'en-US'`                                                                                                            | 繼承上級，預設 `'en-US'` |
@@ -56,10 +65,10 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 
 ### WikiFileData
 
-| 引數      | 說明                                   | 型別                      | 預設值 |
-| --------- | -------------------------------------- | ------------------------- | ------ |
-| conflicts | 檔案裡的衝突                           | `readonly WikiConflict[]` | 必填   |
-| path      | 要展示的文件路徑，省略時不顯示路徑區域 | `string`                  | -      |
+| 引數      | 說明                                                   | 型別                      | 預設值 |
+| --------- | ------------------------------------------------------ | ------------------------- | ------ |
+| conflicts | 檔案裡的衝突                                           | `readonly WikiConflict[]` | 必填   |
+| path      | 文件路徑。未配置編輯器時，提供路徑可顯示開啟檔案圖示。 | `string`                  | -      |
 
 ### WikiConflict
 
@@ -90,35 +99,40 @@ import '@openviking/react/components/wiki-dashboard/style.css';
 
 ### WikiDashboardLabels
 
-| 引數          | 說明                           | 型別     | 預設值                                |
-| ------------- | ------------------------------ | -------- | ------------------------------------- |
-| title         | 看板標題                       | `string` | `生成效果`                            |
-| conflicts     | 衝突列表的標題                 | `string` | `全部衝突`                            |
-| pending       | 檔案檢視中未修復衝突數量的標籤 | `string` | `待確認衝突`                          |
-| conflictFiles | 目錄檢視中衝突檔案數量的標籤   | `string` | `衝突檔案數`                          |
-| pendingLabel  | 未修復衝突的狀態標籤           | `string` | `待確認`                              |
-| fixed         | 已修復衝突的狀態標籤           | `string` | `已修復`                              |
-| severity      | 嚴重程度篩選的標題             | `string` | `嚴重程度`                            |
-| all           | 篩選項「全部」                 | `string` | `全部`                                |
-| high          | 嚴重程度「高」的名稱           | `string` | `嚴重`                                |
-| medium        | 嚴重程度「中」的名稱           | `string` | `中等`                                |
-| low           | 嚴重程度「低」的名稱           | `string` | `普通`                                |
-| reason        | 展開詳情中原因的標題           | `string` | `原因`                                |
-| solution      | 修復方案的標題                 | `string` | `修復方案`                            |
-| occurred      | 檢測時間的標題                 | `string` | `檢測時間`                            |
-| fixedAt       | 修復時間的標題                 | `string` | `修復時間`                            |
-| evidence      | 修復依據的標題                 | `string` | `修復依據`                            |
-| empty         | 沒有符合篩選條件的衝突時的提示 | `string` | `暫無符合條件的衝突`                  |
-| loading       | 載入中的提示                   | `string` | `載入中…`                             |
-| failed        | 載入失敗的提示                 | `string` | `衝突載入失敗`                        |
-| retry         | 重試按鈕                       | `string` | `重試`                                |
-| limited       | 目錄檔案列表被截斷時的提示     | `string` | `最多展示 100 個存在待確認衝突的檔案` |
-| file          | 當前版本未使用                 | `string` | `檔案`                                |
-| open          | 當前版本未使用                 | `string` | `開啟`                                |
+| 引數          | 說明                               | 型別                        | 預設值                                |
+| ------------- | ---------------------------------- | --------------------------- | ------------------------------------- |
+| title         | 看板標題                           | `string`                    | `生成效果`                            |
+| conflicts     | 衝突列表的標題                     | `string`                    | `全部衝突`                            |
+| pending       | 檔案檢視中未修復衝突數量的標籤     | `string`                    | `待確認衝突`                          |
+| conflictFiles | 目錄檢視中衝突檔案數量的標籤       | `string`                    | `衝突檔案數`                          |
+| pendingLabel  | 未修復衝突的狀態標籤               | `string`                    | `待確認`                              |
+| fixed         | 已修復衝突的狀態標籤               | `string`                    | `已修復`                              |
+| severity      | 嚴重程度篩選的標題                 | `string`                    | `嚴重程度`                            |
+| all           | 篩選項「全部」                     | `string`                    | `全部`                                |
+| high          | 嚴重程度「高」的名稱               | `string`                    | `嚴重`                                |
+| medium        | 嚴重程度「中」的名稱               | `string`                    | `中等`                                |
+| low           | 嚴重程度「低」的名稱               | `string`                    | `普通`                                |
+| reason        | 展開詳情中原因的標題               | `string`                    | `原因`                                |
+| solution      | 修復方案的標題                     | `string`                    | `修復方案`                            |
+| occurred      | 檢測時間的標題                     | `string`                    | `檢測時間`                            |
+| fixedAt       | 修復時間的標題                     | `string`                    | `修復時間`                            |
+| evidence      | 修復依據的標題                     | `string`                    | `修復依據`                            |
+| empty         | 沒有符合篩選條件的衝突時的提示     | `string`                    | `暫無符合條件的衝突`                  |
+| loading       | 載入中的提示                       | `string`                    | `載入中…`                             |
+| failed        | 載入失敗的提示                     | `string`                    | `衝突載入失敗`                        |
+| retry         | 重試按鈕                           | `string`                    | `重試`                                |
+| limited       | 目錄檔案列表被截斷時的提示         | `string`                    | `最多展示 100 個存在待確認衝突的檔案` |
+| file          | 當前版本未使用                     | `string`                    | `檔案`                                |
+| open          | 開啟檔案圖示的無障礙名稱與懸浮提示 | `string`                    | `開啟檔案`                            |
+| editConflict  | 衝突編輯圖示的無障礙名稱與懸浮提示 | `(title: string) => string` | `人工修改：{title}`                   |
 
 ## 注意
 
-- 元件沒有預設操作。`defineActions` 在渲染時呼叫，只根據當前行返回配置，不要在裡面發請求或更新狀態；可以按衝突狀態返回不同的操作。
-- 元件沒有頂層 `uri` 屬性。請求和定位需要的 URI 通過 `onOpenUri`、`defineActions` 的閉包傳入。
+- `defineActions` 在渲染時呼叫，只根據當前行返回配置。可以按衝突狀態返回不同的操作。
+- 元件沒有頂層 `uri` 屬性。需要文件 URI 的回撥可從閉包獲取。
 - 切換文件時要重置篩選和展開狀態，在外層給元件設定 `key={documentId}`。
 - 型別從 `@openviking/react/components/wiki-dashboard` 匯出，包根入口只匯出元件和 `WikiDashboardProps`。
+
+## 埋點
+
+通過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

@@ -17,12 +17,13 @@ description: OpenViking 閘道器儲存什麼、誰能訪問、服務商能看�
 | 檔案 | 內容 |
 | --- | --- |
 | `management.sqlite3`（或 Redis management） | 上游、上下文配置、閘道器金鑰、使用預設 `store` sink 時的請求日誌，以及每個 Responses 響應由哪個上游建立 |
-| `kernel.sqlite3`（或 Redis kernel） | 每段對話的狀態：補充到訊息中的記憶原文、OpenViking 工具的往返記錄及其結果、摘要、等待儲存的對話文本，以及開啟**補全推理內容回傳**時模型回覆的推理內容 |
+| `kernel.sqlite3`（或 Redis kernel） | 每段對話的狀態：補充到訊息中的記憶原文、OpenViking 工具的往返記錄及其結果、摘要、開啟**補全推理內容回傳**時模型回覆的推理內容，以及儲存進度（對話寫入的 OpenViking 會話 ID、上次寫到的訊息位置、每條使用者訊息所屬 Peer 的雜湊對映，以及等待中的空閒提交的到期時間和要使用的金鑰記錄 ID，不含對話文本） |
 
 其中有些屬於敏感資料：
 
 - `management.sqlite3` 存有上游 API Key、請求頭的值，以及閘道器金鑰繫結的 OpenViking 金鑰。閘道器金鑰本身只存雜湊和一段短字首。
-- `kernel.sqlite3` 逐字儲存記憶原文，因為閘道器要靠它把之前幾輪補充的內容[原樣放回](01-how-it-works.md#replay)。
+- `kernel.sqlite3` 逐字儲存記憶原文，因為閘道器要靠它把之前幾輪補充的內容[原樣放回](01-how-it-works.md#replay)。它不儲存待寫入的對話文本：一輪由結束它的那個請求直接寫入 OpenViking。
+- 預設由閘道器執行[空閒提交](08-context-profiles.md#save-conversations)，使用儲存這段對話最後一輪的那把金鑰的儲存記錄裡的 OpenViking 金鑰。對話狀態裡只記這份記錄的 ID，從不記金鑰本身：執行提交的閘道器程序在提交時從這份記錄裡取金鑰；到那時金鑰已被吊銷或記錄已過期的，這次提交不再執行。
 
 SQLite 檔案只有執行閘道器的系統使用者能讀取；Redis 由網路和 ACL 配置控制訪問。開啟[加密](../guides/22-gateway-operations.md#encryption)後，儲存的每個值也都會加密；加密關閉時，上面這些憑證以明文儲存，由檔案許可權或 Redis 訪問控制保護。所有副本必須從 Secret 掛載同一把加密根金鑰；只讀掛載缺少金鑰條目時會拒絕啟動。Redis 鍵名使用雜湊，但索引可能包含原始帳號、物件和會話標識，除值加密之外也應啟用 TLS。
 
@@ -43,7 +44,7 @@ SQLite 檔案只有執行閘道器的系統使用者能讀取；Redis 由網路�
 
 每個[上游](../guides/15-gateway.md#key-terms)都收到完整的模型輸入，包括閘道器補充的記憶和 OpenViking 工具的結果。只新增你放心交出這些資料的服務商。
 
-也有一些內容不會離開閘道器：`X-OpenViking-*` 請求頭、客戶端憑證和 Cookie 從不轉發給上游。上游設為由每個客戶端提供自己的服務商金鑰時，這把金鑰只作為該上游的憑證發給服務商。
+也有一些內容不會離開閘道器：`X-OpenViking-*` 請求頭、客戶端憑證和 Cookie 從不轉發給上游，服務商響應中的 `X-OpenViking-*` 響應頭也從不傳給客戶端。上游設為由每個客戶端提供自己的服務商金鑰時，這把金鑰只作為該上游的憑證發給服務商。
 
 ## 訪問控制 {#access-control}
 
@@ -63,19 +64,25 @@ SQLite 檔案只有執行閘道器的系統使用者能讀取；Redis 由網路�
 
 包括管理 API 在內的完整規則見[許可權矩陣](../api/25-gateway.md#credentials-and-account-scope)；各角色在 Studio 中能做什麼，見[誰能修改什麼](06-manage-in-studio.md#who-can-change-what)。
 
+### 來自宿主的請求頭 {#headers-from-a-host}
+
+`trusted_host_headers: true` 時，請求記錄從請求頭 `X-OpenViking-Resource-Id` 和 `X-OpenViking-Request-Source` 取得 `resource_id` 和 `request_source`。閘道器無法分辨這些請求頭是誰設定的，能直接訪問閘道器的客戶端就可以往自己的記錄裡寫入任意值。只有網路策略只允許閘道器前面的宿主訪問閘道器時，才打開這個設定；並讓宿主覆蓋這些請求頭，而不是透傳客戶端發來的值。`X-OpenViking-Request-Id` 對任何呼叫方都會採用，它只用於標識請求，不授予任何許可權。
+
 ## 保留期限 {#retention}
 
 閘道器資料會自動過期。SQLite 每小時執行清理，Redis 使用鍵 TTL：
 
 | 資料 | 保留時長 | 設定 |
 | --- | --- | --- |
-| 對話狀態 | 最後一次使用後 30 天 | `session_ttl_seconds` |
+| 對話狀態 | 最後一次使用後 1 天 | `session_ttl_seconds` |
 | 快取的 OpenViking 金鑰及其使用者記錄 | 從建立時起經過配置的 TTL，不續期 | `session_ttl_seconds` |
 | 儲存的請求日誌 | 30 天 | `log_retention_days` |
 | Responses 響應與上游的對應關係 | 30 天 | `response_ttl_seconds` |
 | OpenViking 中的會話和記憶 | 遵循 OpenViking 自己的規則 | — |
 
-OpenViking 金鑰記錄過期，或被使用 `volatile-lru` 的 Redis 後端驅逐後，寫回任務因讀不到憑據而以 `gateway_key_revoked` 暫停。使用者的下一個請求會重建記錄，並在同一 scope 中恢復寫回。如果使用者不再請求，最後一輪待寫回內容不會存入 OpenViking。這些狀態屬於快取，允許丟失。與吊銷一樣，現有的短時程序內快取可能延遲觀察到過期。
+對話狀態過期後再繼續的對話，對閘道器來說是一段新對話：之前補充的記憶、工具結果和摘要不會再放回，對話改用金鑰當前的上下文配置和上游，完整歷史會重新儲存到一個新的 OpenViking 會話，OpenViking 可能把部分記憶提取兩次。對話經常隔一天以上才繼續時，調大 `session_ttl_seconds`。它還應當比**空閒提交時間**長：狀態過期時仍在等待的空閒提交不再執行。
+
+OpenViking 金鑰記錄在金鑰使用期間會自動續期：剩餘時間不到 `session_ttl_seconds` 的一半時，請求會把記錄按完整時長重新儲存。記錄仍然過期，或被使用 `volatile-lru` 的 Redis 後端驅逐後，使用者的下一個請求會向 OpenViking 確認金鑰，並在同一 scope 中重建記錄。閘道器只在使用者自己的請求裡用這份記錄寫入對話。預設由閘道器提交時，空閒提交在執行時從儲存進度中記下的那份金鑰記錄裡取 OpenViking 金鑰；記錄到那時已被吊銷或過期的，這次提交不再執行。這些狀態屬於快取，允許丟失。與吊銷一樣，現有的短時程序內快取可能延遲觀察到過期。
 
 Redis 每個帳號最多保留 10,000 條請求日誌。讀取時跳過早於 `log_retention_days` 的條目；這些條目仍留在儲存中，直到被更新的條目擠出上限，或者該帳號連續 `log_retention_days` 沒有新日誌。Redis 不需要每小時清理。Redis Responses 路由記錄按 TTL 過期，刪除使用者時不掃描它們；被吊銷的金鑰無法訪問這些記錄。
 
@@ -90,13 +97,13 @@ Redis 每個帳號最多保留 10,000 條請求日誌。讀取時跳過早於 `l
 | 丟失的狀態 | 影響 |
 | --- | --- |
 | 回放、召回記憶或恢復的推理 | 無法重放之前的決策，下一次請求發生快取未命中。壓縮摘要丟失後可能需要重新摘要，或使請求超過模型上下文限制。 |
-| 待投遞的 capture 文件 | 尚未儲存的輪次可能丟失。從客戶端歷史重建時可能重複儲存已經投遞的訊息；持有已丟失文件的 worker 會停止使用舊 lease。 |
+| capture 文件（儲存進度） | 這段對話下一輪結束時，閘道器把客戶端發來的完整歷史寫入一個新的 OpenViking 會話；已經儲存的內容留在原會話裡，這些訊息在 OpenViking 中會有兩份，OpenViking 可能把部分記憶提取兩次。 |
 | observation 或 thinking 狀態 | 召回帳本歸零，之前的推理可能無法識別。 |
 | 另一請求等待期間的工具回執 | 返回超時或結果未知。閘道器不會重試該操作；重試寫操作前應先檢查實際狀態。 |
 
-Redis 非同步主從切換可能丟失最近的寫入或 lease，偶爾導致 capture 重複。應持久化 Redis，以保留待投遞資料和刪除操作；恢復刪除之前的快照會使已刪除的資料重新可見。見 [Redis 記憶體策略](../guides/22-gateway-operations.md#redis-memory-policy)。
+Redis 非同步主從切換可能丟失最近的寫入；丟失的是儲存進度時，下一輪會把已經儲存過的訊息再寫入一次。應持久化 Redis，以保留對話狀態（包括儲存進度）和刪除操作；恢復刪除之前的快照會使已刪除的資料重新可見。見 [Redis 記憶體策略](../guides/22-gateway-operations.md#redis-memory-policy)。
 
-開啟加密後，儲存的值會加密。鍵名使用雜湊，但索引成員包含原始 session ID，記錄型別、版本、排程時間和 lease owner 仍是明文，應相應保護 Redis 的訪問許可權和備份。
+開啟加密後，儲存的值會加密。鍵名使用雜湊，但索引成員包含原始 session ID，記錄型別和版本仍是明文，應相應保護 Redis 的訪問許可權和備份。
 
 ## 刪除資料 {#deleting-data}
 
@@ -104,7 +111,7 @@ Redis 非同步主從切換可能丟失最近的寫入或 lease，偶爾導致 c
 
 | 誰 | 怎麼做 | 刪除什麼 |
 | --- | --- | --- |
-| 帳號管理員或 root | 在 Studio 中用**刪除該使用者的閘道器資料…**（[操作步驟](09-gateway-keys.md#delete-a-users-gateway-data)），或者呼叫 `DELETE /gateway/admin/users/{user_id}/data` | 單個使用者：吊銷其閘道器金鑰，刪除其對話狀態和日誌，包括尚未儲存的內容 |
+| 帳號管理員或 root | 在 Studio 中用**刪除該使用者的閘道器資料…**（[操作步驟](09-gateway-keys.md#delete-a-users-gateway-data)），或者呼叫 `DELETE /gateway/admin/users/{user_id}/data` | 單個使用者：吊銷其閘道器金鑰，刪除其對話狀態和日誌 |
 | root | 呼叫 `DELETE /gateway/admin/account/data?account_id=<account>` | 整個帳號的閘道器資料 |
 | 嵌入部署，自動進行 | 在 OpenViking 中刪除使用者或帳號 | 對應的閘道器資料 |
 
@@ -116,7 +123,7 @@ Redis 非同步主從切換可能丟失最近的寫入或 lease，偶爾導致 c
 
 以下內容要一起備份：
 
-- Redis：啟用 AOF，並把 Redis 持久化資料與加密根金鑰一起備份。未啟用持久化時，重啟 Redis 會丟失管理配置和等待寫回的對話資料。
+- Redis：啟用 AOF，並把 Redis 持久化資料與加密根金鑰一起備份。未啟用持久化時，重啟 Redis 會丟失管理配置和對話狀態。
 - SQLite：整個 `storage_path` 目錄：兩個資料庫及其 `-wal`、`-shm` 檔案。
 - 開啟加密時，還有 OpenViking 的加密根金鑰（不是 root API 金鑰），按[加密指南](../guides/08-encryption.md)的說明保管。
 
@@ -131,7 +138,7 @@ sqlite3 management.sqlite3 ".backup management.backup.sqlite3"
 
 | 丟失 | 後果 | 怎麼辦 |
 | --- | --- | --- |
-| `kernel.sqlite3`（或 Redis kernel） | 之前補充的記憶無法放回。每段進行中的對話會有一次服務商快取未命中，Claude 對話會丟掉一次之前的思考內容（[**記憶記錄缺失**](12-troubleshooting.md#issues-on-degraded-requests)），尚未儲存的輪次也會丟失。 | 無需處理，進行中的對話在一次未命中之後就會恢復 |
+| `kernel.sqlite3`（或 Redis kernel） | 之前補充的記憶無法放回。每段進行中的對話會有一次服務商快取未命中，Claude 對話會丟掉一次之前的思考內容（[**記憶記錄缺失**](12-troubleshooting.md#issues-on-degraded-requests)）；儲存進度也一併丟失，每段對話下一輪結束時把完整歷史寫入新的 OpenViking 會話。 | 無需處理，進行中的對話在一次未命中之後就會恢復 |
 | `management.sqlite3`（或 Redis management） | 上游、上下文配置、金鑰和請求日誌全部丟失。 | 恢復備份，或重新配置並簽發新金鑰；OpenViking 金鑰記錄會在後續請求中重建 |
 | 加密根金鑰（開啟加密時） | 兩個資料庫中已加密的值都無法讀取。 | 從空的 `storage_path`（SQLite），或換用 ACL 鍵模式仍能覆蓋的新 `storage.key_prefix`（例如 `ovgw:2:`），或刪除舊字首下的所有鍵（Redis）後重新開始 |
 

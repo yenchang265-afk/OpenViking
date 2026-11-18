@@ -76,10 +76,15 @@ const profiles = {
       description:
         '新對話開始時，向模型提供你的 Business Context Platform 使用者畫像。此設定獨立於記憶召回。',
     },
+    soul: {
+      label: '會話開頭提供 soul.md',
+      description:
+        '新對話開始時，向模型提供你儲存在 Business Context Platform 的 soul.md，也就是你給模型的長期指令，並告訴模型遵循它。soul.md 全文提供，不佔開頭內容預算。',
+    },
     profileMaxTokens: {
       label: '開頭內容預算',
       description:
-        '限制開頭的畫像、記憶目錄和技能目錄總量。目錄需要啟用讀取工具。這份預算獨立於召回，設為 0 時三項都不提供。',
+        '限制開頭的畫像、記憶目錄和技能目錄總量。目錄需要啟用讀取工具。這份預算獨立於召回，設為 0 時三項都不提供。soul.md 不計入。',
     },
     showRecall: {
       label: '顯示召回摘要',
@@ -142,18 +147,18 @@ const profiles = {
     description:
       '把已完成的輪次寫入 Business Context Platform 會話，讓 Business Context Platform 從中提取記憶。',
     idleSeconds: {
-      label: '最新回覆等待時長',
+      label: '空閒提交時間',
       description:
-        '下一條訊息到達時，上一輪會立即儲存。最新一輪迴復會先等待這段時間，如果沒有後續訊息，就儲存下來，Business Context Platform 隨即開始提取記憶。',
+        '超過這段時間沒有輪次結束時，已儲存的內容會全部提交併提取記憶。閘道器把提交交給 Business Context Platform（openviking_auto_commit）時，小於 300 秒的值按 300 秒處理，且 Business Context Platform 服務端需要開啟會話自動提交。',
     },
     commitTokens: {
       label: '提交閾值',
       description:
-        '已儲存但未提交的對話達到這個量時提交一次。Business Context Platform 在提交時提取記憶。',
+        '一輪結束時，未提交的訊息達到這個 Token 數就會提交併提取記憶，最近的訊息繼續留在會話中。',
     },
     keepRecentMessages: {
       label: '保留最近訊息',
-      description: '每次提交至少在會話中留下最近這麼多條訊息，按整輪計算。',
+      description: '達到提交閾值而提交時，在會話中保留最近多少條訊息。',
     },
   },
   longConversations: {

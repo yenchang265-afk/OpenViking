@@ -49,21 +49,23 @@ ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillat
 在 `--instruction` 裡說清**分析問題、對比維度、基線和範圍**——這直接決定蒸餾的方向：
 
 ```bash
-ov compile \
+ov compile create --compile-name finance-insights \
   --from viking://resources/finance-reports \
   --to viking://resources/finance-insights \
   --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "對比近三年財報，找到營收質量、盈利能力和風險的變化及驅動因素"
+ov compile --compile-name finance-insights
 ```
 
 `--from` 可以傳多個來源，用於跨知識庫對比：
 
 ```bash
-ov compile \
+ov compile create --compile-name finance-comparison \
   --from viking://resources/finance-2024,viking://resources/finance-2025 \
   --to viking://resources/finance-insights \
   --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "對比兩個年度知識庫，找出關鍵指標的變化與結構性差異"
+ov compile --compile-name finance-comparison
 ```
 
 命令會立刻返回 `task_id`：

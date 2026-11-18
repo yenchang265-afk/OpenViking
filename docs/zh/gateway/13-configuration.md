@@ -28,6 +28,7 @@ description: 查詢 OpenViking 閘道器的配置欄位、環境變數、上下�
 | `host` | 獨立 | `127.0.0.1` | | 監聽地址 |
 | `port` | 獨立 | `1935` | 1–65,535 | 監聽埠 |
 | `workers` | 獨立 | `1` | 1–64 | worker 程序數 |
+| `log_path` | 獨立 | 空 | 檔案路徑 | 應用日誌不再以文本寫到 stderr，而是以 JSON 行寫入這個輪轉檔案（256 MiB，保留四個舊檔案）；需要 `workers: 1`。見[觀測](../guides/22-gateway-operations.md#monitoring) |
 | `keep_alive_seconds` | 獨立 | `75` | 大於 0 | 兩次請求之間保留空閒 HTTP 連線的秒數；應大於負載均衡器的後端空閒超時 |
 | `public_url` | 兩者 | 空 | HTTP(S) URL，不帶 `/gateway` | 客戶端訪問的對外地址，`/gateway` 由閘道器自己加。為空時，嵌入閘道器沿用 Server 的對外地址；兩者都沒有時，接入指南使用請求來源地址，MCP 檔案上傳和下載也不可用（`mcp_file_links` 為 `direct` 時除外）。見[對外地址](../guides/22-gateway-operations.md#public-address) |
 | `mcp_file_links` | 兩者 | `proxy` | `proxy`、`direct` | MCP 上傳和下載工具返回的連結如何交給客戶端。`proxy` 改寫為 `public_url` 加 `/gateway/uploads` 或 `/gateway/downloads`，需要設定 `public_url`。`direct` 原樣透傳 OpenViking 的連結，需要 Server 的 `OPENVIKING_PUBLIC_BASE_URL`（或 `server.public_base_url`）是客戶端能訪問的地址 |
@@ -41,14 +42,24 @@ description: 查詢 OpenViking 閘道器的配置欄位、環境變數、上下�
 | `default_upstreams` | 兩者 | `{}` | 穩定 ID 到[上游設定](#upstream-settings)的物件對映 | 帳號沒有儲存上游時供 OpenViking 金鑰使用，見[部署預設上游](07-upstreams.md#deployment-default-upstreams) |
 | `default_profile` | 兩者 | 內建上下文配置預設值 | [上下文配置設定](#context-profile-settings) | 帳號沒有 ID 為 `default` 的配置時使用，也是嵌入式 dev 模式初始化寫入的配置 |
 | `min_server_version` | 兩者 | `0.4.16` | 版本號 | 獨立閘道器要求的 OpenViking Server 最低版本 |
-| `session_ttl_seconds` | 兩者 | `2592000`（30 天） | 3600 及以上 | 對話閒置多少秒後過期；也決定快取的 OpenViking 金鑰及其使用者記錄的固定壽命 |
+| `session_ttl_seconds` | 兩者 | `86400`（1 天） | 3600 及以上 | 對話閒置多少秒後過期；也決定快取的 OpenViking 金鑰及其使用者記錄的固定壽命。過期後再繼續的對話會丟失什麼，見[保留期限](11-security-and-data.md#retention) |
 | `response_ttl_seconds` | 兩者 | `2592000`（30 天） | 60 及以上 | Responses 響應與上游的對應關係保留多少秒 |
-| `request_log_sink` | 兩者 | `store` | `store`, `stdout` | 將請求和後臺儲存日誌寫入儲存，或以每條一行 JSON 寫到 stdout 並立即重新整理；見[觀測](../guides/22-gateway-operations.md#monitoring) |
-| `log_retention_days` | 兩者 | `30` | 1 及以上 | 儲存中的請求日誌保留天數；stdout 的保留期限由日誌採集系統管理 |
+| `request_log_sink` | 兩者 | `store` | `store`, `stdout`, `file` | 將請求記錄寫入儲存，或以每條一行 JSON 寫到 stdout 並立即重新整理，或由後臺執行緒把同樣的行寫入 `request_log_path`；見[觀測](../guides/22-gateway-operations.md#monitoring)。`file` 輸出需要單個 worker 程序：獨立閘道器設 `workers: 1`，嵌入式閘道器需要服務端只有一個 worker |
+| `request_log_path` | 兩者 | 空 | 檔案路徑 | `file` 輸出寫入的檔案；使用 `file` 時必填 |
+| `request_log_max_bytes` | 兩者 | `268435456`（256 MiB） | 1,048,576 及以上 | `file` 輸出的檔案達到這個大小時輪轉，保留四個舊檔案 |
+| `snapshot_interval_seconds` | 兩者 | `0` | 0 及以上 | 寫一行本程序計數的[狀態行](../guides/22-gateway-operations.md#status-line)的間隔秒數。`0` 表示不寫 |
+| `trusted_host_headers` | 兩者 | `false` | `true`, `false` | 把閘道器前置服務發來的 `X-OpenViking-Resource-Id` 和 `X-OpenViking-Request-Source` 記為 `resource_id` 和 `request_source`；見[宿主整合約定](../guides/22-gateway-operations.md#host-integration-contract)。只有客戶端無法直接訪問閘道器時才打開，見[來自宿主的請求頭](11-security-and-data.md#headers-from-a-host) |
+| `log_retention_days` | 兩者 | `30` | 1 及以上 | 儲存中的請求日誌保留天數；stdout 和檔案的保留期限由日誌採集系統管理 |
 | `max_body_bytes` | 兩者 | `33554432`（32 MiB） | 1,024 及以上 | 請求和上傳的大小上限，單位為位元組 |
-| `upstream_timeout_seconds` | 兩者 | `600` | 大於 0 | 服務商請求超時 |
+| `upstream_timeout_seconds` | 兩者 | `600` | 大於 0 | 閘道器等待服務商的秒數：等回覆開始（建立連線、傳送請求、收到響應頭），以及之後等回覆的每一部分。持續有資料的回覆不會被切斷，無論持續多久。等待超時時，客戶端收到 504 `upstream_timeout`；已經開始的流以一條錯誤事件結束 |
+| `prepare_timeout_seconds` | 兩者 | `0` | 0 及以上 | 閘道器為請求補充記憶（查詢會話、召回、畫像、工具）最多花費的秒數，超過後不帶記憶轉發請求，並標記 `prepare_timeout`。壓縮摘要請求的時間不計入。`0` 表示不限制 |
+| `summary_timeout_seconds` | 兩者 | `0` | 0 及以上 | 一次壓縮摘要請求的總秒數，見[摘要怎麼生成](05-long-conversations.md#how-the-summary-is-written)。`0` 表示使用 `upstream_timeout_seconds` |
+| `openviking_budget_seconds` | 兩者 | `0` | 0 及以上 | 每個請求一個從到達時開始計算的截止時間，覆蓋金鑰檢查、召回、使用者畫像和工具列表；見[OpenViking 異常](12-troubleshooting.md#openviking-is-degraded)。`0` 表示各呼叫沿用自己的超時 |
+| `openviking_breaker_failures` | 兩者 | `0` | 0 及以上 | 某個帳號的 OpenViking 呼叫連續這麼多次沒有應答後，它的請求在 `openviking_breaker_seconds` 內跳過 OpenViking，之後由一次試探呼叫決定是否恢復。`0` 表示關閉 |
+| `openviking_breaker_seconds` | 兩者 | `30` | 大於 0 | 一個帳號的 OpenViking 呼叫被跳過多久後進行試探呼叫 |
 | `health_interval_seconds` | 兩者 | `60` | 1 及以上 | 檢查 OpenViking 狀態的間隔秒數 |
-| `capture_concurrency` | 兩者 | `1` | 1 及以上 | 每個程序併發投遞的會話數；停機時停止新 claim，最多等待在途投遞 100 秒 |
+| `openviking_auto_commit` | 兩者 | `false` | `true`、`false` | 儲存的對話不由閘道器提交，改由 OpenViking 的會話自動提交按上下文配置的[儲存對話](#profile-saving)設定提交。空閒提交需要 OpenViking Server 開啟 `memory.session_auto_commit.enabled`；`false` 時由閘道器提交，任何 Server 都適用。見[儲存對話](08-context-profiles.md#save-conversations) |
+| `max_inflight_requests` | 兩者 | `0` | 0 及以上 | 一個程序同時處理的模型請求數上限，超出的請求得到 HTTP 503 `gateway_overloaded`。`0` 表示不限制，見[擴充套件](../guides/22-gateway-operations.md#scaling) |
 | `client_rules` | 兩者 | `{}`（只用內建規則） | 見[客戶端規則](#client-rules) | 在閘道器內建的輔助請求和客戶端插入訊息識別規則上增刪條目 |
 
 例如，獨立閘道器的 `gateway.conf` 可以在尚未配置任何帳號時路由 OpenViking 金鑰：
@@ -134,7 +145,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | `tenancy` | `key` 要求 `management_api: false`；`openviking_keys` 關閉時此欄位不生效 |
 | `client_rules` | 新增的模式必須是合法的 Python 正規表示式；新增的標籤名以英文字母開頭，只能包含英文字母、數字、`_`、`.`、`:` 和 `-` |
 | 未知欄位 | 校驗失敗 |
-| 已刪除的欄位 | 忽略，啟動時列印警告：`encryption_key_env`、`session_ttl_days`（已由 `session_ttl_seconds` 取代），以及 `ov.conf` 中[遷移](../guides/22-gateway-operations.md#migration)列出的 v0.5 欄位 |
+| 已刪除的欄位 | 忽略，啟動時列印警告：`encryption_key_env`、`session_ttl_days`（已由 `session_ttl_seconds` 取代）、`capture_concurrency`、`capture_delivery_records`，以及 `ov.conf` 中[遷移](../guides/22-gateway-operations.md#migration)列出的 v0.5 欄位 |
 
 ## 客戶端規則 {#client-rules}
 
@@ -159,7 +170,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 
 | 列表 | 條目 | 命中後的效果 |
 | --- | --- | --- |
-| `auxiliary_patterns` | 正規表示式，不區分大小寫 | 分別與 Messages 的 `system` 欄位、Responses 的 `instructions` 和最後一條使用者訊息匹配，命中的請求算作**輔助請求**。Chat Completions `messages` 和 Responses `input` 裡的 system、developer 訊息不參與匹配，這類客戶端要匹配使用者訊息裡的文本。 |
+| `auxiliary_patterns` | 正規表示式，不區分大小寫 | 分別與 Messages 的 `system` 欄位、Responses 的 `instructions`、最後一條使用者訊息，以及客戶端附在最後一條工具結果後面的文本匹配，命中的請求算作**輔助請求**。Chat Completions `messages` 和 Responses `input` 裡的 system、developer 訊息不參與匹配，這類客戶端要匹配使用者訊息裡的文本。 |
 | `noise_patterns` | 正規表示式，區分大小寫 | 閘道器讀取對話時忽略這些文本：不參與請求分類和記憶檢索，也不寫入儲存的訊息和工具結果，但仍原樣發給模型。刪完為空的使用者訊息不算新使用者訊息，請求按同一輪的延續處理。 |
 | `noise_tags` | 標籤名 | `<tag …>…</tag>` 塊（不區分大小寫），處理方式同 `noise_patterns`。 |
 | `plugin_tags` | 標籤名 | 系統提示詞或客戶端訊息中出現程式碼之外的完整 `<tag>…</tag>` 塊，表示客戶端裡執行著 OpenViking 記憶外掛。該對話此後閘道器只做轉發：不加記憶、不提供 OpenViking 工具、不儲存（見[兩者同時使用時](../guides/15-gateway.md#when-both-are-in-use)）。只新增外掛自己寫入的標籤。 |
@@ -180,6 +191,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | --- | --- | --- | --- | --- |
 | 召回記憶 | `recall` | `true` | | 為每條新的使用者訊息檢索記憶。 |
 | 會話開頭提供使用者畫像 | `profile` | `true` | | 新對話開始時提供畫像，獨立於召回。 |
+| 會話開頭提供 soul.md | `soul` | `true` | | 新對話開始時提供使用者的 `memories/soul.md`，並告訴模型遵循它，獨立於召回。全文提供，不佔開頭內容預算。 |
 | 開頭內容預算 | `profile_max_tokens` | `4000` | 0–32,000 | 畫像和目錄的獨立預算；0 表示省略。目錄需要提供 OpenViking 的 `read` 工具（`openviking_read`）。 |
 | 顯示召回摘要 | `show_recall` | `false` | | 在回覆開頭說明 OpenViking 補充了什麼，或召回失敗的原因。模型看不到。 |
 | 檢索範圍 | `context_types` | `memory`、`resource`、`skill` | 開啟召回時至少一個（僅 Studio 校驗） | 檢索哪些內容：記憶、資源、技能。 |
@@ -200,12 +212,12 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | Studio 名稱 | API 名稱 | 預設值 | 取值範圍 | 含義 |
 | --- | --- | --- | --- | --- |
 | 儲存對話 | `capture` | `true` | | 把完成的輪次儲存到 OpenViking。 |
-| 最新回覆等待時長 | `idle_seconds` | `600`（秒） | 1 及以上 | 停頓多久之後儲存最後一輪並提交會話。 |
-| 提交閾值 | `commit_tokens` | `20000` | 1 及以上 | 會話中待提交的 token 數達到這個值時提交。 |
-| 保留最近訊息 | `keep_recent_messages` | `10` | 0–1,000 | 提交後會話中保留的訊息數。 |
+| 空閒提交時間 | `idle_seconds` | `600`（秒） | 1 及以上 | 最後一輪結束後多久沒有新的一輪結束，就提交剩下的全部訊息。開啟 `openviking_auto_commit` 時由 OpenViking 計時：低於 300 的值按 300 處理，超過 604,800（7 天）的值按 604,800 處理，並且需要 Server 開啟 `memory.session_auto_commit.enabled`。 |
+| 提交閾值 | `commit_tokens` | `20000` | 1 及以上 | 一輪結束時待提交的 token 數達到這個值就提交一次。開啟 `openviking_auto_commit` 時由 OpenViking 檢查，超過 1,000,000 的值按 1,000,000 處理。 |
+| 保留最近訊息 | `keep_recent_messages` | `10` | 0–1,000 | 按提交閾值提交時，會話中保留的訊息數。 |
 | （僅 API） | `capture_memory_types` | `null`（Server 0.5.0 及以上繼承使用者策略） | 記憶型別名稱，例如 `preferences`、`events`；`[]` 表示不提取 | OpenViking 從儲存的對話中提取哪些記憶型別。顯式列表設定會話策略。 |
 
-管理 API 儲存 `capture_memory_types` 時不檢查名稱。閘道器為對話建立 OpenViking 會話時，OpenViking 會拒絕它不認識或已停用的記憶型別：對話的內容都不會儲存，儲存狀態先顯示**重試中**，再顯示**已暫停**，原因為 `openviking_http_400`。修正後的配置只對之後開始的對話生效。`cases` 和 `trajectories` 只隨 `experiences` 一起提取：列出 `experiences` 時會同時加入這兩種，不列出時這兩種會被去掉，因此只列這兩種時不提取任何記憶。
+管理 API 儲存 `capture_memory_types` 時不檢查名稱。閘道器為對話建立 OpenViking 會話時，OpenViking 會拒絕它不認識或已停用的記憶型別：對話的內容都不會儲存，每個結束一輪的請求都顯示儲存失敗，原因為 `openviking_http_400`。修正後的配置只對之後開始的對話生效。`cases` 和 `trajectories` 只隨 `experiences` 一起提取：列出 `experiences` 時會同時加入這兩種，不列出時這兩種會被去掉，因此只列這兩種時不提取任何記憶。
 
 ### 長對話 {#profile-long-conversations}
 

@@ -195,3 +195,7 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 - 六個元件共用同一份樣式，各 `style.css` 入口內容相同；同一頁面用到多個元件時，引入其中一個即可。
 - 顏色取自 `--ov-ui-color-*` 主題變數，暗色模式跟隨 `<html>` 上的 `.dark` 類，詳見[快速開始](../guide/getting-started)。
 - 型別從各元件子路徑匯出：`AuthAction`、`AuthAgreements` 和 `AuthLabels` 可從四個表單的子路徑匯入，`AuthAction` 也可從 `invitation-confirmation` 匯入。包根入口只匯出六個元件和它們的 Props 型別。
+
+## 埋點
+
+通過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

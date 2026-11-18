@@ -23,6 +23,7 @@ description: 把 OpenViking 閘道器嵌入 Server、用 Docker Compose 或 Helm
 | --- | --- |
 | OpenViking 認證方式 | `api_key` 或本地 dev 模式。閘道器不支援 trusted 認證。 |
 | OpenViking 版本 | 嵌入執行時和 Server 同版本釋出，無需額外檢查；獨立執行時要求 OpenViking Server 0.4.16 或更高版本。 |
+| OpenViking 自動提交 | 只在閘道器配置 `openviking_auto_commit: true`、把提交交給 OpenViking 時需要：空閒提交需要 OpenViking Server 開啟 `memory.session_auto_commit.enabled`（0.4.x 版本為 `memory.session_auto_commit.idle_enabled`），預設關閉；沒有開啟時，達不到提交閾值的對話只儲存為訊息，不會歸檔，也不會提取記憶。預設由閘道器提交，不需要這項設定。見[儲存對話](../gateway/08-context-profiles.md#save-conversations)。 |
 | 安裝 | 閘道器包含在 OpenViking 核心包中。可選的 `gateway-fast` extra（`pip install "openviking[gateway-fast]"`）裝上更快的事件迴圈和 HTTP 解析器。 |
 | 登入身份 | 遠端部署需要 OpenViking API 金鑰，普通使用者、帳號管理員和 root 都能登入 Studio 的閘道器頁面。本地 dev 模式不需要金鑰，固定使用 `default/default` 身份。 |
 | 儲存 | 單機使用本地磁碟上的 SQLite，多副本使用共享 Redis。Redis 需要 `pip install "openviking[expiry]"`，官方映象已包含。 |
@@ -130,7 +131,7 @@ helm upgrade --install gateway ./deploy/helm/openviking-gateway \
 
 預設使用單副本 SQLite、持久卷和 `Recreate` 更新策略。叢集必須有預設 StorageClass，或配置 `persistence.storageClass`/`persistence.existingClaim`。設定 `persistence.enabled: false` 後，更換 Pod 會丟失 SQLite 狀態，Helm NOTES 會顯示警告。解除安裝會保留 PVC。擴容前必須把兩個 provider 都改成 Redis，見[擴充](#scaling)。
 
-chart 設定了 `session_ttl_seconds: 604800` 和 `response_ttl_seconds: 604800`，比閘道器 30 天的預設值短；需要其他值時覆蓋 `config.*`。每個 Pod 請求 500m CPU 和 1Gi 記憶體，上限為 2 CPU 和 4Gi；可按負載設定 `resources`。
+chart 設定了 `response_ttl_seconds: 604800`，比閘道器 30 天的預設值短；`session_ttl_seconds` 沿用閘道器 1 天的預設值。需要其他值時覆蓋 `config.*`。每個 Pod 請求 500m CPU 和 1Gi 記憶體，上限為 2 CPU 和 4Gi；可按負載設定 `resources`。
 
 獨立 chart 的 `existingSecret` 接受 `management-key`、`redis-password` 和 `root-key`。前兩項分別注入 `OPENVIKING_GATEWAY_MANAGEMENT_KEY` 和 `OPENVIKING_GATEWAY_REDIS_PASSWORD`；`config.storage.redis.password_env` 指向後者。local 和 KMS 加密把 `root-key` 只讀掛載到 `/etc/openviking-gateway/keys/root-key`，並將 provider 的 `key_file` 指向它。安裝前先按[加密](#encryption)生成金鑰。上游憑證和 KMS AK/SK 在 `config` 中寫 `$VAR`，通過 `extraEnv` 的 `secretKeyRef` 注入，不要將明文憑證寫入 ConfigMap。
 
@@ -166,7 +167,7 @@ chart 不建立 Ingress。把代理指向它的 Service，並保持 `fullnameOve
 
 ### 啟動檢查 {#startup-checks}
 
-選擇 Redis 後端時，啟動 PING 必須成功。地址、憑據錯誤或 Redis 不可達會使啟動失敗，Kubernetes 會重啟容器；滾動釋出使用 `maxUnavailable: 0`。執行時 Redis 故障不會改變 `/health`；鑑權階段儲存失敗返回純文本 HTTP 500，並在 stderr 輸出異常棧。
+選擇 Redis 後端時，啟動 PING 必須成功。地址、憑據錯誤或 Redis 不可達會使啟動失敗，Kubernetes 會重啟容器；滾動釋出使用 `maxUnavailable: 0`。執行時 Redis 故障不會改變 `/health`；鑑權或路由階段儲存失敗返回 JSON `503 store_unavailable`，帶 `Retry-After: 1`，閘道器日誌記一條寫明錯誤型別的警告。
 
 獨立閘道器開始監聽前會先檢查 OpenViking 的認證模式：
 
@@ -345,7 +346,6 @@ SQLite 供一臺主機上的一套部署使用，不要跨主機共享目錄，�
 replicaCount: 2
 existingSecret: gateway-credentials
 config:
-  capture_concurrency: 4
   storage:
     kernel: redis
     management: redis
@@ -361,13 +361,17 @@ config:
 
 無管理面、按金鑰隔離的部署再加上 `management_api: false`、`openviking_keys: true`、`tenancy: key`、`default_upstreams` 和 `request_log_sink: stdout`，見[直接使用 OpenViking API 金鑰](../gateway/09-gateway-keys.md#openviking-keys)和[部署預設上游](../gateway/07-upstreams.md#deployment-default-upstreams)。沒有管理 API 時，在 OpenViking 中刪除使用者不會通知閘道器，該使用者的閘道器資料按[保留期限](../gateway/11-security-and-data.md#retention)過期。部署在它前面的服務遵循[宿主整合約定](#host-integration-contract)。
 
-Redis `mode: standalone` 用於單個端點，包括託管代理；`mode: cluster` 用 Redis Cluster 端點且資料庫必須為 0。TLS 用 `rediss://`，端點 URL 中不要寫憑證。`pool_size` 限制每個程序同時執行的 Redis 命令數，超出的命令等待空閒連線。保持 `pool_size >= capture_concurrency + 8`。Redis 位於鑑權路徑，整體不可用時請求返回 HTTP 500；需要高可用時使用主從和自動切換，記憶體和持久化按 [Redis 記憶體策略](#redis-memory-policy)配置。
+Redis `mode: standalone` 用於單個端點，包括託管代理；`mode: cluster` 用 Redis Cluster 端點且資料庫必須為 0。TLS 用 `rediss://`，端點 URL 中不要寫憑證。`pool_size` 限制每個程序同時執行的 Redis 命令數，超出的命令等待空閒連線。每條命令連同這段等待最長 `connect_timeout_ms + command_timeout_ms`（`command_timeout_ms` 為 `0` 時不限）。Redis 位於鑑權路徑，整體不可用時請求在 `connect_timeout_ms + command_timeout_ms` 內返回 `503 store_unavailable`（JSON），帶 `Retry-After: 1` 和 `X-OpenViking-Upstream-Attempted: 0`；這期間結束的輪次儲存失敗，原因為 `save_failed`。需要高可用時使用主從和自動切換，記憶體和持久化按 [Redis 記憶體策略](#redis-memory-policy)配置。
 
 Redis 部署使用 `RollingUpdate`，配置 `maxUnavailable: 0`、`maxSurge: 1`；多副本時建立 `maxUnavailable: 1` 的 PDB。通過 `affinity` 把副本分散到不同節點。各程序快取管理記錄，所以修改管理配置或吊銷簽發金鑰後，其他副本最多 **2 秒**後生效。
 
+`max_inflight_requests` 限制一個程序同時處理的模型請求數；預設 `0` 表示不限制。超出時，請求立即得到 HTTP 503 `gateway_overloaded` 和 `Retry-After: 1`，閘道器不讀儲存、不呼叫 OpenViking，也不會發給服務商（`X-OpenViking-Upstream-Attempted: 0`），客戶端或閘道器前置服務可以把它改發到別處。流式回覆在響應體結束前一直佔用名額。`.../models` 不受限制。這個值根據壓測結果來定：[狀態行](#status-line)中的 `inflight_requests` 是在途請求數，`rejected_overload` 是被拒絕的請求數。
+
 所有探針都不帶憑證訪問 `/health`，只返回本地狀態，不呼叫 OpenViking 或 Redis。startupProbe 預算為 300 秒（`2 × 150`）。啟動完成後，OpenViking 故障不會使 Pod 摘流。
 
-停機預算是 `15s preStop + upstream_timeout_seconds + 最多 100s capture 排空`。chart 預設的 `terminationGracePeriodSeconds: 660` 覆蓋 preStop 和一條持續到預設 600 秒上游超時的流；capture 尚未排空就被 Kubernetes 終止時，其他副本會在 lease 到期後接手。要讓 capture 在 Pod 被終止前排空，把它調到 `15 + upstream_timeout_seconds + 100`（預設超時下為 715）。
+停機預算是 `15s preStop + 仍在進行的最長請求`。最長請求包括回覆發出後儲存這一輪的最多 30 秒；停機時閘道器不執行、也不等待空閒提交。`upstream_timeout_seconds` 限制的是請求等待一個不發資料的服務商的時長，而不是持續有資料的回覆能持續多久，所以除非設定了 OpenViking 工具的**總時長**，閘道器不限制請求能持續多久。客戶端不斷開連線但停止讀取時，請求同樣會一直保持，需要靠 ingress 或負載均衡的空閒超時來關閉。chart 預設的 `terminationGracePeriodSeconds: 660` 在 preStop 之後給進行中的請求留 645 秒；寬限期結束時仍在流式輸出的回覆會在 Pod 被終止時切斷，客戶端看到連線關閉，這次請求也不儲存這一輪。要讓最長 N 秒的請求完成並儲存，把它調到 `15 + N + 30`（N = 600 時為 645）。
+
+空閒提交的到期時間記在閘道器儲存裡，不受停機影響：每個閘道器程序每分鐘檢查一次，把到期已滿一分鐘、還沒有提交的補上。儲存這一輪的 Pod 被替換、程序崩潰或被終止後，提交由同一份儲存上的其他程序或重新啟動的程序完成，比到期時間晚一兩分鐘；沒有閘道器程序執行期間到期的提交，在有程序啟動後補上。兩個程序同時補做同一次提交時，後一次沒有可歸檔的內容。
 
 ### 宿主整合約定 {#host-integration-contract}
 
@@ -378,9 +382,25 @@ Redis 部署使用 `RollingUpdate`，配置 `maxUnavailable: 0`、`maxSurge: 1`�
 | `X-API-Key` 或 `Authorization: Bearer` | 客戶端的 OpenViking API 金鑰，原樣透傳 |
 | `X-OpenViking-Upstream-URL` | 選中的端點，必須與某個 `default_upstreams` 條目的 `base_url` 相同；其他值返回 403，且不發出任何請求。見[按請求指定上游](../gateway/07-upstreams.md#upstream-url-header) |
 | `X-OpenViking-Upstream-Key` | 服務商 API Key，用於 `auth_mode: passthrough` 的上游 |
+| `X-OpenViking-Request-Id` | 可選：宿主自己為請求分配的 ID，須匹配 `[A-Za-z0-9._:/-]{1,128}`。閘道器把它用作自己的 `request_id`，宿主日誌和閘道器記錄因此共用一個關聯鍵。缺失時閘道器自行生成；不合法時替換為生成的 ID，記錄中加上 `request_id_rejected: true` |
+| `X-OpenViking-Resource-Id` | 可選：宿主希望寫入記錄的 ID（`[A-Za-z0-9._:-]{1,128}`），僅在 `trusted_host_headers: true` 時記為 `resource_id` |
+| `X-OpenViking-Request-Source` | 可選：呼叫方型別（`[a-z0-9_-]{1,32}`），僅在 `trusted_host_headers: true` 時記為 `request_source` |
 | 其他請求頭 | 客戶端自己的請求頭，例如 `X-OpenViking-Session` 和 `X-OpenViking-Context`，原樣透傳 |
 
-閘道器把請求轉發給服務商之前，會去掉所有 `X-OpenViking-*` 請求頭、客戶端憑證和逐跳請求頭。
+設定這三個可選請求頭時，要覆蓋客戶端可能發來的同名值。閘道器把請求轉發給服務商之前，會去掉所有 `X-OpenViking-*` 請求頭、客戶端憑證和逐跳請求頭；也會去掉服務商響應中的所有 `X-OpenViking-*` 響應頭，因此服務商無法偽造下面這些響應頭。
+
+模型路由的每個響應都會給宿主帶回這些響應頭：
+
+| 響應頭 | 何時出現 | 取值 |
+| --- | --- | --- |
+| `X-OpenViking-Request-Id` | 每個響應：成功、轉發的服務商錯誤、閘道器錯誤、流式回覆 | 閘道器的 `request_id` |
+| `X-OpenViking-Error-Reason` | 僅當狀態碼和響應體由閘道器自己產生時 | [模型路由的錯誤](../api/25-gateway.md#model-route-errors)中的原因 |
+| `X-OpenViking-Error-Origin` | 同上 | `gateway`、`openviking` 或 `upstream` |
+| `X-OpenViking-Upstream-Attempted` | 同上 | 閘道器已開始向服務商傳送請求（包括壓縮摘要請求）時為 `1`，否則為 `0` |
+| `X-OpenViking-Degraded` | 傳送響應頭時請求已經降級 | 用 `,` 連線的異常程式碼，例如 `revocation_check_unavailable,recall_failed` |
+| `Retry-After` | `store_unavailable` 和 `gateway_overloaded` 響應 | `1` |
+
+非 2xx 響應如果沒有 `X-OpenViking-Error-Reason`，就是服務商自己的錯誤，閘道器原樣轉發。只有帶 `X-OpenViking-Upstream-Attempted: 0` 的響應，宿主才可以把請求改發到別處；為 `1` 時服務商可能已經收到了請求。閘道器處理請求時發給 OpenViking 的呼叫，在 `X-Request-ID` 中帶上同一個 ID。
 
 ## Redis 記憶體策略 {#redis-memory-policy}
 
@@ -393,35 +413,69 @@ appendonly yes
 appendfsync everysec
 ```
 
-`volatile-lru` 只驅逐本來就會過期的資料：對話狀態、replay、待投遞 capture 和 OpenViking 金鑰記錄。每類資料丟失的影響見 [Redis 對話狀態](../gateway/11-security-and-data.md#redis-conversation-state)。不要使用 `allkeys-*`：它也會驅逐沒有 TTL 的資料，導致簽發的金鑰、上游和上下文配置消失，已刪除的對話狀態可能重新出現，待投遞 capture 不再被排程。`noeviction` 也能執行，但記憶體滿後寫入失敗，請求無法獲得記憶增強。
+`volatile-lru` 只驅逐本來就會過期的資料：對話狀態（包括 replay 和儲存進度）和 OpenViking 金鑰記錄。每類資料丟失的影響見 [Redis 對話狀態](../gateway/11-security-and-data.md#redis-conversation-state)。不要使用 `allkeys-*`：它也會驅逐沒有 TTL 的資料，導致簽發的金鑰、上游和上下文配置消失，已刪除的對話狀態可能重新出現。`noeviction` 也能執行，但記憶體滿後寫入失敗，請求無法獲得記憶增強。
 
-監控 `evicted_keys` 的增速和記憶體用量；容量充足時不會發生驅逐。閘道器不檢查驅逐策略或其他任何 Redis 設定。觀察 capture 積壓可用 `ZCARD <key_prefix>v1:k:{cap}:ready`，它統計已排程或正在處理的 capture，其中可能有少量稍後才清理的過期條目。Redis Cluster 中所有 capture 資料位於同一個分片，應為 OpenViking 故障期間的積壓預留該分片容量。capture lease 使用 Redis 時鐘，排程時間則來自閘道器宿主，各宿主應通過 NTP 保持時鐘同步。
+監控 `evicted_keys` 的增速和記憶體用量；容量充足時不會發生驅逐。閘道器不檢查驅逐策略或其他任何 Redis 設定。Redis Cluster 中所有對話的儲存進度位於同一個分片。
 
-未啟用持久化時，Redis 重啟會刪除閘道器的全部管理資料：已簽發的閘道器金鑰失效，上游和上下文配置需要重新設定。AOF 讓這些資料、待投遞 capture 和刪除操作在重啟後保留。在 Redis 7.2 上，禁用的 `default` 使用者也要保留命令許可權（例如 `user default off ~* &* +@all`）：AOF 回放事務時會檢查這些許可權，缺少時回放的寫入會因 `NOPERM` 失敗。`appendfsync everysec` 仍可能丟失約一秒的寫入，非同步主從切換也可能丟失最近的寫入。AOF 重寫和快照期間需為寫時複製預留記憶體。備份中可能保留其生成之後才刪除的資料。
+未啟用持久化時，Redis 重啟會刪除閘道器的全部管理資料：已簽發的閘道器金鑰失效，上游和上下文配置需要重新設定。AOF 讓這些資料、對話狀態和刪除操作在重啟後保留。在 Redis 7.2 上，停用的 `default` 使用者也要保留命令許可權（例如 `user default off ~* &* +@all`）：AOF 回放事務時會檢查這些許可權，缺少時回放的寫入會因 `NOPERM` 失敗。`appendfsync everysec` 仍可能丟失約一秒的寫入，非同步主從切換也可能丟失最近的寫入。AOF 重寫和快照期間需為寫時複製預留記憶體。備份中可能保留其生成之後才刪除的資料。
 
 ## 觀測與例行檢查 {#monitoring}
 
 閘道器不匯出 Prometheus 之類的監控指標。請求日誌預設寫入儲存，可通過 Studio 的[概覽和請求日誌](../gateway/10-overview-and-requests.md#overview)標籤頁檢視，或者呼叫管理 API 的 `/gateway/admin/overview` 和 `/gateway/admin/logs`。
 
-在閘道器配置中設定 `request_log_sink: "stdout"`，或設定 `OPENVIKING_GATEWAY_REQUEST_LOG_SINK=stdout`，重啟後新記錄只寫到 stdout。每個完成的模型請求和後臺儲存狀態變更各產生一行 JSON，即使 stdout 接到管道也會立即重新整理。每條記錄包含 `time`（寫入時的 Unix 秒數）、`account`、`user_id`（舊儲存狀態可能為 `null`），以及位於頂層的現有請求指標，如 `kind`、`status`、`input_tokens` 和 `cached_tokens`。不包含憑證、提示詞或回覆。採集系統負責這些記錄的保留期限和訪問許可權；`log_retention_days` 只作用於儲存中的日誌。
+在閘道器配置中設定 `request_log_sink: "stdout"`，或設定 `OPENVIKING_GATEWAY_REQUEST_LOG_SINK=stdout`，重啟後新記錄只寫到 stdout。每個模型請求（包括失敗的請求）產生一行 JSON，即使 stdout 接到管道也會立即重新整理。每條記錄包含 `time`（寫入時的 Unix 秒數）、`account` 和 `user_id`（金鑰確認之前就失敗的請求為 `null`），以及位於頂層的現有請求指標，如 `kind`、`status`、`input_tokens` 和 `cached_tokens`。不包含憑證、提示詞或回覆。採集系統負責這些記錄的保留期限和訪問許可權；`log_retention_days` 只作用於儲存中的日誌。
+
+設定 `request_log_sink: "file"` 和 `request_log_path`，就把同樣的行寫到檔案。寫檔案由後臺執行緒完成，磁碟慢也不會拖住請求；它的佇列（10,000 行）滿了時，新行被丟棄，並計入狀態行的 `records_dropped`。檔案達到 `request_log_max_bytes`（預設 256 MiB）時輪轉，保留四個舊檔案（`requests.jsonl.1` … `.4`）。這種輸出需要單個 worker 程序：獨立閘道器設 `workers: 1`，嵌入式閘道器需要服務端只有一個 worker；需要擴容時增加副本。在 Kubernetes 上，把檔案放在日誌採集器能讀到的捲上，例如用 chart 的 `extraVolumes` 和 `extraVolumeMounts`：
+
+```yaml
+config:
+  request_log_sink: file
+  request_log_path: /var/log/openviking-gateway/$HOSTNAME.jsonl
+extraVolumes:
+  - name: gateway-logs
+    hostPath:
+      path: /var/log/openviking-gateway
+      type: DirectoryOrCreate
+extraVolumeMounts:
+  - name: gateway-logs
+    mountPath: /var/log/openviking-gateway
+```
+
+`$HOSTNAME` 從環境變數解析為 Pod 名，每個 Pod 寫自己的檔案：副本之間絕不能共用一個日誌檔案。
+
+獨立閘道器設定 `log_path` 後，應用日誌（警告、錯誤和 traceback）不再以文本寫到 stderr，而是以 JSON 行寫入這個輪轉檔案，欄位為 `time`、`level`、`logger`、`message`、`request_id`（處理請求時寫下的行才有）和 `exc`（有 traceback 時）。
 
 當 `management_api: false` 關閉 Studio 和管理介面時，配置 stdout sink 並採集程序或容器日誌進行觀測。管理面開啟但選擇 stdout sink 時也採用同樣流程：請求日誌頁和概覽中的請求統計不會收到新記錄。之前已儲存的記錄仍可見，直到過期。
 
-從請求日誌的頂層欄位統計 reason 和首調快取結果。對 capture 暫停（`kind: capture`）、佇列增長、`openviking_http_429`、Redis 記憶體/驅逐和 HTTP 錯誤率設定告警。identify 拒絕發生在代理請求記錄之前，所以從代理訪問日誌統計 401/402/403 和 Redis 故障引發的 500，具體 traceback 看閘道器 stderr。代理併發連線數可以近似表示在途流數。確認平臺實際採集 stdout；只掛一個目錄不會把它轉成檔案日誌。
+從請求日誌的頂層欄位統計 reason 和首調快取結果。對儲存失敗（`capture_status: "failed"`，按 `capture_reason` 統計）、`openviking_http_429`、Redis 記憶體/驅逐和 HTTP 錯誤率設定告警。閘道器自身的錯誤也會寫入記錄：按 `error_reason` 和 `error_origin` 統計（見[日誌記錄](../api/25-gateway.md#log-records)）。store 輸出不儲存金鑰確認之前就被拒絕的請求，使用它時請從代理訪問日誌統計這些 401/402/403；`internal_error` 的 traceback 看閘道器 stderr。確認平臺實際採集 stdout；只掛一個目錄不會把它轉成檔案日誌。
+
+### 狀態行 {#status-line}
+
+設定 `snapshot_interval_seconds`（例如 `60`）後，每個閘道器程序按這個間隔寫一行狀態。使用 `stdout` 和 `file` 輸出時，它和請求記錄寫在同一處；使用 `store` 時，由 `openviking_gateway.snapshot` logger 以 INFO 級別輸出，宿主沒有配置日誌 handler 時寫到 stderr。狀態行不含帳戶、使用者、會話、模型或請求 ID，欄位見[狀態行](../api/25-gateway.md#status-line)。每行統計的是距上一行的這段時間。區間計數（包括 `capture.delivered` 和 `capture.failed`）和 `inflight_*` 按程序統計，可以跨程序相加。建議的告警：
+
+- `errors.store_unavailable` 或 `store_errors` 大於零：狀態儲存（SQLite 或 Redis）出錯。
+- `errors.upstream_timeout`、`upstream_unreachable` 或 `upstream_disconnected` 上升：服務商變慢或無法連線。
+- `openviking.state` 不是 `ok`，或 `degradations.recall_failed` 上升：OpenViking 沒有應答。
+- `inflight_requests` 接近容量；`inflight_streams` 反映長時間執行的流；`rejected_overload` 大於零：程序已達 `max_inflight_requests`。
+- `records_dropped` 或 `records_failed` 大於零：請求記錄在丟失。
+- `capture.failed` 大於零：有已完成的輪次沒能寫入 OpenViking，閘道器不會重試；`capture.delivered` 同時一直為零時，儲存完全停止了。按請求記錄的 `capture_reason` 查原因。
+
+提交失敗不進入狀態行和請求記錄。預設由閘道器提交時，對閘道器日誌中的 `could not commit` 警告設定告警：空閒提交失敗後閘道器每分鐘再試一次，成功之前這段對話只儲存為訊息；被 OpenViking 以 401、403、404 拒絕的不再重試。
 
 ### 例行檢查 {#day-to-day-operations}
 
 - **程序存活：** `/health`。嵌入部署用的是 Server 的健康檢查，獨立部署用的是閘道器自己的。
 - **閘道器健康：** **概覽**標籤頁上的**首次呼叫快取命中率**（[含義](../gateway/10-overview-and-requests.md#overview)），或從 stdout 指標計算：在同一帳號和時間視窗內，篩選 `kind: "user"` 的記錄，將 `first_upstream_cached_tokens` 的總和除以 `first_upstream_input_tokens` 的總和。某個欄位缺失時，用該條記錄的 `cached_tokens` 或 `input_tokens` 代替（未報告的用量按 0 計）。分母為零表示沒有報告輸入用量。這些欄位位於頂層，不在巢狀的 `metrics` 物件中。命中率明顯下降時，見[首次呼叫快取命中率下降](../gateway/12-troubleshooting.md#the-first-call-cache-hit-rate-dropped)。
-- **單個請求：** 在**請求日誌**標籤頁展開對應的行，或按 `account`、`user_id` 和 `request_id` 查詢 stdout 記錄；見[請求日誌](../gateway/10-overview-and-requests.md#requests)。後臺儲存事件的 `kind` 為 `capture`，通過雜湊後的 `session` 標識對話。
+- **單個請求：** 在**請求日誌**標籤頁展開對應的行，或按 `account`、`user_id` 和 `request_id` 查詢 stdout 記錄；見[請求日誌](../gateway/10-overview-and-requests.md#requests)。請求記錄的 `capture_status`、`capture_reason` 和 `openviking_session` 說明這次請求是否儲存了一輪、寫入了哪個 OpenViking 會話。
 - **對外地址：** `public_url` 仍是客戶端訪問的地址，見[對外地址](#public-address)。
 - **備份：** SQLite 目錄或 Redis 持久化/備份；開啟加密時還有加密根金鑰，見[備份與恢復](../gateway/11-security-and-data.md#backups)。
 
 ## 升級 {#upgrades}
 
 - 升級前讀釋出說明。新版本的閘道器讀不了舊的儲存格式時，啟動會報 `Unsupported gateway schema`，見[閘道器無法啟動](../gateway/12-troubleshooting.md#the-gateway-does-not-start)。
-- 獨立閘道器要求 OpenViking Server 不低於 `min_server_version`（0.4.16），否則無法簽發金鑰，儲存重試也會以 `openviking_version_mismatch` 失敗；記憶檢索也可能失敗，顯示為 `openviking_http_<status>`。兩者分開升級時，先升級 OpenViking，再升級閘道器。嵌入閘道器和 Server 同版本釋出，不做這項檢查。
+- 獨立閘道器要求 OpenViking Server 不低於 `min_server_version`（0.4.16），否則無法簽發金鑰，儲存也會以 `openviking_version_mismatch` 失敗；記憶檢索也可能失敗，顯示為 `openviking_http_<status>`。兩者分開升級時，先升級 OpenViking，再升級閘道器。嵌入閘道器和 Server 同版本釋出，不做這項檢查。
 - 從 sidecar 或舊版獨立閘道器升級，見[遷移](#migration)。
+- `capture_concurrency` 和 `capture_delivery_records` 已刪除。配置中仍有它們時閘道器照常啟動，忽略這兩個欄位並列印 `Ignoring removed gateway settings` 警告，可以從配置中刪掉。
 
 - SQLite 切換到 Redis 後，會話快取從空開始。management 儲存中的已簽發 `ovgw_` 金鑰、上游和上下文配置需要重建，沒有提供遷移命令。使用 OpenViking key 時，可以通過部署預設值提供上游和上下文配置。
 - Redis 鍵包含佈局版本（`<storage.key_prefix>v1:`）。佈局相同時，回滾可以繼續讀現有狀態。將來佈局版本變化時從空開始：會話資料按快取處理，OpenViking key 記錄在訪問時重建，使用簽發金鑰的部署需要重新配置。不要假設存在跨版本資料遷移。

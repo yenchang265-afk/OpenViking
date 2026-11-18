@@ -23,7 +23,7 @@ import { Button } from '#/shared/ui/button'
 import { useAppConnection } from '#/features/connection/hooks/use-app-connection'
 import { CacheStatsContent } from '#/features/workbench/monitoring/components/cache-stats-content'
 import { ObserverStatusContent } from '#/features/workbench/monitoring/components/observer-status-content'
-import { stripVersionPrefix } from '#/features/workbench/monitoring/lib/version'
+import { stripVersionPrefix } from '#/shared/lib/version'
 import {
   CACHE_STATS_REFETCH_MS,
   fetchCacheStats,

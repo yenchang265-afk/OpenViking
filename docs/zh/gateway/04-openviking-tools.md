@@ -123,12 +123,12 @@ description: 讓模型通過 OpenViking 閘道器代為執行的工具檢索、�
 | **客戶端指定了必須呼叫的工具**（`tools_forced_choice`） | `tool_choice` 不是 `auto` 或 `none`：例如 `required`、Anthropic 的 `any` 或 `tool`、指定某個函式，或者 Responses 的 `allowed_tools` 這類物件形式。 |
 | **DeepSeek 開啟了思考模式，但之前回復的推理內容補不回來**（`deepseek_reasoning_history_required`） | 上游是 DeepSeek，開啟了思考模式（標準 Responses 請求沒有 `thinking` 欄位，按開啟處理），而之前的回覆發到 DeepSeek 時會缺推理內容。在上游的**路由**部分開啟**補全推理內容回傳**（[說明及補不回的情況](07-upstreams.md#restore-reasoning)），或者傳送 `"thinking": {"type": "disabled"}`。 |
 | **客戶端已接入 OpenViking 工具**（`tool_name_collision`） | 閘道器在這段對話剩下的部分不再提供自己的工具（回傳的歷史裡模型已經呼叫過閘道器工具的請求仍保留工具）。判斷條件見[客戶端自己接了 OpenViking 工具時](#client-has-openviking-tools)。 |
-| **這段對話首次需要工具時無法載入 OpenViking 工具清單**（`tools_unavailable`） | 無法從 OpenViking 載入工具清單，也沒有之前載入成功的清單。連線恢復後開始新對話。 |
+| **這段對話首次需要工具時無法載入 OpenViking 工具清單**（`tools_unavailable`） | 無法從 OpenViking 載入工具清單，也沒有之前載入成功的清單。這段對話下一個能用工具的請求會重新載入；程序還沒成功載入過清單時，閘道器最多每 30 秒嘗試一次。工具在對話第一輪之後才載入成功時，下一個使用者輪次開頭會告訴模型有這些工具。 |
 | **這段對話沒有 OpenViking 工具**（`tools_not_selected_at_session_start`） | 上下文配置開啟了工具，但這段對話的工具列表為空：配置裡一個工具都沒選，或者對話在閘道器升級前就已開始。開始新對話即可。 |
 
 ### 何時決定是否提供 {#when-the-decision-is-made}
 
-對話是否帶工具，由它第一個能用工具的請求決定（生成標題這類輔助請求不算），之後保持不變，所以修改上下文配置隻影響新對話。唯一的例外是關閉：模型還沒呼叫過閘道器工具時，客戶端出現了自己的 OpenViking 工具，例如 MCP 伺服器在第一輪之後才連上。
+對話是否帶工具，由它第一個能用工具的請求決定（生成標題這類輔助請求不算，載入不到工具清單的請求也不算），之後保持不變，所以修改上下文配置隻影響新對話。唯一的例外是關閉：模型還沒呼叫過閘道器工具時，客戶端出現了自己的 OpenViking 工具，例如 MCP 伺服器在第一輪之後才連上。
 
 輔助請求、子 Agent 請求和檢測到 OpenViking 外掛的對話都不帶 OpenViking 工具。這類請求如果回傳了模型用過這些工具的歷史，閘道器仍附上工具定義，讓這段歷史保持有效，但拒絕新的 OpenViking 呼叫。客戶端自己的工具在每個請求裡都照常可用。
 
@@ -187,16 +187,17 @@ Token 預算只計算模型使用 OpenViking 工具時新增的呼叫、結果�
 
 - 服務商拒絕了後續的模型請求。
 - 模型呼叫了這段對話裡沒有提供的 OpenViking 工具，或者 OpenViking 呼叫被拒絕後仍堅持呼叫。
-- **Hidden tool request timed out**：OpenViking 工具的往返超過了上下文配置中工具的**總時長**；沒有設定總時長時，是往返中某次模型請求超過了 `upstream_timeout_seconds`。
+- **Hidden tool request timed out**：OpenViking 工具的往返超過了上下文配置中工具的**總時長**。持續有資料的模型回覆只受**總時長**限制。
+- **Model upstream did not answer in time**：在往返中，服務商超過 `upstream_timeout_seconds` 還沒開始回覆，或在回覆中途這麼久沒有傳送任何資料。
 
 這時客戶端收到錯誤，請求日誌顯示 **OpenViking 工具呼叫失敗**（`hidden_tool_loop_failed`）。錯誤的形式取決於請求型別：
 
 | 請求 | 客戶端收到什麼 |
 | --- | --- |
-| 流式 | 流以錯誤事件結束：Responses 是 `response.failed`，Chat Completions 和 Anthropic Messages 是型別為 `gateway_tool_error` 的 `error`。此時 HTTP 狀態碼已經是 200。 |
+| 流式 | 流以錯誤事件結束：Responses 是 `response.failed`，Chat Completions 和 Anthropic Messages 是 `error`：模型服務沒有及時應答或斷開連線時，其型別為 `upstream_timeout`、`upstream_disconnected` 或 `upstream_unreachable`，其餘情況為 `gateway_tool_error`。此時 HTTP 狀態碼已經是 200。 |
 | 非流式，服務商拒絕了後續請求 | 原樣返回服務商的錯誤內容和狀態碼。 |
-| 非流式，超時 | 504（`gateway_http_504`）。 |
-| 非流式，其他失敗 | 502，響應體為 `{"reason": "gateway_http_502", "detail": "..."}`。 |
+| 非流式，超時 | 用完**總時長**時為 504 `tool_loop_timeout`，服務商沒有及時回覆時為 504 `upstream_timeout`。 |
+| 非流式，其他失敗 | 502，響應體為 `{"reason": "...", "detail": "...", "request_id": "..."}`；原因為 `tool_upstream_invalid`、`tool_upstream_incomplete`、`tool_upstream_stream_error`、`tool_call_invalid`、`tool_loop_limit`、`upstream_unreachable` 或 `upstream_disconnected`（見[模型路由的錯誤](../api/25-gateway.md#model-route-errors)）。 |
 
 另外兩種情況：
 

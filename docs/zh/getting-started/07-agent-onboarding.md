@@ -6,18 +6,18 @@
 
 通過一條提示詞，將 OpenViking 接入你正在使用的程式設計 Agent。Agent 會在本機檢測到的各個 Agent 裡安裝 OpenViking 記憶外掛，檢查連線，問你要不要匯入近期工作，再告訴你怎麼重啟。重啟後，你問的第一個問題就能用上 OpenViking。
 
-Agent 按一份簡短的指南執行。指南以純 Markdown 釋出，任何 Agent 都能直接獲取：
+Agent 按一份簡短的指南執行。指南以純 Markdown 釋出，任何 Agent 都能直接獲取。個人版和團隊版各有一份，安裝命令相同，只有指南不同：
 
-- 中文：`https://docs.openviking.ai/agents/zh/onboarding.md`
-- 英文：`https://docs.openviking.ai/agents/en/onboarding.md`
+- 個人版：`https://docs.openviking.ai/agents/zh/onboarding.md`（英文把 `zh` 換成 `en`）
+- 團隊版：`https://docs.openviking.ai/agents/zh/onboarding-team.md`（英文同上）
 
 兩份也都可以從 `docs.openviking.net` 訪問，中國大陸訪問通常更快。
 
 ## 提示詞
 
-複製提示詞，傳送前把 `<API_KEY>` 換成你的 key，在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_07-agent-onboarding)的**使用者管理 → API Key** 中獲取。
+先在提示詞標題欄選版本：自己一個人用選**個人版**；你是團隊裡的一名成員，和同事共用一個 OpenViking 帳號下的共享目錄，選**團隊版**。複製提示詞，傳送前把 `<API_KEY>` 換成你的 key：個人版和團隊管理員在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_07-agent-onboarding)的**使用者管理 → API Key** 中獲取，團隊成員在團隊分發給你的 OpenViking 工作臺中獲取。
 
-<AgentPrompt>
+<AgentPrompt editions="個人版|團隊版" ids="personal|team">
 
 ```text
 幫我安裝 OpenViking 記憶外掛，並帶我開始使用。OpenViking 是為 Agent 提供的上下文資料庫（https://github.com/volcengine/OpenViking），下面的命令和連結來自它的官方文件。
@@ -30,6 +30,17 @@ Agent 按一份簡短的指南執行。指南以純 Markdown 釋出，任何 Age
 API key 是我在 OpenViking 控制台給自己生成的，安裝器會把它存到本機的 ~/.openviking/ovcli.conf。命令裡原樣使用就行，回覆裡不用再顯示它，也不要寫進別的檔案或規則。全程用中文和我交流。
 ```
 
+```text
+幫我安裝 OpenViking 記憶外掛，並帶我開始使用。OpenViking 是為 Agent 提供的上下文資料庫（https://github.com/volcengine/OpenViking），下面的命令和連結來自它的官方文件。
+
+1. 執行官方安裝器。它需要聯網並寫入我的主目錄，如果被你的沙箱攔住，請向我申請批准：
+   curl -fsSL https://openviking.ai/install | bash -s -- --yes --lang zh --url https://api.vikingdb.cn-beijing.volces.com/openviking --api-key <API_KEY>
+2. 裝好後讀 OpenViking 的接入引導，按它帶我完成設定。匯入歷史、寫協作規則這類選擇，引導會讓你先問我。docs.openviking.ai 和 docs.openviking.net 是同一個文件站，哪個打得開用哪個：
+   https://docs.openviking.ai/agents/zh/onboarding-team.md
+
+API key 是我在 OpenViking 控制台或工作臺拿到的我自己的 key，安裝器會把它存到本機的 ~/.openviking/ovcli.conf。命令裡原樣使用就行，回覆裡不用再顯示它，也不要寫進別的檔案或規則。全程用中文和我交流。
+```
+
 </AgentPrompt>
 
 安裝器會給本機檢測到的所有受支援的 Agent 都裝上外掛，所以你裝過的其他 Agent 也會裝上；每個 Agent 都要各自重啟後，外掛才會在裡面生效。安裝器還會同時安裝 `ov` 命令，Agent 要用它檢查連線、新增檔案。`--lang` 設定安裝器的語言，安裝器最後列印的引導連結也隨之選擇語言。想只裝其中幾個，加上 `--harness` 並用逗號分隔列出，例如 `--harness claude,cli`，詳見[統一安裝器](../agent-integrations/16-capability-reference.md#_3-1-2-統一安裝器)。
@@ -40,11 +51,19 @@ API key 是我在 OpenViking 控制台給自己生成的，安裝器會把它存
 
 ## 已經裝好
 
-如果外掛已經裝好，在 Agent 裡開一個新會話，傳送：
+如果外掛已經裝好，在 Agent 裡開一個新會話，按你的版本傳送：
 
-```text
+::: code-group
+
+```text [個人版]
 按 https://docs.openviking.ai/agents/zh/onboarding.md 帶我完成 OpenViking 首次使用。
 ```
+
+```text [團隊版]
+按 https://docs.openviking.ai/agents/zh/onboarding-team.md 帶我完成 OpenViking 首次使用。
+```
+
+:::
 
 ## Agent 會做什麼
 
@@ -55,7 +74,9 @@ API key 是我在 OpenViking 控制台給自己生成的，安裝器會把它存
 5. **告訴你怎麼重啟。** 外掛要在 Agent 重新啟動後才會載入。Agent 會給出你正在對話的這個 Agent 的具體操作：Codex 裡先信任 OpenViking 的 hooks（CLI 在會話裡輸入 `/hooks`，桌面版點輸入框下方的 hooks 圖示），再退出、回到同一段對話（CLI 執行 `codex resume --last`），說一句「已重啟」，如果仍出現「Hooks need review」，選 **Trust all and continue**；Claude Code 和其他 Agent 開一個新會話，發它給你的第一句話。安裝器如果還裝進了其他 Agent，它會告訴你那些也需要重啟。
 6. **讓你看到 OpenViking 在起作用。** 重啟之後，你的第一個問題會基於召回的上下文回答，Agent 會告訴你在哪裡能看到：Claude Code 的來源卡片、Codex 的 OV-Usage 行，等等。
 
-Agent 只在需要你做決定時提問：帶入哪些工作（看到數量後再確認一次），以及要不要寫入協作規則；每次都會先講清對你有什麼用、會傳送或改動什麼。已經選過的不會重複問。
+**團隊版多出來的部分。** 第 1 步會講清你自己的空間和團隊共享目錄的區別：你的記憶、會話和個人資料只有你能看到；團隊共享的資料在 `viking://resources/`，共享的 Agent 技能在 `viking://agent/skills/`，每次提問前召回的上下文裡也包括它們。匯入歷史之後多一步：Agent 先列出團隊共享目錄裡同事已經貢獻了什麼、有哪些共享技能，再問你要不要把剛匯入的專案（沒匯入時是當前專案）的方案文件和一份進展摘要貢獻到 `viking://resources/<你的使用者名稱>/<專案名>/`，團隊成員都能看到。協作規則預設把重要決定、進展和產出存進團隊目錄下你自己的資料夾，草稿和你說不共享的內容留在個人空間；你也可以改成「預設存個人空間，共享前先問我」。重啟後可以選「瞭解團隊共享的上下文」。
+
+Agent 只在需要你做決定時提問：帶入哪些工作（看到數量後再確認一次）、團隊版裡要不要貢獻給團隊，以及要不要寫入協作規則；每次都會先講清對你有什麼用、會傳送或改動什麼。已經選過的不會重複問。
 
 ## 另請參閱
 

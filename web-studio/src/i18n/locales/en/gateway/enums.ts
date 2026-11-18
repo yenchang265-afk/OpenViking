@@ -33,8 +33,10 @@ const enums = {
   captureStatus: {
     active: 'On',
     disabled: 'Off',
+    failed: 'Failed',
     retrying: 'Retrying',
     paused: 'Paused',
+    lost: 'Lost',
   },
   captureReason: {
     history_changed:
@@ -46,7 +48,14 @@ const enums = {
     manual_reset: 'Resynced by an administrator',
     delivery_recovered: 'Saving works again',
     delivery_failed: 'Saving to Business Context Platform failed',
-    invalid_archive_id: 'Business Context Platform returned an unexpected archive',
+    invalid_archive_id:
+      'Business Context Platform returned an unexpected archive',
+    gateway_key_missing: "The key's record was missing",
+    stage_failed: "A finished turn couldn't be queued for saving",
+    save_timeout: 'Saving to Business Context Platform timed out',
+    save_failed: 'Saving to Business Context Platform failed',
+    delivered: 'Saved to Business Context Platform',
+    committed: 'Committed in Business Context Platform',
   },
   recallReason: {
     recalled: 'Memory added',
@@ -66,7 +75,8 @@ const enums = {
     tools_forced_choice: 'The client required a specific tool',
     deepseek_reasoning_history_required:
       'DeepSeek thinking is on and earlier reasoning cannot be sent back',
-    tool_name_collision: 'The client already has Business Context Platform tools',
+    tool_name_collision:
+      'The client already has Business Context Platform tools',
     tools_unavailable:
       "Business Context Platform's tool list couldn't be loaded when this conversation first needed it",
     tools_not_selected_at_session_start:
@@ -82,6 +92,11 @@ const enums = {
   openviking: {
     unavailable:
       "Business Context Platform is unreachable or didn't answer in time",
+    timeout: "Business Context Platform didn't answer in time",
+    circuitOpen:
+      'Business Context Platform stopped answering for this account, so it was skipped for now',
+    budgetExhausted:
+      'The time allowed for Business Context Platform calls ran out',
     unauthorized:
       'Business Context Platform rejected the key. It may be wrong or revoked.',
     httpStatus: 'Business Context Platform returned HTTP {{status}}',

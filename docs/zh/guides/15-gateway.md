@@ -36,10 +36,10 @@ OpenViking 閘道器是一個模型 API 代理：客戶端只要能修改 Base U
 | 閘道器金鑰 | 客戶端用來代替服務商 API Key 的金鑰（`ovgw_…`），繫結一位 OpenViking 使用者、一份上下文配置和一組上游。 | [閘道器金鑰](../gateway/09-gateway-keys.md#gateway-keys) |
 | OpenViking API 金鑰 | 你在 OpenViking 的使用者金鑰：用它登入 Studio，它也決定以哪個帳號、哪個使用者的身份讀寫記憶。 | [金鑰和憑證](22-gateway-operations.md#keys-and-credentials) |
 | 閘道器管理金鑰 | 可選的金鑰（`ovgm_…`）；設定後，只有帶上它的請求才能修改上游和上下文配置。誰能修改什麼，見[許可權矩陣](../api/25-gateway.md#credentials-and-account-scope)。 | [閘道器管理金鑰](22-gateway-operations.md#gateway-management-key) |
-| 對話 | 閘道器認定屬於同一次聊天的一組請求；一段對話沿用開始時的上下文配置和上游。它的輪次儲存到一個 OpenViking 會話，某些情況下改存到新會話，例如客戶端改寫歷史時（見[儲存狀態](../gateway/10-overview-and-requests.md#saving-status)）。 | [閘道器如何識別對話](../gateway/03-connect-clients.md#how-conversations-are-recognized) |
+| 對話 | 閘道器認定屬於同一次聊天的一組請求；一段對話沿用開始時的上下文配置和上游。它的輪次儲存到一個 OpenViking 會話，客戶端改寫歷史後也不換會話，只有[重新同步對話](../gateway/10-overview-and-requests.md#resync-a-conversation)會換。 | [閘道器如何識別對話](../gateway/03-connect-clients.md#how-conversations-are-recognized) |
 | 召回 | 從 OpenViking 搜出和當前訊息相關的記憶，附加到這條訊息上。 | [模型看到什麼](../gateway/01-how-it-works.md#what-the-model-sees) |
-| 儲存 | 把已完成的輪次寫入 OpenViking 會話（晚一輪進行），供之後的提交從中提取新記憶。 | [對話什麼時候儲存](../gateway/01-how-it-works.md#when-conversations-are-saved) |
-| 提交 | 告訴 OpenViking 會話裡已儲存的輪次可以處理了：OpenViking 歸檔較早的輪次（會話中只留最新的訊息），並在後臺從中提取記憶。已儲存的輪次要等提交之後才會變成記憶。 | [對話什麼時候儲存](../gateway/01-how-it-works.md#when-conversations-are-saved) |
+| 儲存 | 一輪結束時，把這一輪寫入 OpenViking 會話，供之後的提交從中提取新記憶。 | [對話什麼時候儲存](../gateway/01-how-it-works.md#when-conversations-are-saved) |
+| 提交 | 告訴 OpenViking 會話裡已儲存的訊息可以處理了：OpenViking 歸檔較早的訊息（按提交閾值提交時會話中只留最新的訊息），並在後臺從中提取記憶。已儲存的輪次要等提交之後才會變成記憶。預設由閘道器提交。 | [對話什麼時候儲存](../gateway/01-how-it-works.md#when-conversations-are-saved) |
 | 壓縮 | 對話接近模型的上下文視窗時，讓同一個模型寫一份摘要，替換截斷點之前的全部內容。 | [閘道器中的長對話](../gateway/05-long-conversations.md#long-conversations) |
 | 提示詞快取 | 服務商的計費機制：請求開頭和上一次請求相同的部分按快取價計費（通常只有原價的一小部分），從第一個不同的位元組起按原價計費。 | [記憶原樣放回與提示詞快取](../gateway/01-how-it-works.md#replay) |
 | 本地 dev 模式 | 以 dev 模式執行的 OpenViking 服務：繫結 `127.0.0.1`、未配置 `root_api_key`，開啟 Studio 不需要 API 金鑰，所有操作都以 `default` 使用者身份進行。 | [本地服務](../gateway/02-quickstart.md#local-server-no-api-key) |
@@ -52,14 +52,14 @@ OpenViking 閘道器是一個模型 API 代理：客戶端只要能修改 Base U
 - **執行在哪**：開啟後嵌入 OpenViking Server，和 Server 共用埠；也可以用 `openviking-gateway` 獨立執行，連線已有的 OpenViking 服務（開源版或商業版）。兩種方式下閘道器的所有 URL 都在 `/gateway` 下（例如 `/gateway/v1`），客戶端路徑相同，見[選擇部署方式](22-gateway-operations.md#deployment-options)。
 - **和 OpenViking 的關係**：閘道器只呼叫 OpenViking 的公開介面，向量化和記憶提取都在 OpenViking 中完成。
 - **資料在哪**：會話和記憶的正本在 OpenViking。閘道器預設使用兩個 SQLite 檔案，多副本部署可以改用共享 Redis。開啟 OpenViking 加密後，兩種後端中儲存的值都會加密。見[安全與資料](../gateway/11-security-and-data.md)。
-- **出故障時**：OpenViking 不可用時，對話照常進行，只是不帶記憶，儲存會自動重試。閘道器停止服務時，經過它的模型呼叫全部失敗。
+- **出故障時**：OpenViking 不可用時，對話照常進行，只是不帶記憶；這期間結束的輪次儲存失敗，下一輪結束時補上。閘道器停止服務時，經過它的模型呼叫全部失敗。
 
 ## 能得到什麼，代價是什麼 {#what-you-get-and-what-it-costs}
 
 接入後你會得到：
 
 - 每條新訊息都補上相關記憶；
-- 新對話開頭帶上你的使用者畫像；
+- 新對話開頭帶上你的 soul（`soul.md` 裡的指令）和使用者畫像；
 - 對話儲存回 OpenViking，並提取成新記憶；
 - 長對話自動壓縮；
 - 開啟 OpenViking 工具後，模型還能主動檢索、讀取和寫入記憶（見[讓任意客戶端擁有 Agentic 記憶](../gateway/04-openviking-tools.md#agentic-memory-for-any-client)）。
@@ -84,7 +84,7 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 | 適用客戶端 | 能設定 Base URL 和 API Key、使用 Anthropic Messages、Chat Completions 或 Responses 的客戶端：聊天應用、SDK 指令碼、低程式碼平臺和程式設計 Agent。Cursor 和 TRAE 不行，它們的模型呼叫從廠商伺服器發出。 | 只有帶 OpenViking 外掛的 Agent。其他 MCP 客戶端可以接入 OpenViking 工具，但沒有自動召回和儲存。 |
 | 模型登入方式 | 需要服務商的 API Key，由閘道器保管，或[由客戶端各自傳送](../gateway/03-connect-clients.md#bring-your-own-provider-key)。客戶端不能用訂閱帳號登入，可以改用[訂閱反代上游](../gateway/07-upstreams.md#custom-upstreams)。Codex 可以通過 [CLIProxyAPI](../gateway/03-connect-clients.md#codex-chatgpt-subscription) 使用 ChatGPT 訂閱；其他訂閱服務請自行確認其使用條款。 | 不經手模型呼叫，Agent 原來怎麼登入就怎麼登入，訂閱也可以。 |
 | 召回 | 每條新的使用者訊息召回一次，結果附加在這條訊息末尾；檢索預設最多等 2 秒。預設檢索記憶、資源和技能。 | 在 Agent 的提問事件裡進行。多數外掛會帶上會話 ID，讓服務端結合對話擴充查詢；自動召回不含資源。 |
-| 儲存 | 晚一輪儲存已完成的輪次，連同客戶端自己的工具呼叫和結果。子 Agent 請求和雜項請求不儲存。 | 跟隨 Agent 的事件，通常在每輪結束時。子 Agent 各不相同：Claude Code、OpenCode 和 DSH 存成單獨的會話，Codex 併入主會話，Hermes 不儲存。 |
+| 儲存 | 每一輪結束時儲存這一輪，連同客戶端自己的工具呼叫和結果。子 Agent 請求和雜項請求不儲存。 | 跟隨 Agent 的事件，通常在每輪結束時。子 Agent 各不相同：Claude Code、OpenCode 和 DSH 存成單獨的會話，Codex 併入主會話，Hermes 不儲存。 |
 | OpenViking 工具 | 由閘道器在回覆過程中執行，不支援工具或 MCP 的客戶端也能用。預設開放全部工具。呼叫[不經過客戶端的許可權確認](../gateway/04-openviking-tools.md#risks-and-controls)，每次呼叫顯示一行提示。 | 由 Agent 當作自己的工具執行，呼叫和結果出現在對話記錄裡，遵循 Agent 的工具許可權設定。 |
 | 提示詞快取 | 在後續請求裡把每個記憶塊逐位元組原樣放回，快取字首保持不變。**概覽**頁顯示快取命中率。 | 因外掛而異。基於 hook 的外掛把記憶塊交給 Agent，由 Agent 儲存在自己的歷史裡；pi 和 OpenCode v2 也會讓之前的召回保持不變；OpenClaw 每輪在系統提示詞裡重建召回內容。 |
 | 長對話 | 接近模型上下文視窗時由閘道器壓縮，任何客戶端都適用，包括從不壓縮的應用。[實驗性的 Agent 自管上下文視窗](../gateway/05-long-conversations.md#experimental-agent-managed-context-windows)讓模型自己決定何時開啟新視窗。 | 由 Agent 自己壓縮，多數外掛會先提交已捕獲的內容。pi 和 OpenClaw 可以用 OpenViking 的摘要替換 Agent 的摘要。 |
@@ -92,7 +92,7 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 | 可見性 | 補充的記憶在客戶端裡看不到，除非上下文配置開啟了[召回摘要](../gateway/08-context-profiles.md#recall-summary)。Studio 的請求日誌記錄條數和儲存狀態，不記錄內容。 | Claude Code 的狀態列和 `/openviking-memory:ov` 命令顯示召回條數和補充內容的來源；pi 的狀態列顯示連線狀態。其他外掛沒有自己的狀態顯示。 |
 | 部署與運維 | 一個服務，嵌入 OpenViking Server 或獨立執行。使用者只改 Base URL 和金鑰；上游、上下文配置和金鑰都在 Studio 裡管理。 | 每臺機器分別安裝和升級，各自配置 OpenViking 憑證。 |
 | 團隊使用 | 管理員給每人簽發一個閘道器金鑰，可以單獨吊銷。閘道器保管服務商 API Key 時，使用者看不到它。 | 每人用自己的 OpenViking API 金鑰安裝外掛。行為設定可以寫進程式碼倉庫的 `.openviking/config.json`，按倉庫共享。 |
-| 出故障時 | OpenViking 不可用時，請求照常發出，只是不帶記憶，儲存會自動重試。閘道器本身停止服務時（嵌入形態即 OpenViking Server 停止時），經過它的模型呼叫全部失敗。服務商 API Key 和尚未儲存的對話文本集中存放在閘道器，每次模型呼叫也多經過一跳。 | OpenViking 不可用時，Agent 等到外掛的召回超時（多數為 15 秒，Hermes 為 4 秒）後不帶記憶繼續；多數外掛會把寫入失敗的內容排隊存到磁碟。模型呼叫從不依賴 OpenViking。 |
+| 出故障時 | OpenViking 不可用時，請求照常發出，只是不帶記憶；結束的輪次儲存失敗，不重試，由下一輪結束時補上，沒有下一輪時會丟失。閘道器本身停止服務時（嵌入形態即 OpenViking Server 停止時），經過它的模型呼叫全部失敗。服務商 API Key 集中存放在閘道器，每次模型呼叫也多經過一跳。 | OpenViking 不可用時，Agent 等到外掛的召回超時（多數為 15 秒，Hermes 為 4 秒）後不帶記憶繼續；多數外掛會把寫入失敗的內容排隊存到磁碟。模型呼叫從不依賴 OpenViking。 |
 
 各外掛的細節見 [Agent 整合能力](../agent-integrations/16-capability-reference.md)，閘道器的細節見 [OpenViking 閘道器的工作原理](../gateway/01-how-it-works.md)。
 

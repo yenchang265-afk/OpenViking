@@ -187,7 +187,7 @@ Rule 編譯始終以 `thinking=true` 呼叫專用 Compiler 或回退的帳戶預
 | `model` | string / `null` | provider 預設值 | 模型名或 Endpoint ID；`custom` 必填 |
 | `timeout` | number | `30` | HTTP 請求超時秒數 |
 | `extra_headers` | object / `null` | `null` | 附加 HTTP 請求頭 |
-| `log_payloads` | boolean | `false` | 是否記錄完整請求和響應；日誌可能包含任務與 Rule 內容 |
+| `log_payloads` | boolean | `false` | 在 `log.level=DEBUG` 時記錄安全的請求和響應摘要；不記錄任務、Rule 和響應正文 |
 
 | Provider | 預設請求 URL | 預設 model | 說明 |
 |---|---|---|---|
@@ -233,7 +233,7 @@ Compiler 會優先忠實提煉原文中的物件、操作、前提和場景，�
 | `mode` | `noul`、`choice` 或 `null` | `noul` | Jev Rerank 模式；`null` 同樣使用 `noul` |
 | `threshold` | number | `0.1` | 判定結果相關的最低 Rerank 分數；只過濾模型產出的 Rerank 分數，不過濾向量分數；請求中的 `score_threshold` 優先 |
 | `max_input_tokens` | integer；`0` 或 `>= 128` | `0` | 每個 query-document pair 的最大估算 token；`0` 表示不截斷 |
-| `log_payloads` | boolean | `false` | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容 |
+| `log_payloads` | boolean | `false` | 僅用於 Jev：在 `log.level=DEBUG` 時記錄安全的請求和響應摘要；不記錄 query、文件和響應正文 |
 
 Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑證後才會啟用。
 
@@ -288,7 +288,11 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking 工作目錄 |
 | `agfs.backend` | `local`、`memory`、`s3` | `local` | 檔案與後設資料儲存後端 |
+| `cache.instances` | object | 啟用 cache consumer 時必填 | 命名 CacheRuntime Provider，必須包含 `default` |
+| `agfs.cachefs.instance` | 例項名 | `"default"` | `cachefs.backend="cache"` 時使用的 Runtime |
+| `agfs.queuefs.instance` | 例項名 | `"default"` | `queuefs.backend="cache"` 時使用的 Runtime |
 | `agfs.pathlock.provider` | `filesystem`、`memory`、`sqlite`、`postgres`、`cache` | `filesystem` | 路徑鎖儲存；`postgres` 直連 PostgreSQL，`cache` 使用 Redis |
+| `agfs.pathlock.instance` | 例項名 | `"default"` | `pathlock.provider="cache"` 時使用的 Runtime，必須是 Redis |
 | `agfs.pathlock.sqlite_path` | 本地檔案絕對路徑 | 使用 `sqlite` 時為 `{workspace}/_system/pathlock/pathlock.db` | SQLite 共享鎖資料庫，可顯式覆蓋 |
 | `agfs.pathlock.postgres_dsn_env` | 環境變數名 / `null` | `null` | `postgres` 必填；指定服務程序中儲存 PostgreSQL DSN 的環境變數名 |
 | `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss`、`pgvector`、`elasticsearch` | `local` | 向量資料庫後端；參見 [pgvector 配置](../guides/25-pgvector.md) |
@@ -411,7 +415,8 @@ PathLock 不提供租約失效後的儲存側 fencing，也不改變 CachedFileS
 #### Redis PathLock
 
 使用 Redis 協調時，
-設定 `storage.agfs.pathlock.provider="cache"` 和頂層 `cache.provider="redis"`。
+設定 `storage.agfs.pathlock.provider="cache"`，並通過
+`storage.agfs.pathlock.instance` 選擇 `cache.instances` 中的 Redis 例項。
 所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
 參見[共享 Redis 配置示例](../guides/01-configuration.md)。
 無論選擇哪種 PathLock，共享 QueueFS 都需選擇適合該部署的後端，例如 `storage.agfs.queuefs.backend="cache"`；
@@ -490,6 +495,39 @@ namespace 中混跑新舊版本；保留已有持久化佇列 handoff。
 |---|---|---:|---|
 | `max_concurrent` | integer | `10` | 同時消費的外部非同步任務數，必須大於 `0`；修改後需重啟服務 |
 
+## 日誌配置
+
+`log` 統一控制獨立伺服器的 Python、Rust 和 C++ 輸出。預設級別為 `INFO`，
+便於看到兜底和重試；業務過程使用 `DEBUG`。第三方日誌保留原級別語義。
+Bootstrap 啟動結果和失敗提示直接列印到 stdout/stderr，即使設定高日誌閾值
+或檔案輸出也會顯示。
+
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
+| --- | --- | --- | --- |
+| `level` | `DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL` | `INFO` | 輸出閾值；大小寫不敏感，相容 `WARN` 和 `FATAL` |
+| `format` | 公共格式字串 | 見下文 | Python、Rust、C++ 使用同一日誌頭 |
+| `output` | `stdout`、`stderr`、`file` 或檔案路徑 | `stdout` | `file` 寫入 `storage.workspace/log/openviking.log` |
+| `rotation` | boolean | `true` | Python 檔案輸出輪轉，並通知 Rust 重開檔案 |
+| `rotation_days` | integer | `3` | Python 保留的輪轉檔案數量 |
+| `rotation_interval` | `midnight`、`H`、`D`、`W0`–`W6` | `midnight` | Python 檔案輪轉週期；C++ 檔案 sink 不參與輪轉 |
+
+公共 `format` 的精確值：
+
+```text
+%(asctime)s %(levelname)s %(name)s pid=%(process)d request_id=%(request_id)s trace_id=%(trace_id)s message=%(message)s
+```
+
+輸出時間為 UTC 毫秒，訊息及附加字串按 JSON 規則轉義，每條事件佔一行，
+不含終端顏色。缺失的關聯欄位顯示 `-`。升級時，舊內建格式
+`%(asctime)s - %(name)s - %(levelname)s - %(message)s` 自動轉為公共格式；
+其他自定義格式和未知級別會導致配置校驗失敗。
+
+原生輸出配置改變後需要重啟服務；Python 重配不能代表原生元件已經更新。
+Rust 沒有 `CRITICAL`，該閾值仍對映到 `ERROR`，輸出仍標為 `ERROR`。
+已有 `server.observability.usage_audit` 配置管理用量及 HTTP 請求記錄；
+安全操作審計落庫記為獨立功能待辦。
+SDK 匯入不會接管宿主 root logger。日誌內容邊界見[日誌規範](https://github.com/volcengine/OpenViking/blob/main/docs/repository/LOGGING_CN.md)。
+
 ## Compile API 配置
 
 | 欄位 | 型別 | 預設值 | 說明 |
@@ -517,7 +555,7 @@ namespace 中混跑新舊版本；保留已有持久化佇列 handoff。
     "host": "127.0.0.1",
     "port": 1933,
     "workers": 1,
-    "executor_threads": 0,
+    "executor_threads": 64,
     "auth_mode": "dev",
     "cors_origins": ["http://localhost:5173"],
     "profile_enabled": false,
@@ -535,7 +573,7 @@ namespace 中混跑新舊版本；保留已有持久化佇列 handoff。
 | `host` | IP / hostname | `"127.0.0.1"` | HTTP 監聽地址 |
 | `port` | integer | `1933` | HTTP 監聽埠 |
 | `workers` | integer | `1` | 服務程序數量 |
-| `executor_threads` | 非負整數 | `0` | 每個服務程序的 asyncio 預設 executor 最大執行緒數；`0` 表示沿用 Python 預設策略 |
+| `executor_threads` | 非負整數 | `64` | 每個服務程序的 asyncio 預設 executor 最大執行緒數；`0` 表示沿用 Python 預設策略 |
 | `timeout_keep_alive` | integer（秒） | `5` | 空閒 HTTP keep-alive 超時；應調大到超過上游空閒連線壽命 |
 | `ready_probe_timeout_seconds` | number（秒） | `5.0` | `/ready` 每項儲存探測（檔案系統、向量資料庫）的最長等待時間，逾時回傳 `503`；編排器探針逾時（如 Kubernetes `timeoutSeconds`）應大於此值 |
 | `auth_mode` | `dev`、`api_key`、`trusted` / `null` | `null` | 鑑權模式；空值根據 `root_api_key` 自動判斷 |

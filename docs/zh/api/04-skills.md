@@ -495,11 +495,11 @@ Python HTTP SDK 會把該響應對映為對應異常（`ProcessingError`）。
 Python HTTP SDK 和 Go SDK 都暴露專用技能管理方法。Python 方法包括
 `list_skills`、`find_skills`、`validate_skill`、`get_skill`、`update_skill`
 和 `delete_skill`；Go 方法包括 `ListSkills`、`FindSkills`、`ValidateSkill`、
-`GetSkill`、`UpdateSkill` 和 `DeleteSkill`。通用檔案系統、內容和檢索方法仍可用於 URI 級訪問。
+`GetSkill`、`UpdateSkill` 和 `DeleteSkill`。通用檔案系統和檢索方法可用於 URI 級讀取；通用內容寫入、檔案變更和快照恢復不能繞過 Skill API 修改包內容。
 
 ### 列出技能
 
-`GET /api/v1/skills` 的查詢引數為 `node_limit=1000` 和可選 `target_uri`。省略目標時合併私有與共享根，同名 Skill 都保留，以 `root_uri` 區分。當前服務端實際固定每個根的目錄掃描 `node_limit=1000`，尚未把請求的 `node_limit` 傳到掃描層，不應依賴它作為全域條數限制或分頁引數。
+`GET /api/v1/skills` 的查詢引數為 `node_limit=1000` 和可選 `target_uri`。省略目標時合併私有與共享根，同名 Skill 都保留，以 `root_uri` 區分。每項包含 `owner_user_id`、`created_by/created_at`、`updated_by/updated_at` 和 `current_revision`，用於展示上傳歸屬與最近修改。舊 Skill 沒有歷史記錄時這些欄位為 `null`。
 
 **Python SDK**：
 
@@ -586,6 +586,18 @@ fmt.Println(skill)
 curl -X GET "http://localhost:1933/api/v1/skills/search-web?include_content=true&include_files=true" \
   -H "X-API-Key: your-key"
 ```
+
+### 歸屬與修改時間線
+
+首次建立時，服務端從認證上下文寫入 `owner_user_id=created_by`，後續更新不會覆蓋原上傳人和上傳時間。create、update、delete 都會追加 `{actor_user_id, occurred_at, operation, before_hash, after_hash, request_id}`；內容 hash 不包含後臺生成的 abstract/overview。刪除後記錄仍保留，`after_hash=null`。
+
+詳情響應包含當前歸屬和完整 `history`。也可查詢獨立時間線（包括已刪除 Skill）：
+
+```http
+GET /api/v1/skills/{skill_name}/audit?target_uri=viking://agent/skills&limit=50
+```
+
+`limit` 範圍為 1 到 1000，預設 50；省略 `target_uri` 時先查私有根，再查共享根。
 
 ### 完整性清單與遠端使用
 

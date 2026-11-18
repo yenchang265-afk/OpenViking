@@ -22,8 +22,8 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 | [聊天客戶端和 SDK](#chat-clients-and-sdks) | Chat Completions（或 SDK 使用的 API） | `https://ov.example.com/gateway/v1` | `X-OpenViking-Session`，需要自己傳送 |
 | [Open WebUI](#open-webui) | Chat Completions | `https://ov.example.com/gateway/v1` | 在連線上配置 `X-OpenViking-Session` 請求頭 |
 | [OpenCode](#opencode) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1` | OpenCode 的會話請求頭 |
-| [pi](#pi) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 通常根據對話歷史匹配 |
-| [DSH](#dsh) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 通常根據對話歷史匹配 |
+| [pi](#pi) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 使用 Responses 時用 pi 的會話請求頭，否則根據對話歷史匹配 |
+| [DSH](#dsh) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 使用 Responses 時用 DSH 的會話請求頭，否則根據對話歷史匹配 |
 | [火山方舟與 BytePlus 方舟 SDK](#volcano-engine-ark-and-byteplus-modelark-sdks) | 三種均可 | `https://ov.example.com/gateway/api/v3` 或 `https://ov.example.com/gateway/api/compatible` | 取決於客戶端傳送的請求頭 |
 
 最後一列的含義見[閘道器如何識別對話](#how-conversations-are-recognized)。
@@ -167,6 +167,8 @@ print(reply.choices[0].message.content)
 - Anthropic SDK 指向 `https://ov.example.com/gateway`。
 - Responses API 使用 `https://ov.example.com/gateway/v1`，每個請求都要帶完整歷史並設定 `store: false`；其他 Responses 請求直接轉發，不補充記憶。
 
+如果服務商在流式回覆中途停止傳送（超過 `upstream_timeout_seconds` 沒有資料，或連線斷開），流仍然以 SDK 能識別的方式結束：閘道器追加一條當前 API 的錯誤事件，然後正常關閉流。OpenAI Chat Completions 和 Anthropic SDK 會丟擲它們的 API 錯誤，訊息開頭是原因（例如 `upstream_timeout`）；Responses API 收到 `response.failed`。此時 HTTP 狀態碼已經是 200。只有服務商停在一個事件的中間，或者停在回覆的最後一個事件之後，連線才會像以前一樣直接斷開。
+
 配好後，[檢查接入是否生效](#check-the-connection)。
 
 ## Open WebUI {#open-webui}
@@ -256,7 +258,7 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 | Anthropic Messages | `anthropic-messages` | `https://ov.example.com/gateway` |
 
 - `apiKey` 從環境變數 `OPENVIKING_GATEWAY_KEY` 讀取閘道器金鑰，啟動 pi 前先匯出它。開頭的 `$` 不能省，否則 pi 會把這個字串本身當作金鑰傳送。
-- pi 通常不傳送會話請求頭，閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
+- 使用 Responses 時，pi 傳送 `session-id`，閘道器據此識別它的對話；使用 Chat Completions 和 Anthropic Messages 時不傳送會話請求頭，閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
 - pi 自己的 OpenViking 擴充啟用時，閘道器會讓出這些對話，兩者選一個即可。
 
 配好後，[檢查接入是否生效](#check-the-connection)。
@@ -284,7 +286,7 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 - 也可以在 Web UI 的 Settings → Models → Add model provider → Custom model API 中新增，寫入的是同一個檔案。
 - Desktop 看不到在終端裡 export 的變數。macOS 上把 `OPENVIKING_GATEWAY_KEY` 寫進 shell 啟動檔案（`~/.zprofile` 或 `~/.zshrc`）；Windows 上用 `setx` 設定。然後用 ⌘Q 或托盤選單退出 Desktop，再重新開啟。Desktop 的恢復對話方塊會把 `cordis.patch.yml` 挪成 `.bak-<時間戳>` 檔案，執行過恢復後需要重新新增服務商。
 - DSH 的一個服務商只使用一種協議。要通過多種協議使用閘道器，就為每種協議各宣告一個服務商。
-- 除非 DSH 傳送了某個會話請求頭，否則閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
+- 使用 Responses 時，DSH 傳送 `session_id`，閘道器據此識別它的對話；使用 Chat Completions 和 Anthropic Messages 時不傳送會話請求頭，閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
 - 同一個 profile 裡裝了 [OpenViking 的 DSH 外掛](../agent-integrations/17-dsh.md)時，閘道器會讓出這些對話，兩者選一個即可。
 
 配好後，[檢查接入是否生效](#check-the-connection)。
@@ -317,11 +319,11 @@ client = Ark(base_url="https://ov.example.com/gateway/api/v3", api_key="<gateway
 
 1. 在客戶端的同一段對話（同一個聊天或同一個 Agent 會話）裡發兩條訊息。應該能正常收到回覆。
 2. 在 Studio 中開啟**請求日誌**標籤頁。兩個請求都應顯示為**新訊息**，狀態碼為 200。
-3. 展開這兩個請求。它們的**對話**應該相同，**儲存**一欄應顯示**正常**，表示儲存已開啟且執行正常。第二條訊息到達後第一輪就會儲存；要看到它，請以金鑰所屬使用者的身份登入 Studio，在**會話**頁面找到 `gateway-…` 會話（見[確認記憶生效](02-quickstart.md#confirm-that-memory-works)）。
+3. 展開這兩個請求。它們的**對話**應該相同，**儲存**一欄應顯示**正常**，表示儲存已開啟且執行正常。每一輪在回覆結束後就會儲存；要看到它，請以金鑰所屬使用者的身份登入 Studio，在**會話**頁面找到 `gateway-…` 會話（見[確認記憶生效](02-quickstart.md#confirm-that-memory-works)）。
 
 如果結果不對：
 
-- **看不到任何請求。** 只有到達模型服務商的請求才會記錄，說明客戶端直接收到了閘道器返回的錯誤，見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)。
+- **看不到任何請求。** 預設的 `store` 儲存不保留在金鑰確認之前就失敗的請求（例如 401、402、403）；其餘請求都會出現在列表中，包括閘道器自身返回的錯誤，並帶有錯誤原因，見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)。
 - **兩個請求屬於不同的對話。** 客戶端沒有傳送會話請求頭，且歷史也沒有匹配上，見[閘道器如何識別對話](#how-conversations-are-recognized)。
 - **記憶一欄一直是空的。** 全新帳號本來就是這樣。要完整驗證記憶是否生效，按[確認記憶生效](02-quickstart.md#confirm-that-memory-works)操作。
 
@@ -329,14 +331,16 @@ client = Ark(base_url="https://ov.example.com/gateway/api/v3", api_key="<gateway
 
 ## 閘道器如何識別對話 {#how-conversations-are-recognized}
 
-對話是閘道器當作同一次聊天處理的一系列請求：一段對話固定使用同一份上下文配置和同一個上游，並儲存到一個 OpenViking 會話，某些情況下改存到新會話，例如客戶端改寫歷史時（見[儲存狀態](10-overview-and-requests.md#saving-status)）。為了判斷請求屬於哪段對話，閘道器按以下順序取第一個出現的請求頭：
+對話是閘道器當作同一次聊天處理的一系列請求：一段對話固定使用同一份上下文配置和同一個上游，並儲存到一個 OpenViking 會話，客戶端改寫歷史後也不換會話，只有[重新同步對話](10-overview-and-requests.md#resync-a-conversation)會換。為了判斷請求屬於哪段對話，閘道器按以下順序取第一個出現的請求頭：
 
 1. `X-OpenViking-Session`
 2. `thread-id`
 3. `x-claude-code-session-id`（Claude Code）
 4. `x-opencode-session-id`（OpenCode）
-5. `x-session-id`
-6. `session-id`（Codex CLI）
+5. `x-deepseek-harness-session-id`（使用內建 DeepSeek 服務商的 DSH）
+6. `x-session-id`
+7. `session-id`（Codex CLI，以及使用 Responses 的 pi）
+8. `session_id`（使用 Responses 的 DSH；閘道器前面的反向代理要放行帶下劃線的請求頭，nginx 需設定 `underscores_in_headers on`）
 
 這些請求頭都沒有時，閘道器檢視歷史中最近一條助手回覆：如果恰好有一段之前的對話產生過這條回覆，請求就併入那段對話，否則開始一段新對話。開場訊息相同的兩段對話不會因此被合併。普通的一問一答這樣就能識別，但重試、重新生成和內容完全相同的對話存在歧義，可能被當成新對話。所以只要客戶端允許設定請求頭，就傳送 `X-OpenViking-Session`。
 

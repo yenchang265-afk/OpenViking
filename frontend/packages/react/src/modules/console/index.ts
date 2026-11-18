@@ -2,6 +2,8 @@ export * from './console.js';
 export type {
   ConsoleChatOptions,
   ConsoleCommandProps,
+  ConsoleCommandOptions,
+  ConsoleCommandFiles,
   ConsoleLabels,
   ConsoleMode,
   ConsoleProps,
@@ -10,8 +12,15 @@ export type {
   ConsoleTaskSnapshot,
 } from './types.js';
 export type {
+  VikingBotAttachmentUpload,
   VikingBotChatEvent,
   VikingBotChatInput,
   VikingBotChatService,
   VikingBotSessionService,
 } from './chat/types.js';
+
+export type {
+  ConsoleHitlOptions,
+  ConsoleHitlCard,
+  ConsoleHitlCardOptions,
+} from './hitl/types.js';

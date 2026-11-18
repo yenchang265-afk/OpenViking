@@ -31,7 +31,6 @@ async def test_create_bot_proxy_client_disables_env_proxy():
         assert client._trust_env is False
 
 
-@pytest.mark.asyncio
 async def test_feedback_proxy_forwards_request(monkeypatch):
     forwarded = {}
 
@@ -88,7 +87,6 @@ async def test_feedback_proxy_forwards_request(monkeypatch):
     assert forwarded["timeout"] == 30.0
 
 
-@pytest.mark.asyncio
 async def test_interrupt_proxy_forwards_session_interrupt(monkeypatch):
     forwarded = {}
 
@@ -135,7 +133,6 @@ async def test_interrupt_proxy_forwards_session_interrupt(monkeypatch):
     assert forwarded["timeout"] == 30.0
 
 
-@pytest.mark.asyncio
 async def test_steer_proxy_forwards_message_body(monkeypatch):
     forwarded = {}
 
@@ -199,7 +196,6 @@ async def test_steer_proxy_forwards_message_body(monkeypatch):
     assert forwarded["timeout"] == 30.0
 
 
-@pytest.mark.asyncio
 async def test_chat_proxy_attaches_authenticated_openviking_connection(monkeypatch):
     forwarded = {}
 
@@ -301,6 +297,9 @@ async def test_compile_route_uses_ov_owned_task_and_rejects_legacy_routes(monkey
         "X-OpenViking-User": "alice",
     }
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        memory = {"skill": "memory", "to": "viking://~/memories"}
+        response = await client.post("/api/v1/compile", headers=headers, json=memory)
+        assert response.status_code == 202 and {"deprecation", "link"}.isdisjoint(response.headers)
         created = await client.post(
             "/api/v1/compile",
             headers=headers,
@@ -319,6 +318,9 @@ async def test_compile_route_uses_ov_owned_task_and_rejects_legacy_routes(monkey
             headers=headers,
         )
 
+    assert created.headers["deprecation"] == "@1794009600"
+    guide = "https://docs.openviking.ai/en/api/23-agent-runtime#execute-compile"
+    assert created.links["deprecation"]["url"] == guide
     assert created.status_code == 202
     assert created.json()["result"]["task_id"] == "cmp_1"
     assert legacy_created.status_code == 400
@@ -394,7 +396,6 @@ async def test_chat_proxy_strips_client_openviking_connection_in_dev_mode(monkey
     assert forwarded["json"].get("user_id") == "default"
 
 
-@pytest.mark.asyncio
 async def test_chat_stream_proxy_preserves_sse_event_boundaries(monkeypatch):
     payload = (
         'data: {"event":"reasoning_delta","data":"thinking"}\n\n'

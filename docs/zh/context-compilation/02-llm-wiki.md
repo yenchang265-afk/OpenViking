@@ -57,11 +57,12 @@ ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking:
 ## 第三步：執行編譯
 
 ```bash
-ov compile \
+ov compile create --compile-name research-wiki \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
   --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "面向團隊檢索整理成 Wiki，保留每條結論的出處"
+ov compile --compile-name research-wiki
 ```
 
 - `--from` 可以重複或用逗號分隔，一次傳多個來源。

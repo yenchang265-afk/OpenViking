@@ -21,16 +21,27 @@ ov add-skill ./llm-wiki-v1.zip -p viking://agent/skills --wait
 ov read viking://agent/skills/llm-wiki/SKILL.md
 ```
 
-這個樣例包包含專案自帶的 LLM Wiki Skill。編譯將呼叫模型並在下面的新目錄中寫入產物；重複體驗時使用新的目標目錄名。
+這個樣例包包含專案自帶的 LLM Wiki Skill。編譯將呼叫模型並在下面的新目錄中寫入產物。
 
 ## 提交編譯
 
+先建立命名配置，儲存來源、目標、Skill 和可選的 `--instruction`、`--args`。
+
 ```bash
-ov compile --from viking://resources/onboarding-zh-v1 \
+ov compile create --compile-name lighthouse-wiki \
+  --from viking://resources/onboarding-zh-v1 \
   --to viking://resources/onboarding-wiki-v1 \
   --skill viking://agent/skills/llm-wiki \
   --instruction "請用中文生成一個 index.md 和一篇 entity/lighthouse.md。正文圍繞隔離網路中的反饋試點，綜合專案、反饋和會議資料，保留完整來源 viking:// URI，明確未知日期。僅在目標目錄寫入。"
 ```
+
+配置只需建立一次。按名稱提交編譯：
+
+```bash
+ov compile --compile-name lighthouse-wiki
+```
+
+執行時會複用配置中已儲存的 `from`、`to`、`skill` 和 `instruction`。
 
 記錄返回的 `cmp_...` 任務 ID，查詢進度：
 
@@ -41,6 +52,10 @@ ov task status <cmp_task_id>
 每隔 5 秒檢視一次，先觀察最多 5 分鐘。狀態為 `completed` 後讀取產物；仍在執行時可稍後再查，或用 `ov task cancel <cmp_task_id>` 請求取消。失敗時檢視任務錯誤和 Compile Runtime 配置。
 
 編譯完成後，目標目錄中應包含導航頁和專案正文。你可以參考 [Wiki 正文示例](/quickstart/wiki-output-zh-v1.txt)，瞭解內容組織和來源引用方式，再按下文核對生成結果。
+
+首次執行執行全量編譯，後續執行使用上次成功的增量基線。名稱必填，由漢字、ASCII 字母、數字、下劃線或連字元組成，純 ASCII 名稱最多 64 個字元，含漢字的名稱總長最多 32 個字元，首字元不能是連字元，區分大小寫，在同一 account 的同一使用者內唯一；不同使用者可以使用相同名稱。定時計劃和呼叫時間說明見[配置與執行介面](../api/23-agent-runtime.md)。
+
+直接傳入 `ov compile --from … --to … --skill …` 的寫法已棄用，仍可執行一次性全量編譯。
 
 ## 開啟正文
 

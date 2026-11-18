@@ -194,8 +194,8 @@ import '@openviking/react/components/scope-switcher/style.css';
 - 停用選項，以及 `busy` 時的全部選項，不能選擇，方向鍵也會跳過它們。`renderOption` 裡內嵌的按鈕、連結和輸入框不會觸發行選擇。
 - 觸發器帶有 `aria-haspopup="dialog"` 和 `aria-expanded`，面板是 `dialog`，列表是 `listbox`，選項行是帶 `aria-selected` 的 `option`。
 - 圖示由宿主通過 `trigger.icon` 和 `option.icon` 傳入，元件不內建層級圖示。預設圖示可以從 `@openviking/react/icons` 取 `LibraryIcon`、`SpaceIcon`、`UserIcon`；ScopeCascade 會給適配函式沒有返回 `icon` 的選項自動補上這三個。
-- 整行固定 32px 高，不換行；空間不足時各層級收縮、文本省略，單級觸發器最寬 260px。
-- 視口寬度不超過 600px 時，面板改為貼底的整寬麵板；更寬時，最後一級的面板右對齊展開。
+- 每行至少 32px 高，空間不足時各層級換行；單級觸發器最寬 260px，超出後文本省略。
+- 視口寬度不超過 600px 時，面板改為貼底的整寬麵板；更寬時，最後一級的面板預設右對齊，越出視口時自動橫向調整。
 - 包根入口匯出 `ScopeSwitcher`、`ScopeSelector`、`ScopeSwitcherProps` 和 `ScopeSelectorProps`；其餘型別和 `SCOPE_SWITCHER_SEARCH_THRESHOLD` 從 `@openviking/react/components/scope-switcher` 匯入。
 
 ## 主題變數
@@ -216,3 +216,7 @@ import '@openviking/react/components/scope-switcher/style.css';
 | `--ov-ui-scope-switcher-option-gap`         | 相鄰選項行的間距                                                   | `2px`                         |
 | `--ov-ui-scope-switcher-list-max-height`    | 選項列表的最大高度，超出後在列表內滾動                             | `288px`                       |
 | `--ov-ui-scope-switcher-panel-max-height`   | 面板的最大高度，另受視口高度限制；`renderPanel` 接管內容時同樣適用 | 列表最大高度加 `54px`         |
+
+## 埋點
+
+通過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

@@ -107,4 +107,4 @@ export function Browser({ apiKey }: { apiKey: string }) {
 
 ## 許可證
 
-`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal、Drawer 與 Notification 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。
+`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal、Drawer、Notification 與 TimePicker 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。
