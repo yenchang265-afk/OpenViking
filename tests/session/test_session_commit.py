@@ -757,7 +757,8 @@ class TestCommit:
         assert extract.await_args.kwargs["ctx"].account_id == session.ctx.account_id
         prompts = str(vlm.get_completion_async.call_args_list)
         assert "Write all section content in en." in prompts
-        assert "Write all section content in zh-CN." in prompts
+        # The fork restricts output to English or Traditional Chinese (#18).
+        assert "Write all section content in zh-TW." in prompts
 
     async def test_commit_keep_recent_count_retains_live_tail_and_resets_pending_tokens(
         self,
