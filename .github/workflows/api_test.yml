@@ -109,7 +109,7 @@ jobs:
         env:
           UBUNTU_MIRROR: ${{ runner.environment == 'self-hosted' && vars.CI_UBUNTU_MIRROR || '' }}
         run: |
-          packages=(git ca-certificates build-essential pkg-config curl unzip xz-utils python3 libssl-dev cmake ccache)
+          packages=(git ca-certificates build-essential pkg-config curl unzip xz-utils python3 python3-dev libssl-dev cmake ccache)
           ready=true
           for package in "${packages[@]}"; do
             if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then

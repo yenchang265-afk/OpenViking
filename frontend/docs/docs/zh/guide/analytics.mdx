@@ -107,205 +107,205 @@ const analytics = {
 
 {/* analytics-events:start */}
 
-### 檔案瀏覽區塊
+### 文件浏览区块
 
-| 事件名                                                | 觸發時機                                                 | params                                                                                                                                                                                                              |
+| 事件名                                                | 触发时机                                                 | params                                                                                                                                                                                                              |
 | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openviking_file_browser_show`                        | 檔案瀏覽區塊進入可視區域。                               | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_search_dialog_show`          | 搜尋彈窗實際可見。                                       | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_search_results_show`         | 當前查詢的非空搜尋結果實際可見。                         | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_search_empty_show`           | 當前查詢的無結果狀態實際可見。                           | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_connect_agent_show`          | 連線 Agent 按鈕實際可見。                                | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_import_resources_show`       | 預設匯入資源按鈕實際可見。                               | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_agent_connect_drawer_show`   | 內建 Agent 接入抽屜實際可見。                            | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_connect_agent_click`         | 使用者點選連線 Agent 按鈕。                              | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_import_resources_click`      | 使用者點選預設匯入資源按鈕；不代表匯入完成。             | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_search_result_select`        | 使用者選擇一條搜尋結果。                                 | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_search_submit`               | 去抖後的有效查詢開始請求，每次查詢變化是新操作。         | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`                                                                                                              |
-| `openviking_file_browser_search_success`              | 當前搜尋返回結果，包括零條結果。                         | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`<br />`duration_ms: number`<br />`result_count: number`                                                       |
-| `openviking_file_browser_search_fail`                 | 當前搜尋失敗；取消或過期請求不計失敗。                   | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
-| `openviking_file_browser_pack_import_submit`          | 內建 ovpack 匯入：開始執行。                             | `operation_id: string`                                                                                                                                                                                              |
-| `openviking_file_browser_pack_import_success`         | 內建 ovpack 匯入：執行完成。                             | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
-| `openviking_file_browser_pack_import_fail`            | 內建 ovpack 匯入：執行失敗，不包含錯誤原文。             | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
-| `openviking_file_browser_pack_export_submit`          | 內建 ovpack 匯出併發起下載：開始執行。                   | `operation_id: string`                                                                                                                                                                                              |
-| `openviking_file_browser_pack_export_success`         | 內建 ovpack 匯出併發起下載：執行完成。                   | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
-| `openviking_file_browser_pack_export_fail`            | 內建 ovpack 匯出併發起下載：執行失敗，不包含錯誤原文。   | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
-| `openviking_file_browser_resource_delete_submit`      | 確認後刪除資源：開始執行。                               | `operation_id: string`                                                                                                                                                                                              |
-| `openviking_file_browser_resource_delete_success`     | 確認後刪除資源：執行完成。                               | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
-| `openviking_file_browser_resource_delete_fail`        | 確認後刪除資源：執行失敗，不包含錯誤原文。               | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
-| `openviking_file_browser_compile_config_save_submit`  | 儲存編譯配置，不代表編譯完成：開始執行。                 | `operation_id: string`                                                                                                                                                                                              |
-| `openviking_file_browser_compile_config_save_success` | 儲存編譯配置，不代表編譯完成：執行完成。                 | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
-| `openviking_file_browser_compile_config_save_fail`    | 儲存編譯配置，不代表編譯完成：執行失敗，不包含錯誤原文。 | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
-| `openviking_file_browser_acl_change_submit`           | 授權變更：開始執行。                                     | `operation_id: string`                                                                                                                                                                                              |
-| `openviking_file_browser_acl_change_success`          | 授權變更：執行完成。                                     | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
-| `openviking_file_browser_acl_change_fail`             | 授權變更：執行失敗，不包含錯誤原文。                     | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
-| `openviking_file_browser_history_dialog_show`         | 歷史版本彈窗實際可見。                                   | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_compile_config_dialog_show`  | 編譯配置彈窗實際可見。                                   | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_delete_confirm_dialog_show`  | 刪除確認彈窗實際可見。                                   | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_pack_import_dialog_show`     | ovpack 匯入彈窗實際可見。                                | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_acl_dialog_show`             | 許可權管理彈窗實際可見。                                 | `{}`                                                                                                                                                                                                                |
-| `openviking_file_browser_history_revision_select`     | 使用者選擇歷史版本，不包含版本內容。                     | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_show`                        | 文件浏览区块进入可视区域。                               | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_search_dialog_show`          | 搜索弹窗实际可见。                                       | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_search_results_show`         | 当前查询的非空搜索结果实际可见。                         | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_search_empty_show`           | 当前查询的无结果状态实际可见。                           | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_connect_agent_show`          | 连接 Agent 按钮实际可见。                                | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_import_resources_show`       | 默认导入资源按钮实际可见。                               | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_agent_connect_drawer_show`   | 内置 Agent 接入抽屉实际可见。                            | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_connect_agent_click`         | 用户点击连接 Agent 按钮。                                | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_import_resources_click`      | 用户点击默认导入资源按钮；不代表导入完成。               | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_search_result_select`        | 用户选择一条搜索结果。                                   | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_search_submit`               | 去抖后的有效查询开始请求，每次查询变化是新操作。         | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`                                                                                                              |
+| `openviking_file_browser_search_success`              | 当前搜索返回结果，包括零条结果。                         | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`<br />`duration_ms: number`<br />`result_count: number`                                                       |
+| `openviking_file_browser_search_fail`                 | 当前搜索失败；取消或过期请求不计失败。                   | `operation_id: string`<br />`mode: 'find' \| 'search' \| 'grep' \| 'glob'`<br />`has_filters: boolean`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
+| `openviking_file_browser_pack_import_submit`          | 内置 ovpack 导入：开始执行。                             | `operation_id: string`                                                                                                                                                                                              |
+| `openviking_file_browser_pack_import_success`         | 内置 ovpack 导入：执行完成。                             | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
+| `openviking_file_browser_pack_import_fail`            | 内置 ovpack 导入：执行失败，不包含错误原文。             | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
+| `openviking_file_browser_pack_export_submit`          | 内置 ovpack 导出并发起下载：开始执行。                   | `operation_id: string`                                                                                                                                                                                              |
+| `openviking_file_browser_pack_export_success`         | 内置 ovpack 导出并发起下载：执行完成。                   | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
+| `openviking_file_browser_pack_export_fail`            | 内置 ovpack 导出并发起下载：执行失败，不包含错误原文。   | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
+| `openviking_file_browser_resource_delete_submit`      | 确认后删除资源：开始执行。                               | `operation_id: string`                                                                                                                                                                                              |
+| `openviking_file_browser_resource_delete_success`     | 确认后删除资源：执行完成。                               | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
+| `openviking_file_browser_resource_delete_fail`        | 确认后删除资源：执行失败，不包含错误原文。               | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
+| `openviking_file_browser_compile_config_save_submit`  | 保存编译配置，不代表编译完成：开始执行。                 | `operation_id: string`                                                                                                                                                                                              |
+| `openviking_file_browser_compile_config_save_success` | 保存编译配置，不代表编译完成：执行完成。                 | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
+| `openviking_file_browser_compile_config_save_fail`    | 保存编译配置，不代表编译完成：执行失败，不包含错误原文。 | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
+| `openviking_file_browser_acl_change_submit`           | 授权变更：开始执行。                                     | `operation_id: string`                                                                                                                                                                                              |
+| `openviking_file_browser_acl_change_success`          | 授权变更：执行完成。                                     | `operation_id: string`<br />`duration_ms: number`                                                                                                                                                                   |
+| `openviking_file_browser_acl_change_fail`             | 授权变更：执行失败，不包含错误原文。                     | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'`                                                                                 |
+| `openviking_file_browser_history_dialog_show`         | 历史版本弹窗实际可见。                                   | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_compile_config_dialog_show`  | 编译配置弹窗实际可见。                                   | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_delete_confirm_dialog_show`  | 删除确认弹窗实际可见。                                   | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_pack_import_dialog_show`     | ovpack 导入弹窗实际可见。                                | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_acl_dialog_show`             | 权限管理弹窗实际可见。                                   | `{}`                                                                                                                                                                                                                |
+| `openviking_file_browser_history_revision_select`     | 用户选择历史版本，不包含版本内容。                       | `{}`                                                                                                                                                                                                                |
 
-### 檔案樹
+### 文件树
 
-| 事件名                                    | 觸發時機                                       | params |
-| ----------------------------------------- | ---------------------------------------------- | ------ |
-| `openviking_file_tree_show`               | 檔案樹進入可視區域。                           | `{}`   |
-| `openviking_file_tree_entry_select`       | 使用者選擇一個檔案或目錄；不代表內容載入完成。 | `{}`   |
-| `openviking_file_tree_directory_expand`   | 使用者展開目錄。                               | `{}`   |
-| `openviking_file_tree_directory_collapse` | 使用者摺疊目錄。                               | `{}`   |
+| 事件名                                    | 触发时机                                     | params |
+| ----------------------------------------- | -------------------------------------------- | ------ |
+| `openviking_file_tree_show`               | 文件树进入可视区域。                         | `{}`   |
+| `openviking_file_tree_entry_select`       | 用户选择一个文件或目录；不代表内容加载完成。 | `{}`   |
+| `openviking_file_tree_directory_expand`   | 用户展开目录。                               | `{}`   |
+| `openviking_file_tree_directory_collapse` | 用户折叠目录。                               | `{}`   |
 
-### 檔案預覽
+### 文件预览
 
-| 事件名                                         | 觸發時機                                 | params                                                                                                                              |
+| 事件名                                         | 触发时机                                 | params                                                                                                                              |
 | ---------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `openviking_file_preview_content_show`         | 預覽正文實際可見，不包含載入或失敗佔位。 | `{}`                                                                                                                                |
-| `openviking_file_preview_source_show`          | 原始碼檢視實際可見。                     | `{}`                                                                                                                                |
-| `openviking_file_preview_tab_change`           | 使用者選擇另一個預覽頁籤。               | `{}`                                                                                                                                |
-| `openviking_file_preview_source_view_select`   | 使用者選擇原始碼模式。                   | `{}`                                                                                                                                |
-| `openviking_file_preview_preview_view_select`  | 使用者選擇預覽模式。                     | `{}`                                                                                                                                |
-| `openviking_file_preview_edit_start`           | 完整正文可供編輯後進入編輯態。           | `{}`                                                                                                                                |
-| `openviking_file_preview_edit_cancel`          | 使用者取消編輯並放棄草稿。               | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_path_show`       | 複製路徑：按鈕實際可見。                 | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_path_click`      | 複製路徑：使用者點選複製按鈕。           | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_path_success`    | 複製路徑：剪貼簿寫入完成。               | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_path_fail`       | 複製路徑：剪貼簿寫入失敗。               | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_content_show`    | 複製正文：按鈕實際可見。                 | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_content_click`   | 複製正文：使用者點選複製按鈕。           | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_content_success` | 複製正文：剪貼簿寫入完成。               | `{}`                                                                                                                                |
-| `openviking_file_preview_copy_content_fail`    | 複製正文：剪貼簿寫入失敗。               | `{}`                                                                                                                                |
-| `openviking_file_preview_save_show`            | 儲存按鈕實際可見。                       | `{}`                                                                                                                                |
-| `openviking_file_preview_download_show`        | 下載按鈕實際可見。                       | `{}`                                                                                                                                |
-| `openviking_file_preview_save_submit`          | 儲存正文：開始執行。                     | `operation_id: string`                                                                                                              |
-| `openviking_file_preview_save_success`         | 儲存正文：執行完成。                     | `operation_id: string`<br />`duration_ms: number`<br />`version_status: 'not-created' \| 'unknown'`                                 |
-| `openviking_file_preview_save_fail`            | 儲存正文：執行失敗，不包含錯誤原文。     | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
-| `openviking_file_preview_download_start`       | 瀏覽器下載已發起，不代表檔案已寫入磁碟。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_file_preview_download_fail`        | 下載發起失敗。                           | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
+| `openviking_file_preview_content_show`         | 预览正文实际可见，不包含加载或失败占位。 | `{}`                                                                                                                                |
+| `openviking_file_preview_source_show`          | 源码视图实际可见。                       | `{}`                                                                                                                                |
+| `openviking_file_preview_tab_change`           | 用户选择另一个预览页签。                 | `{}`                                                                                                                                |
+| `openviking_file_preview_source_view_select`   | 用户选择源码模式。                       | `{}`                                                                                                                                |
+| `openviking_file_preview_preview_view_select`  | 用户选择预览模式。                       | `{}`                                                                                                                                |
+| `openviking_file_preview_edit_start`           | 完整正文可供编辑后进入编辑态。           | `{}`                                                                                                                                |
+| `openviking_file_preview_edit_cancel`          | 用户取消编辑并放弃草稿。                 | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_path_show`       | 复制路径：按钮实际可见。                 | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_path_click`      | 复制路径：用户点击复制按钮。             | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_path_success`    | 复制路径：剪贴板写入完成。               | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_path_fail`       | 复制路径：剪贴板写入失败。               | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_content_show`    | 复制正文：按钮实际可见。                 | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_content_click`   | 复制正文：用户点击复制按钮。             | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_content_success` | 复制正文：剪贴板写入完成。               | `{}`                                                                                                                                |
+| `openviking_file_preview_copy_content_fail`    | 复制正文：剪贴板写入失败。               | `{}`                                                                                                                                |
+| `openviking_file_preview_save_show`            | 保存按钮实际可见。                       | `{}`                                                                                                                                |
+| `openviking_file_preview_download_show`        | 下载按钮实际可见。                       | `{}`                                                                                                                                |
+| `openviking_file_preview_save_submit`          | 保存正文：开始执行。                     | `operation_id: string`                                                                                                              |
+| `openviking_file_preview_save_success`         | 保存正文：执行完成。                     | `operation_id: string`<br />`duration_ms: number`<br />`version_status: 'not-created' \| 'unknown'`                                 |
+| `openviking_file_preview_save_fail`            | 保存正文：执行失败，不包含错误原文。     | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
+| `openviking_file_preview_download_start`       | 浏览器下载已发起，不代表文件已写入磁盘。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_file_preview_download_fail`        | 下载发起失败。                           | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
 
-### 控制台區塊
+### 控制台区块
 
-| 事件名                                     | 觸發時機                             | params                                                                                                                              |
-| ------------------------------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `openviking_console_command_panel_show`    | 命令面板實際可見。                   | `{}`                                                                                                                                |
-| `openviking_console_chat_panel_show`       | 對話面板實際可見。                   | `{}`                                                                                                                                |
-| `openviking_console_command_mode_select`   | 使用者選擇命令模式。                 | `{}`                                                                                                                                |
-| `openviking_console_chat_mode_select`      | 使用者選擇對話模式。                 | `{}`                                                                                                                                |
-| `openviking_console_command_preset_select` | 使用者選擇命令預設，不代表執行。     | `{}`                                                                                                                                |
-| `openviking_console_command_submit`        | 開始執行非空命令，clear 除外。       | `operation_id: string`                                                                                                              |
-| `openviking_console_command_accepted`      | 非同步任務已受理，不代表執行完成。   | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_console_command_success`       | 同步命令成功或關聯任務全部完成。     | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_console_command_fail`          | 命令或關聯任務失敗。                 | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
-| `openviking_console_command_cancel`        | 使用者取消命令，或關聯任務確認取消。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| 事件名                                     | 触发时机                           | params                                                                                                                              |
+| ------------------------------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `openviking_console_command_panel_show`    | 命令面板实际可见。                 | `{}`                                                                                                                                |
+| `openviking_console_chat_panel_show`       | 对话面板实际可见。                 | `{}`                                                                                                                                |
+| `openviking_console_command_mode_select`   | 用户选择命令模式。                 | `{}`                                                                                                                                |
+| `openviking_console_chat_mode_select`      | 用户选择对话模式。                 | `{}`                                                                                                                                |
+| `openviking_console_command_preset_select` | 用户选择命令预设，不代表执行。     | `{}`                                                                                                                                |
+| `openviking_console_command_submit`        | 开始执行非空命令，clear 除外。     | `operation_id: string`                                                                                                              |
+| `openviking_console_command_accepted`      | 异步任务已受理，不代表执行完成。   | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_console_command_success`       | 同步命令成功或关联任务全部完成。   | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_console_command_fail`          | 命令或关联任务失败。               | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
+| `openviking_console_command_cancel`        | 用户取消命令，或关联任务确认取消。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
 
-### 命令檢視
+### 命令视图
 
-| 事件名                                      | 觸發時機                               | params |
+| 事件名                                      | 触发时机                               | params |
 | ------------------------------------------- | -------------------------------------- | ------ |
-| `openviking_command_console_command_submit` | 命令檢視發出提交意圖，不代表執行成功。 | `{}`   |
+| `openviking_command_console_command_submit` | 命令视图发出提交意图，不代表执行成功。 | `{}`   |
 
-### 對話
+### 对话
 
-| 事件名                                       | 觸發時機                                                 | params                                                                                                                              |
+| 事件名                                       | 触发时机                                                 | params                                                                                                                              |
 | -------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `openviking_viking_bot_message_submit`       | 開始新回覆請求，不包含輸入內容；流中追加僅報告發送意圖。 | `operation_id: string`                                                                                                              |
-| `openviking_viking_bot_reply_start`          | 收到首個可呈現的文本、推理或工具內容，不以連線建立計數。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_viking_bot_reply_success`        | 收到回覆的正常完成態。                                   | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_viking_bot_reply_fail`           | 回覆失敗或未收到結束事件即斷流。                         | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
-| `openviking_viking_bot_reply_cancel`         | 使用者停止回覆或收到明確中斷態。                         | `operation_id: string`<br />`duration_ms: number`                                                                                   |
-| `openviking_viking_bot_session_create_click` | 使用者請求新建會話，不代表建立成功。                     | `{}`                                                                                                                                |
-| `openviking_viking_bot_session_select`       | 使用者選擇會話。                                         | `{}`                                                                                                                                |
-| `openviking_viking_bot_interaction_submit`   | 使用者提交互動卡片，不包含答案。                         | `{}`                                                                                                                                |
-| `openviking_viking_bot_interaction_cancel`   | 使用者取消互動卡片。                                     | `{}`                                                                                                                                |
-| `openviking_viking_bot_send_click`           | 使用者傳送對話輸入，不採集輸入內容。                     | `{}`                                                                                                                                |
+| `openviking_viking_bot_message_submit`       | 开始新回复请求，不包含输入内容；流中追加仅报告发送意图。 | `operation_id: string`                                                                                                              |
+| `openviking_viking_bot_reply_start`          | 收到首个可呈现的文本、推理或工具内容，不以连接建立计数。 | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_viking_bot_reply_success`        | 收到回复的正常完成态。                                   | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_viking_bot_reply_fail`           | 回复失败或未收到结束事件即断流。                         | `operation_id: string`<br />`duration_ms: number`<br />`error_kind: 'network' \| 'http' \| 'business' \| 'permission' \| 'unknown'` |
+| `openviking_viking_bot_reply_cancel`         | 用户停止回复或收到明确中断态。                           | `operation_id: string`<br />`duration_ms: number`                                                                                   |
+| `openviking_viking_bot_session_create_click` | 用户请求新建会话，不代表创建成功。                       | `{}`                                                                                                                                |
+| `openviking_viking_bot_session_select`       | 用户选择会话。                                           | `{}`                                                                                                                                |
+| `openviking_viking_bot_interaction_submit`   | 用户提交交互卡片，不包含答案。                           | `{}`                                                                                                                                |
+| `openviking_viking_bot_interaction_cancel`   | 用户取消交互卡片。                                       | `{}`                                                                                                                                |
+| `openviking_viking_bot_send_click`           | 用户发送对话输入，不采集输入内容。                       | `{}`                                                                                                                                |
 
-### 作用域選擇
+### 作用域选择
 
-| 事件名                                        | 觸發時機                                     | params |
-| --------------------------------------------- | -------------------------------------------- | ------ |
-| `openviking_scope_switcher_option_select`     | 使用者選擇作用域選項，不包含選項標識或名稱。 | `{}`   |
-| `openviking_scope_cascade_selection_complete` | 使用者操作形成有效的三級選擇。               | `{}`   |
+| 事件名                                        | 触发时机                                   | params |
+| --------------------------------------------- | ------------------------------------------ | ------ |
+| `openviking_scope_switcher_option_select`     | 用户选择作用域选项，不包含选项标识或名称。 | `{}`   |
+| `openviking_scope_cascade_selection_complete` | 用户操作形成有效的三级选择。               | `{}`   |
 
 ### Agent 接入
 
-| 事件名                                               | 觸發時機                             | params |
-| ---------------------------------------------------- | ------------------------------------ | ------ |
-| `openviking_agent_connect_show`                      | Agent 接入元件實際可見。             | `{}`   |
-| `openviking_agent_connect_tab_change`                | 使用者切換接入分類。                 | `{}`   |
-| `openviking_agent_connect_select`                    | 使用者選擇接入方式，不包含配置。     | `{}`   |
-| `openviking_agent_connect_instructions_copy_show`    | 接入指南複製按鈕實際可見。           | `{}`   |
-| `openviking_agent_connect_instructions_copy_click`   | 使用者複製接入指南，不採集複製內容。 | `{}`   |
-| `openviking_agent_connect_instructions_copy_success` | 接入指南已寫入剪貼簿。               | `{}`   |
-| `openviking_agent_connect_instructions_copy_fail`    | 接入指南複製失敗。                   | `{}`   |
-| `openviking_agent_connect_code_block_copy_show`      | 程式碼塊複製按鈕實際可見。           | `{}`   |
-| `openviking_agent_connect_code_block_copy_click`     | 使用者複製程式碼塊，不採集複製內容。 | `{}`   |
-| `openviking_agent_connect_code_block_copy_success`   | 程式碼塊已寫入剪貼簿。               | `{}`   |
-| `openviking_agent_connect_code_block_copy_fail`      | 程式碼塊複製失敗。                   | `{}`   |
+| 事件名                                               | 触发时机                           | params |
+| ---------------------------------------------------- | ---------------------------------- | ------ |
+| `openviking_agent_connect_show`                      | Agent 接入组件实际可见。           | `{}`   |
+| `openviking_agent_connect_tab_change`                | 用户切换接入分类。                 | `{}`   |
+| `openviking_agent_connect_select`                    | 用户选择接入方式，不包含配置。     | `{}`   |
+| `openviking_agent_connect_instructions_copy_show`    | 接入指南复制按钮实际可见。         | `{}`   |
+| `openviking_agent_connect_instructions_copy_click`   | 用户复制接入指南，不采集复制内容。 | `{}`   |
+| `openviking_agent_connect_instructions_copy_success` | 接入指南已写入剪贴板。             | `{}`   |
+| `openviking_agent_connect_instructions_copy_fail`    | 接入指南复制失败。                 | `{}`   |
+| `openviking_agent_connect_code_block_copy_show`      | 代码块复制按钮实际可见。           | `{}`   |
+| `openviking_agent_connect_code_block_copy_click`     | 用户复制代码块，不采集复制内容。   | `{}`   |
+| `openviking_agent_connect_code_block_copy_success`   | 代码块已写入剪贴板。               | `{}`   |
+| `openviking_agent_connect_code_block_copy_fail`      | 代码块复制失败。                   | `{}`   |
 
-### 目錄引導
+### 目录引导
 
-| 事件名                                | 觸發時機                               | params               |
+| 事件名                                | 触发时机                               | params               |
 | ------------------------------------- | -------------------------------------- | -------------------- |
-| `openviking_directory_tour_start`     | 引導首個步驟實際展示。                 | `step_index: number` |
-| `openviking_directory_tour_step_show` | 當前引導步驟實際展示，不包含步驟正文。 | `step_index: number` |
-| `openviking_directory_tour_complete`  | 使用者完成引導。                       | `step_index: number` |
-| `openviking_directory_tour_close`     | 使用者提前關閉引導。                   | `step_index: number` |
+| `openviking_directory_tour_start`     | 引导首个步骤实际展示。                 | `step_index: number` |
+| `openviking_directory_tour_step_show` | 当前引导步骤实际展示，不包含步骤正文。 | `step_index: number` |
+| `openviking_directory_tour_complete`  | 用户完成引导。                         | `step_index: number` |
+| `openviking_directory_tour_close`     | 用户提前关闭引导。                     | `step_index: number` |
 
 ### Wiki 面板
 
-| 事件名                                           | 觸發時機                   | params |
-| ------------------------------------------------ | -------------------------- | ------ |
-| `openviking_wiki_dashboard_show`                 | Wiki 看板實際可見。        | `{}`   |
-| `openviking_wiki_dashboard_filter_change`        | 使用者改變 Wiki 衝突篩選。 | `{}`   |
-| `openviking_wiki_dashboard_resource_open_click`  | 使用者請求開啟 Wiki 資源。 | `{}`   |
-| `openviking_wiki_dashboard_dashboard_open_click` | 使用者請求開啟彙總面板。   | `{}`   |
+| 事件名                                           | 触发时机                 | params |
+| ------------------------------------------------ | ------------------------ | ------ |
+| `openviking_wiki_dashboard_show`                 | Wiki 看板实际可见。      | `{}`   |
+| `openviking_wiki_dashboard_filter_change`        | 用户改变 Wiki 冲突筛选。 | `{}`   |
+| `openviking_wiki_dashboard_resource_open_click`  | 用户请求打开 Wiki 资源。 | `{}`   |
+| `openviking_wiki_dashboard_dashboard_open_click` | 用户请求打开汇总面板。   | `{}`   |
 
-### 經驗面板
+### 经验面板
 
-| 事件名                                                     | 觸發時機                     | params |
-| ---------------------------------------------------------- | ---------------------------- | ------ |
-| `openviking_experience_dashboard_show`                     | 經驗看板實際可見。           | `{}`   |
-| `openviking_experience_dashboard_tab_change`               | 使用者切換經驗看板頁籤。     | `{}`   |
-| `openviking_experience_dashboard_range_change`             | 使用者改變經驗統計時間範圍。 | `{}`   |
-| `openviking_experience_dashboard_page_change`              | 使用者切換經驗看板頁碼。     | `{}`   |
-| `openviking_experience_dashboard_experience_open_click`    | 使用者請求開啟經驗。         | `{}`   |
-| `openviking_experience_dashboard_trajectory_open_click`    | 使用者請求開啟軌跡。         | `{}`   |
-| `openviking_experience_dashboard_source_open_click`        | 使用者請求開啟來源。         | `{}`   |
-| `openviking_experience_dashboard_test_material_open_click` | 使用者請求開啟測試材料。     | `{}`   |
+| 事件名                                                     | 触发时机                   | params |
+| ---------------------------------------------------------- | -------------------------- | ------ |
+| `openviking_experience_dashboard_show`                     | 经验看板实际可见。         | `{}`   |
+| `openviking_experience_dashboard_tab_change`               | 用户切换经验看板页签。     | `{}`   |
+| `openviking_experience_dashboard_range_change`             | 用户改变经验统计时间范围。 | `{}`   |
+| `openviking_experience_dashboard_page_change`              | 用户切换经验看板页码。     | `{}`   |
+| `openviking_experience_dashboard_experience_open_click`    | 用户请求打开经验。         | `{}`   |
+| `openviking_experience_dashboard_trajectory_open_click`    | 用户请求打开轨迹。         | `{}`   |
+| `openviking_experience_dashboard_source_open_click`        | 用户请求打开来源。         | `{}`   |
+| `openviking_experience_dashboard_test_material_open_click` | 用户请求打开测试材料。     | `{}`   |
 
-### 郵箱登入
+### 邮箱登录
 
-| 事件名                               | 觸發時機                                                       | params |
+| 事件名                               | 触发时机                                                       | params |
 | ------------------------------------ | -------------------------------------------------------------- | ------ |
-| `openviking_email_login_form_show`   | 郵箱登入表單實際可見。                                         | `{}`   |
-| `openviking_email_login_form_submit` | 郵箱登入表單通過本地校驗後提交，不包含輸入值，不代表認證成功。 | `{}`   |
+| `openviking_email_login_form_show`   | 邮箱登录表单实际可见。                                         | `{}`   |
+| `openviking_email_login_form_submit` | 邮箱登录表单通过本地校验后提交，不包含输入值，不代表认证成功。 | `{}`   |
 
-### API Key 登入
+### API Key 登录
 
-| 事件名                                 | 觸發時機                                                           | params |
+| 事件名                                 | 触发时机                                                           | params |
 | -------------------------------------- | ------------------------------------------------------------------ | ------ |
-| `openviking_api_key_login_form_show`   | API Key 登入表單實際可見。                                         | `{}`   |
-| `openviking_api_key_login_form_submit` | API Key 登入表單通過本地校驗後提交，不包含輸入值，不代表認證成功。 | `{}`   |
+| `openviking_api_key_login_form_show`   | API Key 登录表单实际可见。                                         | `{}`   |
+| `openviking_api_key_login_form_submit` | API Key 登录表单通过本地校验后提交，不包含输入值，不代表认证成功。 | `{}`   |
 
-### 密碼錶單
+### 密码表单
 
-| 事件名                                          | 觸發時機                                                           | params |
+| 事件名                                          | 触发时机                                                           | params |
 | ----------------------------------------------- | ------------------------------------------------------------------ | ------ |
-| `openviking_password_reset_request_form_show`   | 重置密碼申請表單實際可見。                                         | `{}`   |
-| `openviking_password_reset_request_form_submit` | 重置密碼申請表單通過本地校驗後提交，不包含輸入值，不代表認證成功。 | `{}`   |
-| `openviking_password_setup_form_show`           | 設定密碼錶單實際可見。                                             | `{}`   |
-| `openviking_password_setup_form_submit`         | 設定密碼錶單通過本地校驗後提交，不包含輸入值，不代表認證成功。     | `{}`   |
+| `openviking_password_reset_request_form_show`   | 重置密码申请表单实际可见。                                         | `{}`   |
+| `openviking_password_reset_request_form_submit` | 重置密码申请表单通过本地校验后提交，不包含输入值，不代表认证成功。 | `{}`   |
+| `openviking_password_setup_form_show`           | 设置密码表单实际可见。                                             | `{}`   |
+| `openviking_password_setup_form_submit`         | 设置密码表单通过本地校验后提交，不包含输入值，不代表认证成功。     | `{}`   |
 
-### 登入方式
+### 登录方式
 
-| 事件名                                    | 觸發時機                             | params |
-| ----------------------------------------- | ------------------------------------ | ------ |
-| `openviking_login_method_selector_select` | 使用者選擇登入方式，不包含帳號資訊。 | `{}`   |
+| 事件名                                    | 触发时机                           | params |
+| ----------------------------------------- | ---------------------------------- | ------ |
+| `openviking_login_method_selector_select` | 用户选择登录方式，不包含账号信息。 | `{}`   |
 
-### 邀請確認
+### 邀请确认
 
-| 事件名                                            | 觸發時機                             | params |
-| ------------------------------------------------- | ------------------------------------ | ------ |
-| `openviking_invitation_confirmation_show`         | 邀請確認介面實際可見。               | `{}`   |
-| `openviking_invitation_confirmation_accept_click` | 使用者點選接受邀請，不代表接受成功。 | `{}`   |
+| 事件名                                            | 触发时机                           | params |
+| ------------------------------------------------- | ---------------------------------- | ------ |
+| `openviking_invitation_confirmation_show`         | 邀请确认界面实际可见。             | `{}`   |
+| `openviking_invitation_confirmation_accept_click` | 用户点击接受邀请，不代表接受成功。 | `{}`   |
 
 {/* analytics-events:end */}
