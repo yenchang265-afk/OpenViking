@@ -49,6 +49,12 @@ async def test_studio_served_from_env_dir(tmp_path: Path, monkeypatch):
     escape = await _get(app, "/studio/..%2F..%2Fetc%2Fpasswd")
     assert escape.text == "<html>studio</html>"
 
+    secret = tmp_path / "secret.txt"
+    secret.write_text("secret", encoding="utf-8")
+    (dist / "assets" / "leak.txt").symlink_to(secret)
+    symlink_escape = await _get(app, "/studio/assets/leak.txt")
+    assert symlink_escape.text == "<html>studio</html>"
+
 
 async def test_studio_routes_skipped_without_bundle(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("OPENVIKING_WEB_STUDIO_DIR", str(tmp_path / "missing"))

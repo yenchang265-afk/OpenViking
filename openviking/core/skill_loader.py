@@ -9,6 +9,26 @@ from typing import Any, Dict, Optional, Tuple
 import yaml
 
 
+def _line_break_starts(content: str, position: int) -> list[int]:
+    """Indexes after each newline in the whitespace run at ``position``, latest first."""
+    starts = []
+    end = position
+    while end < len(content) and content[end].isspace():
+        if content[end] == "\n":
+            starts.append(end + 1)
+        end += 1
+    return starts[::-1]
+
+
+def _after_line_break(content: str, position: int) -> Optional[int]:
+    """Index after the last newline in the whitespace run at ``position``, or None."""
+    end = position
+    while end < len(content) and content[end].isspace():
+        end += 1
+    newline = content.rfind("\n", position, end)
+    return None if newline == -1 else newline + 1
+
+
 class SkillLoader:
     """Load and parse SKILL.md files."""
 
@@ -101,10 +121,28 @@ class SkillLoader:
 
     @classmethod
     def _split_frontmatter(cls, content: str) -> Tuple[Optional[str], str]:
-        """Split frontmatter and body."""
-        match = cls.FRONTMATTER_PATTERN.match(content)
-        if match:
-            return match.group(1), match.group(2)
+        """Split frontmatter and body.
+
+        Linear-time equivalent of FRONTMATTER_PATTERN, whose nested ``\\s*\\n``
+        backtracking is polynomial on untrusted input.
+        """
+        if not content.startswith("---"):
+            return None, content
+        # Like the regex, prefer the latest opening line break, then fall back
+        # to earlier ones; each earlier start only adds closings before the
+        # previous start, so every closing is examined once.
+        upper = len(content)
+        for start in _line_break_starts(content, 3):
+            search = start
+            while True:
+                close = content.find("\n---", search, upper + 3)
+                if close == -1 or close >= upper:
+                    break
+                body = _after_line_break(content, close + 4)
+                if body is not None:
+                    return content[start:close], content[body:]
+                search = close + 1
+            upper = start
         return None, content
 
     @classmethod
