@@ -1,22 +1,22 @@
 {
   "repository": "https://github.com/volcengine/OpenViking.git",
   "path": "bot/vikingbot/compile",
-  "commit": "90f4edcede4c6a665fccb747417ebe6c1db56f4d",
+  "commit": "989e6c784283b7895b3f0b7db82b5a070e40f33f",
   "ruff_version": "0.16.9",
   "upstream_only": {
     "router.py": "bot HTTP routes; the server exposes Compile through openviking/server/routers/compile.py",
     "sandbox.py": "bot sandbox credentials; in-server Compile has no command execution",
     "service.py": "bot task runtime; replaced by runner.py on the durable ExternalTask queue",
-    "store.py": "bot-local task status store; tasks live on the ExternalTask queue"
+    "store.py": "bot-local task status store; tasks live on the ExternalTask queue",
+    "simple.py": "bot 'simple' single-AgentLoop executor; in-server Compile runs the planned pipeline only (port pending)"
   },
   "diverged": {
     "models.py": "drops bot request/task models; CompileFailure carries a diagnostic result",
-    "pipeline_agent.py": "drops the bot AgentLoop adapter; agent_loop.py runs child agents",
+    "pipeline_agent.py": "keeps only TargetReader; the bot AgentLoop adapter (ChildProvider, agent_runner) is replaced by agent_loop.py",
     "skill_resources.py": "no local Skill copies for scripts, since nothing executes them",
-    "ops/map.py": "no Skill-script hint in the Map prompt",
     "renderer.py": "zh-TW headings",
     "plan.py": "decodes JSON-encoded objects some providers send for nested arguments",
-    "pipeline.py": "names the first job failure when no final artifact remains",
+    "pipeline.py": "names the first job failure when no completed output remains",
     "pipeline_io.py": "no remote-sandbox branch in TaskFiles.put: scratch files are local and nothing executes commands"
   }
 }

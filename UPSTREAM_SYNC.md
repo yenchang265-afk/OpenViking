@@ -53,10 +53,12 @@ Confirm ancestry with Git; update this note after each accepted sync.
 - In-server Compile keeps upstream's configuration API (`compile_name`, create/update,
   runs, scheduler) but executes in-process (`CompileService.run`); there is no Runtime
   HTTP client, archive call or `CompileDependencyFailure` path.
-- The Compile pipeline (`openviking/compile`) is still pinned at upstream `90f4edc`
-  (see `UPSTREAM.json`). Upstream `#7657`/`#7682` replaced it with file-tool workers
-  and a "simple" executor; porting that to `agent_loop.py`/`runner.py` is pending, so
-  the llm-wiki example Skill (and its `write_wiki.py` script) also stay at the fork version.
+- The Compile pipeline (`openviking/compile`) follows upstream `989e6c7`'s Markdown
+  file-worker design. `agent_loop.agent_runner` implements upstream's worker contract
+  in-server (private output directory, read-only `assignment.json`/`inputs/`, natural
+  completion); upstream's VikingBot "simple" executor (`simple.py`) is not ported, and
+  the llm-wiki example Skill stays at the fork version because upstream's rewrite
+  persists pages by running `scripts/write_wiki.py`, which in-server Compile cannot exec.
 - Studio keeps the fork's context-menu delete/move UI; upstream's header copy/move/delete
   dialogs were not adopted (their API helpers remain in `resources/lib/api.ts`).
 

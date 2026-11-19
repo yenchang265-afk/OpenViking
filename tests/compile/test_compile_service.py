@@ -103,8 +103,6 @@ async def test_create_queues_normalized_payload(tmp_path):
     # wiki_links is still accepted but no longer reaches the pipeline.
     request = service._sanitized_request(kwargs["payload"])
     assert not hasattr(request, "wiki_links")
-    assert request.last_compile_time is None
-    assert request.instruction_provided is False
 
 
 @pytest.mark.asyncio

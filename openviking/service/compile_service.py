@@ -1095,9 +1095,7 @@ class CompileService:
         payload: Mapping[str, Any], changes: Mapping[str, Any] | None = None
     ) -> Any:
         from openviking.compile.models import DEFAULT_COMPILE_INSTRUCTION, SanitizedCompileRequest
-        from openviking.compile.runner import compile_time
 
-        args = payload.get("args") or {}
         instruction = (payload.get("instruction") or "").strip()
         if changes is not None:
             _validate_changes(changes, list(payload["from"]), payload["skill"])
@@ -1106,14 +1104,7 @@ class CompileService:
                 "from": list(payload["from"]),
                 "to": payload["to"],
                 "instruction": instruction or DEFAULT_COMPILE_INSTRUCTION,
-                "instruction_provided": bool(instruction),
                 "skill": payload["skill"],
-                # A kernel change plan supersedes the modification-time cutoff.
-                "last_compile_time": (
-                    compile_time(args["last_compile_time"])
-                    if "last_compile_time" in args and changes is None
-                    else None
-                ),
                 "changes": dict(changes) if changes is not None else None,
             }
         )

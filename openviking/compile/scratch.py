@@ -60,6 +60,9 @@ class ScratchDir:
         path = self.local_file_path(relative)
         return await asyncio.to_thread(path.read_bytes)
 
+    async def read_file(self, relative: str) -> str:
+        return (await self.read_file_bytes(relative)).decode("utf-8")
+
     async def list_files(
         self, relative: str = ".", *, max_entries: int | None
     ) -> list[ScratchFile]:

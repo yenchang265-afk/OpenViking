@@ -5,10 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from openviking.compile.agent_loop import ScratchFileTool
 from openviking.compile.models import CompileFailure
 from openviking.compile.ov_client import InProcessVikingClient
-from openviking.compile.scratch import ScratchDir
 from openviking.service.compile_service import _validate_changes
 from openviking.service.external_task_service import ExternalTaskSnapshot
 from openviking.service.task_tracker import TaskStatus
@@ -107,7 +105,6 @@ async def test_run_passes_change_plan_and_pins_skill_snapshot(tmp_path):
     assert result == {"ok": True}
     request = captured["request"]
     assert request.changes["head"] == CHANGES["head"]
-    assert request.last_compile_time is None  # The change plan supersedes the cutoff.
     client = captured["client"]
     assert client._snapshot_ref("viking://agent/skills/llm-wiki/SKILL.md") == SNAPSHOT
     assert client._snapshot_ref("viking://resources/raw/a.md") is None
@@ -200,22 +197,6 @@ async def test_on_finish_replaces_recorded_outcome(durable):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_final_review_tools_browse_task_but_write_only_artifacts(tmp_path):
-    scratch = ScratchDir(tmp_path / "task")
-    scratch.reset()
-    await scratch.write_file("pipeline/notes.md", "keep")
-    write = ScratchFileTool("write_file", scratch, "pipeline", "artifacts/run")
-    listing = ScratchFileTool("list_dir", scratch, "pipeline", "artifacts/run")
-
-    assert await write.execute(path="artifacts/run/page.md", content="ok") == (
-        "Wrote artifacts/run/page.md."
-    )
-    with pytest.raises(ValueError, match="Write only inside artifacts/run/"):
-        await write.execute(path="notes.md", content="overwrite")
-    assert await listing.execute(path=".") == "artifacts/\nnotes.md"
-
-
-@pytest.mark.asyncio
 async def test_snapshot_reads_come_from_pinned_commit():
     fs = SimpleNamespace(
         show_blob_raw=AsyncMock(return_value={"bytes": b"line1\nline2\n"}),
@@ -274,41 +255,6 @@ async def _store_artifact(files, body: str) -> None:
             "source_refs": ["r1"],
         },
     )
-
-
-@pytest.mark.asyncio
-async def test_finalize_publishes_validated_artifacts_without_a_review_agent(tmp_path):
-    from openviking.compile.ops import finalize as finalize_op
-    from openviking.compile.pipeline_io import TaskFiles
-
-    scratch = ScratchDir(tmp_path / "task")
-    scratch.reset()
-    files = TaskFiles(scratch)
-    body = "# Topic\n\nReviewed body.\n"
-    await _store_artifact(files, body)
-    runtime = _finalize_runtime(files)
-
-    rendered = await finalize_op.run(runtime, ["artifacts/a1"])
-
-    runtime.model.agent_runner.assert_not_awaited()
-    assert not runtime.warnings, runtime.warnings
-    (operation,) = rendered.operations
-    assert operation["uri"] == "viking://resources/wiki/notes/topic.md"
-    assert operation["content"] == body
-
-
-@pytest.mark.asyncio
-async def test_finalize_rejects_empty_artifacts_before_publication(tmp_path):
-    from openviking.compile.ops import finalize as finalize_op
-    from openviking.compile.pipeline_io import TaskFiles
-
-    scratch = ScratchDir(tmp_path / "task")
-    scratch.reset()
-    files = TaskFiles(scratch)
-    await _store_artifact(files, "  \n")
-
-    with pytest.raises(ValueError, match="Empty output: notes/topic.md"):
-        await finalize_op.run(_finalize_runtime(files), ["artifacts/a1"])
 
 
 @pytest.mark.asyncio
