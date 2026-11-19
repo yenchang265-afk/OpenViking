@@ -445,3 +445,34 @@ async def test_chat_stream_proxy_preserves_sse_event_boundaries(monkeypatch):
 
     assert response.status_code == 200
     assert response.text == payload
+
+
+@pytest.mark.parametrize(
+    "session_id,ok",
+    [
+        ("3f2b8c1e-5d4a-4e7b-9a10-123456789abc", True),
+        ("cli:default.session@1", True),
+        ("session 1", True),
+        ("..", False),
+        ("a\\b", False),
+        ("../admin", False),
+        ("a/b", False),
+        ("a?x=1", False),
+        ("a#frag", False),
+        ("%2e%2e", False),
+        ("", False),
+    ],
+)
+def test_bot_session_path_rejects_ids_that_could_rewrite_the_request(session_id, ok):
+    from fastapi import HTTPException
+
+    from openviking.server.routers.bot import _bot_session_path
+
+    if ok:
+        from urllib.parse import quote
+
+        assert _bot_session_path(session_id) == quote(session_id, safe="")
+    else:
+        with pytest.raises(HTTPException) as raised:
+            _bot_session_path(session_id)
+        assert raised.value.status_code == 400

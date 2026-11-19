@@ -271,7 +271,8 @@ async def test_skill_read_restores_placeholder(service, monkeypatch, name):
     stored = await service.viking_fs.read_file(skill_file_uri, ctx=ctx)
     restored = await service.fs.read(skill_file_uri, ctx=ctx)
     assert SECRET not in stored
-    assert "https://example.com" in stored
+    # Non-secret URLs in the Skill body are stored unchanged.
+    assert stored.count("https://example.com") >= 1
     assert content in restored
     current = await service.privacy_configs.get_current(ctx, "skill", name)
     [field] = current.values

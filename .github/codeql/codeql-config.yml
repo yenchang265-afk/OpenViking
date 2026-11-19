@@ -1,0 +1,8 @@
+name: OpenViking CodeQL config
+
+# py/unsafe-cyclic-import reports imports under `if TYPE_CHECKING:` as cycles.
+# Those imports never execute, and a module-level import graph of openviking/
+# that skips them has no cycles, so the query only produces false positives here.
+query-filters:
+  - exclude:
+      id: py/unsafe-cyclic-import
