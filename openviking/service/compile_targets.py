@@ -666,7 +666,9 @@ class CompileLifecycle:
         Tasks without a saved role have USER privileges. Resolver failures propagate
         so authorization cannot silently reuse stale group membership.
         """
-        connection = (task.auth or {}).get("openviking_connection") or {}
+        auth = task.auth or {}
+        # In-server Compile stores the executor as request_identity, not a connection.
+        connection = auth.get("openviking_connection") or auth.get("request_identity") or {}
         groups = (
             await self.resolve_groups(task.account_id, task.user_id)
             if self.resolve_groups is not None

@@ -529,3 +529,28 @@ async def test_purge_scratch_removes_deleted_owner_files(tmp_path):
     scratch.mkdir(parents=True)
     await service.purge_scratch("acme", "alice")
     assert not scratch.exists()
+
+
+@pytest.mark.asyncio
+async def test_create_passes_only_arguments_the_task_service_accepts(tmp_path):
+    """The task service is mocked elsewhere; bind the call to its real signature."""
+    import inspect
+
+    service, tasks = _compile_service(tmp_path)
+    await service.create(_request(args={"wiki_links": True}), ctx=CTX)
+    call = tasks.create.await_args
+    inspect.signature(ExternalTaskService.create).bind(None, *call.args, **call.kwargs)
+
+
+async def test_lifecycle_restores_the_executor_from_request_identity():
+    from openviking.service.compile_targets import CompileLifecycle
+
+    lifecycle = CompileLifecycle(store=None, viking_fs=None)
+    task = SimpleNamespace(
+        account_id="acme",
+        user_id="alice",
+        auth={"request_identity": {"role": "admin", "group_ids": ["g1"]}},
+    )
+    ctx = await lifecycle.task_ctx(task)
+    assert str(ctx.role.value if hasattr(ctx.role, "value") else ctx.role) == "admin"
+    assert ctx.group_ids == ("g1",)

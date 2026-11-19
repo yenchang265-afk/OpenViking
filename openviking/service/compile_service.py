@@ -563,14 +563,13 @@ class CompileService:
         # Serialize per owner so concurrent submissions cannot all pass the cap.
         async with self._capacity_locks.acquire((ctx.account_id, ctx.user.user_id)):
             await self._ensure_capacity(ctx)
-            # Private task state retains the executor's role and groups for asynchronous
-            # filesystem access; in-process execution forwards no credentials.
+            # The task service records the executor's role and groups as request_identity;
+            # in-process execution forwards no credentials.
             return await self._tasks.create(
                 self.task_type,
                 resource_id=", ".join(normalized.from_),
                 payload=payload,
                 private_payload=private_payload,
-                connection={"role": str(ctx.role), "group_ids": list(ctx.group_ids)},
                 ctx=ctx,
                 idempotency_key=idempotency_key,
                 submission_payload=submitted if idempotency_key else None,

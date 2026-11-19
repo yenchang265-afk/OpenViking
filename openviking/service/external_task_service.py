@@ -536,6 +536,8 @@ class ExternalTaskService:
             claimed = True
             on_start = getattr(provider, "on_start", None)
             if on_start is not None:
+                # Lifecycle hooks read the decrypted identity and execution checkpoint.
+                task.auth = await self._task_auth(task_id, account_id, user_id)
                 try:
                     started = await on_start(task)
                 except asyncio.CancelledError:
