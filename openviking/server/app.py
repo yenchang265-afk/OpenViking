@@ -933,7 +933,7 @@ def create_app(
             except (OSError, ValueError):
                 return _studio_response(_studio_index, no_store=True)
             # Containment check on the resolved path blocks ../ and symlink escapes.
-            if os.path.commonpath([root, requested]) != root:
+            if not requested.startswith(root + os.sep):
                 return _studio_response(_studio_index, no_store=True)
 
             if os.path.isfile(requested):
