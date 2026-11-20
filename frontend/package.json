@@ -50,6 +50,7 @@
     "dompurify": "3.4.17",
     "@univerjs/core": {
       "nanoid": "5.1.16"
-    }
+    },
+    "katex": "0.19.1"
   }
 }
