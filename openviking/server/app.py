@@ -927,16 +927,17 @@ def create_app(
         async def _studio_assets(path: str):
             # SPA fallback: serve real files when present, otherwise return
             # index.html so TanStack Router can resolve the deep link.
+            root = str(_studio_root)
             try:
-                requested = (_studio_root / path).resolve()
-            except OSError:
+                requested = os.path.realpath(os.path.join(root, path))
+            except (OSError, ValueError):
+                return _studio_response(_studio_index, no_store=True)
+            # Containment check on the resolved path blocks ../ and symlink escapes.
+            if not requested.startswith(root + os.sep):
                 return _studio_response(_studio_index, no_store=True)
 
-            if not requested.is_relative_to(_studio_root):
-                return _studio_response(_studio_index, no_store=True)
-
-            if requested.is_file():
-                return _studio_response(requested)
+            if os.path.isfile(requested):
+                return _studio_response(Path(requested))
             return _studio_response(_studio_index, no_store=True)
 
         logger.info("Web Studio mounted at /studio from %s", _studio_root)

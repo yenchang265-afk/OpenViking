@@ -78,6 +78,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         queries: security-and-quality
+        config-file: ./.github/codeql/codeql-config.yml
 
     - name: Build extensions
       if: matrix.language == 'cpp'

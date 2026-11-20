@@ -32,7 +32,8 @@ class TemplateUtils:
     @staticmethod
     def requires_messages(template: str) -> bool:
         """Inspect actual Jinja references, not literal text or comments."""
-        tree = jinja2.Environment(autoescape=False).parse(template)
+        # Parsing only; nothing is rendered, so escaping cannot change the result.
+        tree = jinja2.Environment(autoescape=True).parse(template)
         classified = set()
         for node in tree.find_all((nodes.Getattr, nodes.Getitem)):
             if not isinstance(node.node, nodes.Name) or node.node.name != "extract_context":
@@ -66,7 +67,8 @@ class TemplateUtils:
         strip: bool = True,
     ) -> str:
         env = jinja2.Environment(
-            autoescape=False,
+            # Templates produce Markdown, not HTML: escaping would corrupt & and <.
+            autoescape=jinja2.select_autoescape(enabled_extensions=(), default_for_string=False),
             undefined=jinja2.DebugUndefined if debug_undefined else jinja2.Undefined,
             keep_trailing_newline=keep_trailing_newline,
         )
@@ -82,7 +84,7 @@ class TemplateUtils:
         *,
         ignored_variables: Iterable[str] | None = None,
     ) -> set[str]:
-        parsed_template = jinja2.Environment(autoescape=False).parse(template)
+        parsed_template = jinja2.Environment(autoescape=True).parse(template)
         ignored = set(ignored_variables or ())
         return (
             meta.find_undeclared_variables(parsed_template)
@@ -100,5 +102,5 @@ class TemplateUtils:
         ``{{ extract_context.get_year(ranges) }}``) are never mistaken for
         variables the way a plain substring/regex scan would.
         """
-        parsed_template = jinja2.Environment(autoescape=False).parse(template)
+        parsed_template = jinja2.Environment(autoescape=True).parse(template)
         return meta.find_undeclared_variables(parsed_template)

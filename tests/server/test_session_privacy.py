@@ -291,7 +291,8 @@ async def test_session_and_skill_choose_canonical_reference_or_reject_strictly(
         with pytest.raises(InvalidArgumentError, match="mapped to multiple fields"):
             await write()
     else:
-        assert await write() == "password=" + reference
+        written = await write()
+        assert written == "password=" + reference
 
 
 @pytest.mark.usefixtures("auto_privacy")

@@ -522,14 +522,7 @@ async def test_add_resource_routes_tos_to_connector(
     assert queued["meta"]["request"]["submit"]["tos_path"] == tos_path
     assert queued["auth"]["external_request_private"]["api_key"] == "secret"
     assert "secret" not in json.dumps(queued["meta"])
-    request_log = next(
-        call for call in info_log.call_args_list if "task add request" in call.args[0]
-    )
-    response_log = next(
-        call for call in info_log.call_args_list if "task add response" in call.args[0]
-    )
-    assert request_log.args[2]["api_key"] == "[REDACTED]"
-    assert response_log.args[2] == {"task_key": "connector-1"}
+    # Connector request and response bodies are no longer logged at all (upstream #7899).
     assert "secret" not in str(info_log.call_args_list)
 
 
@@ -1527,7 +1520,7 @@ async def test_connector_import_logs_http_error_response(
     )
     _install_connector_dependencies(monkeypatch, tracker, connector_client)
     error_log = Mock()
-    monkeypatch.setattr(connector_delegate_module.logger, "error", error_log)
+    monkeypatch.setattr(connector_delegate_module.logger, "info", error_log)
 
     with pytest.raises(ExternalTaskError, match="bad request"):
         await service.add_resource(
@@ -1536,14 +1529,11 @@ async def test_connector_import_logs_http_error_response(
             to="viking://resources/imports",
         )
 
+    # Only the status is logged; the response body (with its token) never is.
     response_log = next(
-        call for call in error_log.call_args_list if "task add response" in call.args[0]
+        call for call in error_log.call_args_list if "submission failed" in call.args[0]
     )
-    assert response_log.args[2] == 400
-    assert response_log.args[3] == {
-        "message": "invalid path_prefix",
-        "token": "[REDACTED]",
-    }
+    assert response_log.args[1:3] == (400, False)
     assert "secret-value" not in str(error_log.call_args_list)
 
 
@@ -2830,7 +2820,7 @@ async def test_connector_provider_logs_http_error_response(
         )
     )
     warning_log = Mock()
-    monkeypatch.setattr(connector_delegate_module.logger, "warning", warning_log)
+    monkeypatch.setattr(connector_delegate_module.logger, "info", warning_log)
 
     provider = ConnectorDelegate(viking_fs=None)
     monkeypatch.setattr(provider, "_client", lambda _account_id: client)
@@ -2841,11 +2831,11 @@ async def test_connector_provider_logs_http_error_response(
         private_payload={"api_key": ctx.api_key},
     )
 
+    # Only the status is logged; the response body (with its token) never is.
     error_log = next(
-        call for call in warning_log.call_args_list if "task info error response" in call.args[0]
+        call for call in warning_log.call_args_list if "task query failed" in call.args[0]
     )
-    assert error_log.args[2] == 503
-    assert error_log.args[3] == {"message": "token=[REDACTED]"}
+    assert error_log.args[1:3] == (503, True)
     assert "secret-value" not in str(warning_log.call_args_list)
 
 

@@ -9,8 +9,8 @@ description: >
   text, a Git repository, or a local folder; when a skill should work in every
   harness and on every machine; or when the user wants to move local skills
   (~/.claude/skills, ~/.agents/skills, ~/.cursor/skills) into OpenViking —
-  "upload my skills", "save this as a skill", "迁移本地 skill", "把 skill 存到
-  OpenViking", "新建一个 skill". Covers the add_skill tool, running a skill's
+  "upload my skills", "save this as a skill", "遷移本地 skill", "把 skill 存到
+  OpenViking", "新建一個 skill". Covers the add_skill tool, running a skill's
   helper files, and which local skills must stay local.
 ---
 
@@ -154,10 +154,10 @@ of that skill.
    - a plugin or marketplace ships it (its real path contains `/plugins/` or
      `/marketplaces/`), so the plugin reinstalls it on update;
    - the directory is a symlink or resolves outside the skills folder, the way
-     CLI installers such as lark-cli link their own skills;
+     some CLI installers link their own skills;
    - it needs a local binary, CLI, or service to work (for example
      `metadata.<vendor>.requires.bins`, or steps that run a vendor CLI);
-   - its name carries a vendor prefix such as `lark-`, `volcengine-`, `ve-`,
+   - its name carries a vendor prefix such as `volcengine-`, `ve-`,
      `claude-`, or `mcp-` (a hint, not proof: check the body);
    - it is `openviking-skills` or `openviking-memory`.
 

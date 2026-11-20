@@ -34,6 +34,11 @@ regexes = [
   '''^ov-bob-secret-9012$''',
   '''^ovk-abcdef123456$''',
   '''^YWNtZQ\.YWxpY2U\.abcdefgh$''',
+  # Upstream privacy-detector fixtures (crates/ragfs/src/privacy_extractor*)
+  '''aB3dE5gH7jK9mN2pQ4s''',
+  '''YWJjZGVmZw==''',
+  '''A{64}''',
+  '''\$\{PRIVATE_KEY\}''',
 
   # Code the generic-api-key rule mistakes for keys
   '''^[a-z_]+=(True|False|[0-9]+)$''',
