@@ -60,7 +60,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 - 未完成的事項；
 - 最近幾次工具結果裡的要點。
 
-摘要是純文本，最長**摘要長度上限**（8,000）個 token。思考內容也計入輸出上限，而有些模型（如 DeepSeek V4.1）即使請求裡沒有思考設定也會預設思考，所以閘道器總在摘要長度上限之外再留 16,000 token 的輸出餘量；客戶端手動指定了思考預算時，改為加上這份預算。這次請求和其他請求一樣由服務商計費。
+摘要是純文本，最長**摘要長度上限**（8,000）個 token。思考內容也計入輸出上限，而有些模型（如 DeepSeek V4.1）即使請求裡沒有思考設定也會預設思考，所以閘道器總在摘要長度上限之外再留 16,000 token 的輸出餘量；客戶端手動指定了思考預算時，改為加上這份預算。這次請求和其他請求一樣由服務商計費。整個請求最長 `summary_timeout_seconds`（見[配置](13-configuration.md#gateway-fields)；預設為 `upstream_timeout_seconds`，即 600 秒），超時按摘要失敗處理。它的時間不計入 `prepare_timeout_seconds`。
 
 ## 壓縮之後模型收到什麼 {#what-the-model-receives-afterwards}
 
@@ -71,7 +71,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 | 新的使用者訊息 | 緊挨在這條訊息之前 | system 和 developer 訊息、作為一條使用者訊息的摘要，以及這條新訊息 |
 | 工具步驟 | 最近一次工具結果之後 | system 和 developer 訊息，以及摘要；模型從摘要出發繼續完成任務 |
 
-摘要訊息開頭說明閘道器替換了對話較早的部分、這段內容不是使用者寫的；結尾附上這段對話開頭的閘道器說明和使用者畫像，所以壓縮後它們仍然保留。
+摘要訊息開頭說明閘道器替換了對話較早的部分、這段內容不是使用者寫的；結尾附上這段對話開頭的閘道器說明、soul 和使用者畫像，所以壓縮後它們仍然保留。
 
 之後凡是重發這段歷史的請求，包括輔助請求和 Token 計數請求，都做同樣的替換；子 Agent 通常傳送自己單獨的歷史，不受影響。每次壓縮讓服務商快取在截斷點失效一次，之後照常命中。
 
@@ -84,7 +84,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 - 這段對話對應的 OpenViking 會話（`viking://user/<user_id>/sessions/<session_id>/`），以及會話中訊息的存放位置；
 - 檢索步驟：先用具體的關鍵詞 grep 會話，拿到行號，再讀取匹配位置前後的內容。
 
-截斷點落在一輪中間時，截斷點之前的部分會立即儲存到 OpenViking，模型在這一輪裡就能檢索到。
+截斷點落在一輪中間時，截斷點之前的部分會立即儲存到 OpenViking，模型在這一輪裡就能檢索到；這次寫入失敗時，由這一輪結束時的儲存一併寫入。
 
 ## 在請求日誌中檢視壓縮 {#see-compaction-in-the-request-log}
 
@@ -108,7 +108,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 
 ## 副作用 {#side-effects}
 
-**不再生成 Working Memory 摘要。** 摘要由閘道器使用的模型生成。在 OpenViking Server 0.5.0 及以上版本，閘道器提交設定 `enable_working_memory=false`，仍按解析後的記憶策略歸檔訊息、提取記憶。新建的閘道器會話繼承使用者策略，除非 `capture_memory_types` 顯式設定了會話策略。舊版服務繼續使用會話級 Working Memory 關閉策略。已有會話保留原來儲存的策略；要繼承使用者策略，請開始新對話。
+**不生成 Working Memory 摘要。** 壓縮用的摘要由閘道器使用的模型生成，不依賴 OpenViking 的 Working Memory。在 OpenViking Server 0.5.0 及以上版本，閘道器提交時設定 `enable_working_memory=false`，仍按解析後的記憶策略歸檔訊息、提取記憶；新建的閘道器會話繼承使用者策略，除非 `capture_memory_types` 顯式設定了會話策略。開啟 `openviking_auto_commit` 後由 OpenViking 提交，Working Memory 是否生成由使用者自己的記憶策略決定（預設關閉）。更早版本的服務上，閘道器建立的會話關閉 Working Memory。已有會話保留原來儲存的策略；要繼承使用者策略，請開始新對話。
 
 **記憶預算重新計算。** 每壓縮一次，**單個上下文視窗預算**（見[召回記憶](08-context-profiles.md#recall-memory)）就重新計算，截斷點之前補充過的記憶可能再次補充。
 
@@ -116,7 +116,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 
 **特別長的會話可能超出請求大小上限。** 客戶端的歷史越來越長，特別長的會話最終可能超出請求大小上限：請求體超過 32 MiB 會被拒絕，返回 HTTP 413（見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)）。運維人員可以用 `max_body_bytes` 調整這個上限（見[閘道器欄位](13-configuration.md#gateway-fields)）；閘道器前面的反向代理允許的請求體也不能比它小（見[反向代理和 HTTPS](../guides/22-gateway-operations.md#reverse-proxy-and-https)）。
 
-**客戶端自己壓縮會換到新會話。** 客戶端壓縮或編輯歷史後，閘道器把新歷史儲存到新的 OpenViking 會話。檢索工具可用時，新歷史開頭的閘道器說明會告訴模型之前的會話在哪裡。
+**客戶端自己壓縮後仍寫入同一個會話。** 客戶端壓縮或編輯歷史後，閘道器從這一輪的使用者訊息開始，繼續寫入同一個 OpenViking 會話；客戶端的摘要和被壓縮掉的內容不會重新寫入。檢索工具可用時，新歷史開頭的閘道器說明會告訴模型較早的內容儲存在哪個會話裡。
 
 ## 實驗性：Agent 自管上下文視窗 {#experimental-agent-managed-context-windows}
 

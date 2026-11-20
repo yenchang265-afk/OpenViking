@@ -42,9 +42,23 @@ Git may reuse conflict resolutions, but they still need review and staging.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: branch `claude/dazzling-thompson-ijelq8`, through
-upstream `90f4edc` (previous: PR #132, merge `4fac34c20`, through `51f0e8e`). Confirm ancestry with
-Git; update this note after each accepted sync.
+Last documented upstream sync: branch `sync/upstream-20261118-155451`, through
+upstream `989e6c7` (previous: branch `claude/dazzling-thompson-ijelq8`, through `90f4edc`).
+Confirm ancestry with Git; update this note after each accepted sync.
+
+- The single-provider `cache` shape (`{"backend"|"provider": ..., "params": ...}`) keeps
+  loading as `cache.instances.default` in Python (`normalize_legacy_cache`) and Rust
+  (`normalize_canonical_cache`); `connections.redis` is inherited per Redis instance.
+  CacheFS `multi_instance` / `max_file_size_bytes` travel in the binding's `cache.cachefs`.
+- In-server Compile keeps upstream's configuration API (`compile_name`, create/update,
+  runs, scheduler) but executes in-process (`CompileService.run`); there is no Runtime
+  HTTP client, archive call or `CompileDependencyFailure` path.
+- The Compile pipeline (`openviking/compile`) is still pinned at upstream `90f4edc`
+  (see `UPSTREAM.json`). Upstream `#7657`/`#7682` replaced it with file-tool workers
+  and a "simple" executor; porting that to `agent_loop.py`/`runner.py` is pending, so
+  the llm-wiki example Skill (and its `write_wiki.py` script) also stay at the fork version.
+- Studio keeps the fork's context-menu delete/move UI; upstream's header copy/move/delete
+  dialogs were not adopted (their API helpers remain in `resources/lib/api.ts`).
 
 ## Chinese text conventions
 

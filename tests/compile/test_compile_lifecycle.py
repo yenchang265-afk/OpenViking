@@ -1,6 +1,5 @@
 """Upstream Compile lifecycle (target registry, incremental plans) on the in-server runtime."""
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -55,39 +54,32 @@ def _lifecycle(**overrides):
 
 
 @pytest.mark.asyncio
-async def test_create_registers_target_and_keeps_submission_hash_input(tmp_path):
+async def test_create_tags_target_and_keeps_submission_hash_input(tmp_path):
     service, tasks = _compile_service(tmp_path)
     tasks.recover_submission.return_value = None  # First submission for this key.
     lifecycle = _lifecycle()
     service.configure_lifecycle(lifecycle)
 
     await service.create(
-        _request(args={"mode": "full", "wiki_links": True}, instruction="refresh"),
+        _request(args={"wiki_links": True}, instruction="refresh"),
         ctx=CTX,
         idempotency_key="key-0123456789abcdef",
     )
 
-    # Target state is prepared in the background; history waits for it.
-    await asyncio.gather(*service._history_tasks)
-    assert lifecycle.prepare.await_args.kwargs["instruction_set"] is True
+    service._fs.ensure_compile_target.assert_awaited_once()
     kwargs = tasks.create.await_args.kwargs
-    assert kwargs["payload"]["compile"] == {"mode": "full", "trigger": "manual"}
+    assert kwargs["payload"]["compile"] == {"trigger": "manual"}
     assert kwargs["payload"]["args"] == {"wiki_links": True}
-    # Idempotent retries compare the caller's request, not the registry metadata.
+    # Idempotent retries compare the caller's request, not the execution metadata.
     assert "compile" not in kwargs["submission_payload"]
-    assert kwargs["submission_payload"]["args"] == {"mode": "full", "wiki_links": True}
-    lifecycle.record_queued.assert_awaited_once()
+    assert kwargs["submission_payload"]["args"] == {"wiki_links": True}
+    # One-off executions have no saved configuration run to register.
+    assert kwargs["on_task_created"] is None
 
 
-@pytest.mark.asyncio
-async def test_create_rejects_invalid_control_args(tmp_path):
-    service, tasks = _compile_service(tmp_path)
-    service.configure_lifecycle(_lifecycle())
-    from openviking_cli.exceptions import InvalidArgumentError
-
-    with pytest.raises(InvalidArgumentError, match="args.mode"):
-        await service.create(_request(args={"mode": "sometimes"}), ctx=CTX)
-    tasks.create.assert_not_awaited()
+def test_create_rejects_server_owned_mode():
+    with pytest.raises(ValueError, match="server-owned"):
+        _request(args={"mode": "sometimes"})
 
 
 @pytest.mark.asyncio
@@ -106,10 +98,9 @@ async def test_run_passes_change_plan_and_pins_skill_snapshot(tmp_path):
         "from": ["viking://resources/raw"],
         "to": "viking://resources/wiki",
         "skill": "viking://agent/skills/llm-wiki",
-        "args": {"last_compile_time": 1700000000},
-        "compile": {"target_id": "t1"},
+        "compile": {"trigger": "manual"},
     }
-    task = SimpleNamespace(task_id="cmp_1")
+    task = SimpleNamespace(task_id="cmp_1", user_id=CTX.user.user_id)
 
     result = await service.run(task, payload, CTX, progress=AsyncMock(), cancelled=AsyncMock())
 
@@ -120,7 +111,6 @@ async def test_run_passes_change_plan_and_pins_skill_snapshot(tmp_path):
     client = captured["client"]
     assert client._snapshot_ref("viking://agent/skills/llm-wiki/SKILL.md") == SNAPSHOT
     assert client._snapshot_ref("viking://resources/raw/a.md") is None
-    assert client._edit_source == "compile"
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from openviking.observability.log_safety import safe_path_for_log
 from openviking.parse.parsers.code.ast.aider_repomap import (
     _extract_with_grep_ast,
     has_tag_query,
@@ -125,5 +126,7 @@ def _extract_with_language_pack(
 
 
 def _llm_fallback(file_name: str, reason: str) -> SkeletonExtractionResult:
-    logger.debug("Code skeleton requires LLM fallback for '%s': %s", file_name, reason)
+    logger.debug(
+        "Code skeleton unavailable path=%s reason=%s", safe_path_for_log(file_name), reason
+    )
     return SkeletonExtractionResult(None, "llm", True, reason)

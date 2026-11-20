@@ -431,7 +431,7 @@ fencing token 校驗通過的一方成功持有 `TreeLock(java-guide)`；失敗�
 
 路徑鎖預設啟用，並使用 `filesystem` Provider。多程序通過 Redis 協調時，
 設定 `storage.agfs.pathlock.provider=cache`。Cache PathLock 要求配置頂層
-Redis Cache Provider，並使用頂層 `service_name` 作為 Redis namespace。
+`cache.instances` 中的 Redis 例項，並使用頂層 `service_name` 作為 Redis namespace。
 執行時等待超時固定為 `0.0` 秒。也可選擇 `provider=postgres`，在不使用 Redis
 的情況下跨程序或主機共享鎖；它使用自己的 DSN 和頂層 `service_name`，獨立於快取配置。
 `storage.transaction` 僅保留為相容舊配置：`lock_timeout`
@@ -459,16 +459,25 @@ Redis 配置：
 {
   "service_name": "production",
   "cache": {
-    "provider": "redis",
-    "params": {
-      "mode": "standalone",
-      "endpoints": ["redis://127.0.0.1:6379"]
+    "instances": {
+      "locks": {
+        "provider": "redis",
+        "params": {
+          "mode": "standalone",
+          "endpoints": ["redis://127.0.0.1:6379"]
+        }
+      },
+      "default": {
+        "provider": "redis",
+        "params": {"endpoints": ["redis://127.0.0.1:6379"]}
+      }
     }
   },
   "storage": {
     "agfs": {
       "pathlock": {
         "provider": "cache",
+        "instance": "locks",
         "lock_expire_secs": 30.0
       }
     }
@@ -500,6 +509,7 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache` | `filesystem` |
+| `instance` | str | `provider="cache"` 時選擇的 Cache Runtime，必須為 Redis | `"default"` |
 | `sqlite_path` | str / null | 使用 `sqlite` 時可覆蓋本地資料庫絕對路徑；見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
 | `postgres_dsn_env` | str / null | `postgres` 必填；儲存連線 DSN 的環境變數名 | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數 | `30.0` |

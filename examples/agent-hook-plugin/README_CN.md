@@ -1,12 +1,12 @@
 # OpenViking 記憶：輕量 Hook 宿主
 
-Cursor、TRAE、TRAE CN 與 ZCode 使用宿主配置檔案；Kimi Code 使用原生託管外掛目錄，CodeBuddy Code 使用本地外掛 marketplace。它們共用同一個 dispatcher 和記憶執行時，安裝指令碼在安裝時組裝依賴，不在倉庫裡為每個宿主提交共享程式碼副本。
+Cursor、TRAE、TRAE CN 與 ZCode 使用宿主配置檔案；Kimi Code 使用原生託管外掛目錄，CodeBuddy Code 與 Qoder CLI 使用本地外掛 marketplace，Antigravity 使用 `~/.gemini/config/plugins/` 下的外掛目錄。它們共用同一個 dispatcher 和記憶執行時，安裝指令碼在安裝時組裝依賴，不在倉庫裡為每個宿主提交共享程式碼副本。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
 ```
 
-安裝指令碼會詢問要安裝哪些宿主以及 OpenViking 連線資訊。要從倉庫 checkout 安裝，在倉庫根目錄執行 `bash examples/memory-plugin-shared/install.sh --harness <cursor|trae|trae-cn|zcode|kimicode|codebuddy>`。
+安裝指令碼會詢問要安裝哪些宿主以及 OpenViking 連線資訊。要從倉庫 checkout 安裝，在倉庫根目錄執行 `bash examples/memory-plugin-shared/install.sh --harness <cursor|trae|trae-cn|zcode|kimicode|codebuddy|qoder|antigravity>`。
 
 > **需要支援 `viking://~` home alias 的 OpenViking 服務端。** 召回通過 `viking://~/memories` 與 `viking://~/skills` 指向呼叫者自己的上下文空間；不帶 uid 的 `viking://user/memories` 簡寫會被較新的服務端拒絕。
 
@@ -33,6 +33,7 @@ curl -fsSL https://openviking.ai/install | bash
 - **TRAE / TRAE CN** — 採集直接讀 Stop 事件的 `prompt`、`text_content`、`last_assistant_message`，不解析 transcript；每次帶內容的 Stop 都 commit。會話字首 `tr-` 與 `trcn-`。見 [TRAE 接入文件](../../docs/zh/agent-integrations/13-trae.md)。
 - **ZCode** — rollout 檔案是權威增量對話源：穩定的 host `turnId` 用於去重，也讓後續 Stop 能補回漏掉的回合，hook stdin 只是兜底。ZCode 不支援 `PreCompact` 與 `SessionEnd`，因此每次 Stop 都 commit 來補足這兩個訊號。它的輸出 schema 是嚴格的，所以放行時不寫任何內容。會話字首 `zc-`。已驗證的擴充面記錄在 [DESIGN.md](./DESIGN.md)。
 - **Kimi Code** — `wire.jsonl` 是權威 transcript；UserPromptSubmit 輸出原始上下文文本。Stop、PreCompact、SessionEnd 可後臺寫入，Interrupt 保持同步並共享 2 秒的 OpenViking 請求預算。安裝指令碼生成自包含原生外掛，不修改舊的 `config.toml` 或 `mcp.json`。會話字首 `kc-`。
+- **Antigravity** — 桌面 app 與 `agy` CLI 讀取 `~/.gemini/config/plugins/` 下的同一個外掛。Antigravity 在每次模型呼叫前都執行 PreInvocation，所以只在一輪的第一次呼叫（`invocationNum` 為 0）召回，上下文以 `injectSteps` 系統訊息返回。Stop 不攜帶文本：捕獲在後臺程序中讀取 `transcriptPath` 裡上次之後已完成的步驟，然後 commit。會話字首為 `ag-`。用 `--harness antigravity` 安裝，指令碼會寫入這個外掛目錄，不是它寫入的同名目錄會保留；見[社群外掛文件](../../docs/zh/agent-integrations/08-community-plugins.md#antigravity-記憶整合)。
 
 Cursor 工具採集依據 [Hooks 契約](https://cursor.com/docs/hooks) 和 [`@cursor/sdk` 1.0.38](https://registry.npmjs.org/@cursor/sdk/-/sdk-1.0.38.tgz) 的 MCP 執行器實現，後者在 `afterMCPExecution` 中提供 `tool_use_id`。舊事件若沒有原生呼叫 ID，只保留文本採集；介面卡不生成呼叫 ID 或推斷完成狀態。
 

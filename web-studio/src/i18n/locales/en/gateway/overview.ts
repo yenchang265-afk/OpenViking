@@ -144,21 +144,17 @@ const overview = {
       'Finds memory for new messages and stores saved conversations.',
     version: 'Version',
     unreachable:
-      "While Business Context Platform can't be reached, requests still go to the model without memory, and saving conversations is retried until it's back.",
+      "While Business Context Platform can't be reached, requests still go to the model without memory, and turns that end aren't saved. Once it's back, the next turn of each conversation saves what's missing.",
     starting:
       "The gateway hasn't finished its first check of Business Context Platform yet. Refresh in a minute.",
   },
   saving: {
     title: 'Saving conversations',
     ok: 'No saving problems in recent requests.',
-    retrying_one:
-      '{{count}} conversation is retrying saving to Business Context Platform after a failure.',
-    retrying_other:
-      '{{count}} conversations are retrying saving to Business Context Platform after a failure.',
-    paused_one:
-      '{{count}} conversation paused saving after repeated failures. The gateway tries again every 5 minutes.',
-    paused_other:
-      '{{count}} conversations paused saving after repeated failures. The gateway tries again every 5 minutes.',
+    failed_one:
+      "{{count}} conversation's latest turn wasn't saved to Business Context Platform. Its next turn saves what's missing.",
+    failed_other:
+      "{{count}} conversations' latest turns weren't saved to Business Context Platform. Their next turn saves what's missing.",
   },
   degraded: {
     title: 'Degraded requests',

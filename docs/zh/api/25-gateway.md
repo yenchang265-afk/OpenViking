@@ -60,32 +60,79 @@ OpenViking 拒絕 API 金鑰時，返回 401 `openviking_http_401`。
 
 ### 日誌記錄 {#log-records}
 
-日誌只記後設資料，不含訊息內容。發往模型服務商的請求結束時寫一條記錄；對話的儲存狀態變化時也寫一條（`kind` 為 `capture`）。閘道器在請求到達服務商之前就拒絕的，不記日誌。除 `time` 外，欄位都是可選的，不適用時省略。
+日誌只記後設資料，不含訊息內容、金鑰和錯誤資訊。發往模型路由的每個請求（`.../models` 除外）無論怎樣結束都恰好寫一條記錄：正常回復、被閘道器拒絕、服務商失敗、流式回覆中途斷開，或者客戶端提前離開。使用預設的 `request_log_sink: store` 時，金鑰確認之前就失敗的請求沒有帳戶，不會儲存；`stdout` 和 `file` 輸出會照常寫出，`account` 和 `user_id` 為 `null`。欄位不適用時省略。
 
 | 欄位 | 含義 |
 | --- | --- |
 | `time` | 記錄寫入時間，Unix 時間戳（秒） |
-| `request_id` | 閘道器為請求分配的 ID |
-| `kind` | `user`、`continuation`、`auxiliary`、`subagent`、`count`、`passthrough` 或 `capture`，見[請求日誌](../gateway/10-overview-and-requests.md#requests) |
-| `model` | 客戶端傳送的模型名 |
-| `status` | 服務商返回的 HTTP 狀態碼 |
-| `upstream_id`、`credential_id` | 處理請求的上游，以及發出請求的閘道器金鑰 |
+| `event`、`schema` | 請求記錄為 `request` 和 `2` |
+| `request_id` | 閘道器為請求分配的 ID；模型路由的錯誤響應體裡也帶有它 |
+| `received_at`、`method`、`endpoint` | 閘道器收到請求的時間（Unix 時間戳，秒）、HTTP 方法，以及 `messages`、`count_tokens`、`chat`、`responses`、`responses_item` 或 `other` |
+| `kind` | `user`、`continuation`、`auxiliary`、`subagent`、`count` 或 `passthrough`，見[請求日誌](../gateway/10-overview-and-requests.md#requests) |
+| `model`、`stream` | 客戶端傳送的模型名，以及是否要求流式回覆 |
+| `status` | 客戶端收到的 HTTP 狀態碼：閘道器轉發的是服務商的狀態碼，閘道器自身的錯誤是閘道器的狀態碼，客戶端在收到任何響應前離開時為 `499` |
+| `upstream_attempted`、`upstream_status` | 閘道器是否向服務商發出了請求（包括壓縮摘要請求），以及服務商應答時的 HTTP 狀態碼 |
+| `error_reason`、`error_origin`、`error_class` | 任何失敗（包括已返回 `200` 後中斷的流）的[原因](#model-route-errors)、來源（`gateway`、`openviking`、`upstream` 或 `client`）和大類（`api_key_invalid`、`quota_or_order`、`openviking_unavailable`、`config_error`、`gateway_internal`、`timeout`、`model_error` 或 `client_cancelled`）。閘道器原樣轉發的服務商錯誤為 `upstream_error` |
+| `upstream_error_code` | 服務商錯誤響應體或其流中錯誤事件的 `code`（沒有時取 `type`），僅當它是簡短識別符號時記錄；從不記錄錯誤資訊 |
+| `stream_error`、`client_disconnected` | 已開始的響應體沒有正常結束的原因（`upstream_timeout`、`upstream_disconnected`、服務商傳送了錯誤事件時為 `upstream_event`、`client_disconnected`、某個 `tool_*` 原因或 `internal_error`）；客戶端離開時後者為 `true` |
+| `upstream_id`、`credential_id`、`openviking_account` | 處理請求的上游、發出請求的閘道器金鑰，以及金鑰背後的 OpenViking 帳戶 |
 | `session`、`protocol` | 對話及其協議，[重置儲存](#gateway-keys)時要用 |
 | `peer` | 請求的 [Peer](../gateway/03-connect-clients.md#peer)，來自 `X-OpenViking-Actor-Peer` 或金鑰的預設 Peer |
 | `degradation` | 異常程式碼，見[降級請求的異常](../gateway/12-troubleshooting.md#issues-on-degraded-requests) |
+| `degradations` | 請求的全部異常，按發生順序。還可能含 `recall_failed`：記憶檢索沒有得到 OpenViking 的應答（原因見 `recall_reason`），它不會寫入 `degradation`；以及 `prepare_timeout`：補充記憶超過了 `prepare_timeout_seconds` |
+| `revocation_reason` | 出現 `revocation_check_unavailable` 時，OpenViking 無法確認金鑰的原因 |
+| `session_source` | 對話是怎樣確定的：`header`（`X-OpenViking-Session`）、`reply_match`（歷史延續了某個對話的回覆）或 `new` |
 | `recall_reason`、`recall_count`、`recall_ms` | 記憶檢索的結果程式碼、補充的條數和檢索耗時，見[沒有補充記憶](../gateway/12-troubleshooting.md#no-memory-is-added) |
 | `replay_hits` | 原樣放回記憶的歷史訊息數 |
-| `capture_status`、`capture_reason`、`capture_retry_at` | 儲存狀態（`active`、`disabled`、`retrying` 或 `paused`）、原因，以及下次重試時間（Unix 時間戳，秒），見[儲存狀態](../gateway/10-overview-and-requests.md#saving-status) |
+| `capture_status`、`capture_reason` | 儲存狀態：`active`、`disabled`，或者這次請求結束了一輪、寫入 OpenViking 卻失敗時為 `failed`；以及原因：失敗時為失敗原因（例如 `openviking_http_503`、`openviking_unavailable`、`openviking_circuit_open`、`save_timeout` 或 `save_failed`），否則為對話記下的原因（例如 `manual_reset`）。見[儲存狀態](../gateway/10-overview-and-requests.md#saving-status) |
+| `capture_messages`、`openviking_session` | 這次請求儲存了一輪時，寫入 OpenViking 的訊息數和 OpenViking 會話 ID |
 | `tool_skip_reason` | 請求沒有拿到 OpenViking 工具的原因，見[什麼時候不提供工具](../gateway/04-openviking-tools.md#when-tools-are-not-offered) |
 | `tool_stop_reason` | 工具 Token 預算用完、後續呼叫被拒絕時為 `token_budget`，見[上限](../gateway/04-openviking-tools.md#limits) |
 | `compaction_failed` | 壓縮失敗的原因（`still_over_threshold` 時摘要已保留），見[長對話超出上下文長度](../gateway/12-troubleshooting.md#long-conversations-hit-the-context-limit) |
 | `context_tokens`、`context_window` | 估算的上下文大小，以及用來比較的上下文視窗 |
 | `input_tokens`、`output_tokens`、`cached_tokens`、`cache_write_tokens` | 本次請求所有服務商呼叫（含 OpenViking 工具輪次）的 token 用量合計。`input_tokens` 已包含快取命中和快取寫入的 token。 |
 | `duration_ms` | 從把請求發給服務商到回覆結束的耗時 |
+| `read_ms`、`auth_ms`、`route_ms`、`prepare_ms` | 讀取請求體、檢查金鑰（含向 OpenViking 確認）、選擇上游、準備記憶（含檢索和壓縮）的耗時 |
+| `added_ms`、`upstream_ttfb_ms`、`first_chunk_ms`、`total_ms` | 從收到請求到開始請求服務商、從開始請求到收到服務商響應頭、從收到請求到第一段流式資料送達客戶端、從收到請求到寫入記錄的耗時 |
+| `compaction_ms` | 壓縮耗時，壓縮失敗時也記錄 |
+| `bookkeeping_failed` | 回覆發出後失敗的步驟：`completed`（記下這次回覆的用量和狀態）或 `responses`（記住 Responses ID）。儲存失敗不在這裡，見 `capture_status` |
 
 以 `first_upstream_` 和 `hidden_upstream_` 開頭的欄位把 token 用量拆成首次服務商呼叫和 OpenViking 工具輪次兩部分，首次呼叫快取命中率按前者計算。
 
-`/overview` 由這些記錄彙總而來。除用量和快取資料外，還返回 `degradations`（異常程式碼 → 次數）、`capture_issues`（正在重試或已暫停儲存的對話數）、`cache_alerts`、`openviking`（OpenViking 的 `status`，降級時另有 `reason`）和 `log_retention_days`。
+`/overview` 由這些記錄彙總而來。除用量和快取資料外，還返回 `degradations`（異常程式碼 → 次數）、`capture_issues`（`{"failed": n}`：最新一條記錄顯示這一輪沒有儲存成功的對話數）、`cache_alerts`、`openviking`（OpenViking 的 `status`，降級時另有 `reason`）和 `log_retention_days`。
+
+### 狀態行 {#status-line}
+
+`snapshot_interval_seconds` 大於零時，每個閘道器程序按這個間隔寫一行 JSON；寫到哪裡見[狀態行](../guides/22-gateway-operations.md#status-line)。使用 `store` 輸出時，由 `openviking_gateway.snapshot` logger 以 INFO 級別輸出，宿主沒有配置日誌 handler 時寫到 stderr。計數覆蓋同一程序距上一行的這段時間。狀態行從不包含帳戶、使用者、會話、模型或請求 ID。
+
+```json
+{"event": "snapshot", "schema": 1, "time": 1794787200.0, "interval_s": 60.0,
+ "uptime_s": 8640.2, "version": "0.5.6",
+ "inflight_requests": 12, "inflight_streams": 9,
+ "requests": 480, "errors": {"upstream_timeout": 2, "store_unavailable": 1},
+ "degradations": {"recall_failed": 4},
+ "stream_errors": {"client_disconnected": 3},
+ "rejected_overload": 0,
+ "records_unlogged": 0, "records_failed": 0, "records_dropped": 0,
+ "store_errors": 1,
+ "openviking": {"state": "ok", "reason": "", "open_circuits": 0},
+ "capture": {"delivered": 18, "failed": 0}}
+```
+
+| 欄位 | 含義 |
+| --- | --- |
+| `time`、`interval_s`、`uptime_s`、`version` | 寫入時間（epoch 秒）、距上一行的秒數、程序已執行的秒數，以及安裝的 OpenViking 版本 |
+| `inflight_requests`、`inflight_streams` | 寫入時從收到到響應結束之間的模型請求數，以及其中正在流式回覆的請求數 |
+| `requests` | 這段時間寫出的請求記錄數 |
+| `errors`、`degradations`、`stream_errors` | 這些記錄按 `error_reason`、按 `degradations` 的每一項、按 `stream_error` 的計數 |
+| `rejected_overload` | 程序達到 `max_inflight_requests` 而以 `gateway_overloaded` 拒絕的請求 |
+| `records_unlogged` | 因請求沒有帳戶而未被 `store` 輸出儲存的記錄 |
+| `records_failed`、`records_dropped` | 輸出寫入失敗的記錄，以及 `file` 輸出因佇列已滿而丟棄的記錄 |
+| `store_errors` | 因狀態儲存出錯而失敗或失去記憶的請求（`store_unavailable`，或異常 `memory_store_failure`） |
+| `openviking.state`、`openviking.reason` | 閘道器最近一次 OpenViking 狀態檢查的結果：`ok`、`degraded` 或 `starting`，降級時附原因 |
+| `openviking.open_circuits` | 因持續無響應、呼叫正被跳過的 OpenViking 帳號數；見[OpenViking 異常](../gateway/12-troubleshooting.md#openviking-is-degraded) |
+| `capture.delivered` | 本區間內本程序寫入 OpenViking 的已完成輪次數 |
+| `capture.failed` | 本區間內本程序寫入 OpenViking 失敗的已完成輪次數。`capture.delivered` 和 `capture.failed` 按程序統計，可以跨程序相加 |
 
 ## 上游和上下文配置 {#upstreams-and-context-profiles}
 
@@ -177,7 +224,7 @@ Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金�
 | GET | `/gateway/admin/keys/{identifier}` | 讀取單個可見金鑰 |
 | POST | `/gateway/admin/keys` | 簽發金鑰，響應中的 `key` 是唯一一次返回的完整金鑰 |
 | DELETE | `/gateway/admin/keys/{identifier}` | 吊銷金鑰，保留使用者資料 |
-| POST | `/gateway/admin/keys/{identifier}/capture/reset` | 讓一段對話重新開始儲存 |
+| POST | `/gateway/admin/keys/{identifier}/capture/reset` | 讓一段對話改存到新的 OpenViking 會話，下一輪結束時寫入完整歷史 |
 | DELETE | `/gateway/admin/users/{user_id}/data` | admin 或 root：吊銷該使用者的全部金鑰，刪除其對話狀態和日誌 |
 | DELETE | `/gateway/admin/account/data` | root：刪除帳號的全部閘道器物件、金鑰、對話狀態和日誌 |
 
@@ -225,9 +272,9 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 
 使用者的 OpenViking API 金鑰重新生成或使用者被刪除後，繫結它的閘道器金鑰會失效並被刪除，使用者資料保留，見[閘道器金鑰](../gateway/09-gateway-keys.md#gateway-keys)。
 
-**重置儲存。** 請求體為 `{"session":"<會話請求頭的值或日誌中的 session>","protocol":"chat"}`，`protocol` 取 `chat`、`anthropic` 或 `responses`。成功返回 `{"status":"ready","message":"…"}`，閘道器會在這段對話的下一個請求裡，把完整歷史寫入一個新的 OpenViking 會話。找不到這段對話時返回 404 `not_found`。
+**重置儲存。** 請求體為 `{"session":"<會話請求頭的值或日誌中的 session>","protocol":"chat"}`，`protocol` 取 `chat`、`anthropic` 或 `responses`。成功返回 `{"status":"ready","message":"…"}`，這段對話下一輪結束時，閘道器把完整歷史寫入一個新的 OpenViking 會話。找不到這段對話時返回 404 `not_found`。
 
-**刪除資料。** 兩個刪除介面會清掉閘道器裡尚未儲存的對話內容和日誌，不影響已經存入 OpenViking 的會話和記憶。保留期和其他刪除途徑見[安全與資料](../gateway/11-security-and-data.md)。
+**刪除資料。** 兩個刪除介面會清掉閘道器裡的對話狀態和日誌，不影響已經存入 OpenViking 的會話和記憶。保留期和其他刪除途徑見[安全與資料](../gateway/11-security-and-data.md)。
 
 ## 錯誤 {#errors}
 
@@ -257,9 +304,52 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 | 422 | `invalid_configuration` | 請求體或 Base URL 不合法。錯誤資訊不會回顯提交的憑證。 |
 | 403 | `vlm_import_forbidden` | 呼叫方沒有匯入許可權，以 `/access` 的 `can_import_vlm` 為準。 |
 | 404 | `vlm_import_unavailable` | 獨立閘道器讀不到服務端的模型配置，請手動新增上游。 |
-| 503 | `openviking_unavailable`、`openviking_unreachable` | 閘道器連不上 OpenViking。檢查 OpenViking 是否執行；獨立閘道器還要檢查 `openviking_url`（`gateway.conf` 或 `OPENVIKING_GATEWAY_OPENVIKING_URL`）。 |
+| 503 | `openviking_unavailable`、`openviking_unreachable`、`openviking_timeout` | 閘道器連不上 OpenViking，或它沒有及時應答。檢查 OpenViking 是否執行；獨立閘道器還要檢查 `openviking_url`（`gateway.conf` 或 `OPENVIKING_GATEWAY_OPENVIKING_URL`）。 |
 | 503 | `openviking_version_mismatch` | 僅獨立閘道器：OpenViking Server 低於要求的版本，響應中的 `required_version` 給出最低版本。 |
 
-OpenViking 返回的其他 HTTP 錯誤記為 `openviking_http_<status>`；閘道器自身的通用 HTTP 錯誤記為 `gateway_http_<status>`，例如對不支援的方法返回 405 `gateway_http_405`。
+OpenViking 返回的其他 HTTP 錯誤記為 `openviking_http_<status>`；閘道器自身的通用 HTTP 錯誤記為 `gateway_http_<status>`，例如對不支援的方法返回 405 `gateway_http_405`。這些名稱適用於管理 API、`/uploads` 和 `/downloads`；模型路由使用下面的原因。
+
+### 模型路由的錯誤 {#model-route-errors}
+
+閘道器在模型路由（`/gateway/v1/*`、`/gateway/api/v3/*`、`/gateway/api/compatible/v1/*`）上產生的錯誤，響應體為 `{"reason": "...", "detail": "...", "request_id": "..."}`；`openviking_version_mismatch` 另有 `required_version`。服務商自己的錯誤原樣轉發，狀態碼和響應體都不變。請求記錄的 `error_reason` 記同樣的原因。
+
+| 狀態碼 | 原因 | 來源 | 含義 |
+| --- | --- | --- | --- |
+| 401 | `gateway_key_invalid` | gateway | 閘道器金鑰缺失、錯誤或已吊銷。 |
+| 401 | `openviking_key_invalid` | openviking | OpenViking 拒絕了客戶端傳送的 OpenViking API 金鑰，或閘道器金鑰背後的 OpenViking 金鑰。 |
+| 401 | `openviking_identity_missing` | openviking | OpenViking 沒有返回這把金鑰的身份。 |
+| 402 | `openviking_not_ordered` | openviking | 這把金鑰未訂購 OpenViking 服務。 |
+| 403 | `openviking_forbidden` | openviking | OpenViking 拒絕了這把金鑰。 |
+| 403 | `root_key_not_allowed`、`trusted_mode_unsupported` | openviking | root 金鑰不能用於閘道器金鑰；閘道器不支援 trusted 認證。 |
+| 429 | `openviking_rate_limited` | openviking | OpenViking 對金鑰檢查限流。 |
+| 503 | `openviking_unavailable` | openviking | 閘道器首次檢查一把金鑰時，OpenViking 無法訪問或出錯。 |
+| 503 | `openviking_timeout` | openviking | OpenViking 沒有及時應答這次檢查。 |
+| 503 | `openviking_version_mismatch` | openviking | OpenViking Server 版本低於閘道器要求。 |
+| 不定 | `openviking_error` | openviking | 這次檢查中 OpenViking 的其他錯誤，狀態碼與 OpenViking 相同。 |
+| 403 | `oauth_credential_unsupported` | gateway | 客戶端或上游使用了 Claude 訂閱令牌。 |
+| 413 | `body_too_large` | gateway | 請求體超過 `max_body_bytes`。 |
+| 415 | `compressed_body_unsupported` | gateway | 限定了模型的金鑰收到了經過壓縮編碼的請求體。 |
+| 400 | `model_missing` | gateway | 限定了模型的金鑰收到的請求體沒有寫明模型。 |
+| 403 | `model_not_allowed` | gateway | 模型不在金鑰允許的範圍內。 |
+| 400、403 | `context_override_invalid`、`context_override_not_allowed` | gateway | `X-OpenViking-Context` 無效，或金鑰的上下文配置不接受它。 |
+| 400 | `peer_invalid` | gateway | `X-OpenViking-Actor-Peer` 不是合法的 Peer ID。 |
+| 403 | `policy_unavailable` | gateway | 金鑰繫結的上下文配置已不存在。 |
+| 403 | `upstream_url_not_allowed` | gateway | `X-OpenViking-Upstream-URL` 不是金鑰繫結的任何上游。 |
+| 404 | `no_matching_upstream` | gateway | 金鑰繫結的已啟用上游中，沒有一個提供這個協議和模型。 |
+| 404 | `upstream_endpoint_mismatch` | gateway | 上游是另一路徑的完整請求地址。 |
+| 404、403 | `response_unknown`、`response_upstream_disallowed` | gateway | 查詢的 Responses 響應不屬於這把金鑰，或它的上游已不再允許使用。 |
+| 401 | `upstream_key_missing` | gateway | 上游沒有儲存 API Key，請求也沒有在 `X-OpenViking-Upstream-Key` 中攜帶。 |
+| 403 | `coding_plan_disabled` | gateway | 上游是不允許通過閘道器使用的 Coding Plan 金鑰。 |
+| 503 | `store_unavailable` | gateway | 閘道器的狀態儲存出錯。響應帶 `Retry-After: 1`。 |
+| 503 | `gateway_overloaded` | gateway | 程序正在處理的模型請求已達 `max_inflight_requests`。請求沒有發給服務商。響應帶 `Retry-After: 1`。 |
+| 500 | `internal_error` | gateway | 閘道器意外出錯。錯誤詳情是通用文本，呼叫棧在閘道器日誌裡。 |
+| 504 | `upstream_timeout` | upstream | 服務商沒有在 `upstream_timeout_seconds` 內開始回覆，或者非流式回覆中途這麼久沒有資料。 |
+| 502 | `upstream_unreachable` | upstream | 閘道器連不上服務商（DNS、連線被拒絕、TLS）。 |
+| 502 | `upstream_disconnected` | upstream | 服務商在回覆完成前關閉了連線。 |
+| 502 | `tool_upstream_invalid`、`tool_upstream_incomplete`、`tool_upstream_stream_error`、`tool_call_invalid` | upstream | OpenViking 工具輪次中，服務商的回覆無法使用、不完整或是錯誤，或者模型呼叫了不允許的工具。 |
+| 502 | `tool_loop_limit` | gateway | OpenViking 工具輪次達到上限。 |
+| 504 | `tool_loop_timeout` | gateway | OpenViking 工具輪次超時。 |
+
+對 Responses 路由發起的 WebSocket 請求仍然收到空的 426，記錄裡寫 `websocket_unsupported`。模型路由上出現 `gateway_http_<status>` 原因，表示閘道器還沒有歸類的錯誤。
 
 模型客戶端收到的 401 不屬於管理 API。原因可能是閘道器金鑰缺失、錯誤或已吊銷，也可能是它繫結的 OpenViking 金鑰已經失效，排查方法見[客戶端收到閘道器返回的錯誤](../gateway/12-troubleshooting.md#clients-get-an-error-from-the-gateway)。

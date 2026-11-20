@@ -20,15 +20,15 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 
 | 卡片 | 顯示什麼 | 正常時 | 不正常時看 |
 | --- | --- | --- | --- |
-| **請求數** | 模型請求的數量（不含後臺儲存事件，即日誌中的**記憶同步**）、最近一次請求的時間，以及這些請求的輸出 token | 隨客戶端發請求而增長 | [檢查接入是否生效](03-connect-clients.md#check-the-connection) |
+| **請求數** | 模型請求的數量、最近一次請求的時間，以及這些請求的輸出 token | 隨客戶端發請求而增長 | [檢查接入是否生效](03-connect-clients.md#check-the-connection) |
 | **首次呼叫快取命中率** | 每條新使用者訊息的第一次模型呼叫中，命中服務商[提示詞快取](01-how-it-works.md#replay)的輸入 token 所佔比例 | 接近不經過閘道器時服務商能達到的水平。這是判斷閘道器是否健康最重要的指標。 | [首次呼叫快取命中率下降](12-troubleshooting.md#the-first-call-cache-hit-rate-dropped) |
 | **輪內快取命中率** | 同一輪裡後續呼叫的同一比例，例如工具步驟和 OpenViking 工具的往返 | 通常很高 | — |
 | **召回的記憶條數** | 補充到新訊息中的記憶條數，以及每次檢索 OpenViking 的平均耗時（只統計實際檢索了的訊息） | 使用者在 OpenViking 中有記憶後開始增長；全新帳號為 0 屬於正常 | [沒有補充記憶](12-troubleshooting.md#no-memory-is-added) |
-| **OpenViking** | **已連線**、**異常**或**啟動中**，OpenViking 的版本，以及異常時的原因。卡片中的**儲存對話**一欄統計正在重試或已暫停儲存的對話數。 | **已連線**，且最近的請求中沒有儲存失敗的對話 | [OpenViking 異常](12-troubleshooting.md#openviking-is-degraded)、[OpenViking 中看不到對話](12-troubleshooting.md#conversations-do-not-appear-in-openviking) |
+| **OpenViking** | **已連線**、**異常**或**啟動中**，OpenViking 的版本，以及異常時的原因。卡片中的**儲存對話**一欄統計最近一輪沒有儲存成功的對話數。 | **已連線**，且最近的請求中沒有儲存失敗的對話 | [OpenViking 異常](12-troubleshooting.md#openviking-is-degraded)、[OpenViking 中看不到對話](12-troubleshooting.md#conversations-do-not-appear-in-openviking) |
 | **降級請求** | 每種異常出現的次數，附說明和建議操作 | **沒有降級請求** | [降級請求的異常](12-troubleshooting.md#issues-on-degraded-requests) |
 | **最近請求** | 最新的幾條請求，以及前往**請求日誌**標籤頁的連結 | — | [請求日誌](#requests) |
 
-首次呼叫快取命中率明顯下降，通常說明閘道器傳送的歷史和上一次對不上了。OpenViking 連不上期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 OpenViking 恢復。**儲存對話**一欄或**降級請求**卡片報告問題時，點**在請求日誌中檢視**會開啟**請求日誌**標籤頁，並篩選出**異常**。
+首次呼叫快取命中率明顯下降，通常說明閘道器傳送的歷史和上一次對不上了。OpenViking 連不上期間，請求照常發給模型，只是不帶記憶，結束的輪次也儲存失敗；OpenViking 恢復後，每段對話的下一輪結束時補上缺的內容。**儲存對話**一欄或**降級請求**卡片報告問題時，點**在請求日誌中檢視**會開啟**請求日誌**標籤頁，並篩選出**異常**。
 
 ### 長對話沒有命中快取 {#long-conversations-missing-the-cache}
 
@@ -46,7 +46,7 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 
 **請求日誌**標籤頁按時間倒序列出日誌中最新的 1,000 條記錄，停留在第一頁時每 30 秒重新整理一次。篩選和搜尋也只覆蓋這 1,000 條。
 
-只有到達模型服務商的請求才會記錄。被閘道器先行拒絕的請求不記錄，例如金鑰無效、模型不在金鑰允許的範圍內、沒有匹配的上游、請求體超限，這些情況下客戶端直接收到錯誤，見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)。
+每個模型請求都會記錄，包括閘道器自己拒絕的請求（例如模型不在金鑰允許的範圍內、沒有匹配的上游、請求體超限），以及在服務商處失敗、或因客戶端離開而結束的請求。金鑰確認之前就被拒絕的請求（例如閘道器金鑰無效）不屬於任何帳戶，不會列出。在準備記憶之前就被拒絕的請求顯示為**直接轉發**。見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)。
 
 ### 篩選和搜尋 {#filter-and-search}
 
@@ -55,7 +55,7 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 | **全部** | 所有記錄 |
 | **新訊息** | 以一條新使用者訊息開啟一輪的請求 |
 | **工具步驟** | 延續同一輪的請求，例如帶著工具結果繼續 |
-| **異常** | 降級請求、對話儲存處於**重試中**或**已暫停**的請求，以及服務商返回 HTTP 400 及以上狀態碼的請求（見[上游返回錯誤](12-troubleshooting.md#the-upstream-returned-an-error)） |
+| **異常** | 降級請求、**儲存失敗**的請求，以及狀態碼為 HTTP 400 及以上的請求，無論來自服務商（見[上游返回錯誤](12-troubleshooting.md#the-upstream-returned-an-error)）還是閘道器（見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)） |
 | **請求型別** | 某一種[請求型別](#request-types) |
 
 搜尋範圍包括模型、對話 ID、請求 ID、金鑰名稱或字首，以及上游名稱。日誌只儲存對話 ID 的雜湊，所以 Studio 會先在瀏覽器裡對貼上的對話 ID 求雜湊再匹配。這要求 Studio 通過 HTTPS 或 localhost 開啟；用普通 HTTP 開啟時，按對話 ID 搜尋什麼也找不到。
@@ -67,10 +67,10 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 | **時間** | 請求到達的時間 |
 | **型別** | [請求型別](#request-types) |
 | **模型** | 客戶端傳送的模型名稱 |
-| **狀態** | 服務商返回的 HTTP 狀態碼 |
+| **狀態** | 客戶端收到的 HTTP 狀態碼：服務商的狀態碼，或者閘道器拒絕或處理失敗時閘道器自己的狀態碼 |
 | **Token** | 輸入 token、其中命中快取的比例，以及輸出 token |
 | **記憶** | 這次請求中[召回](../guides/15-gateway.md#key-terms)做了什麼（見下表） |
-| **儲存** | 所在對話的[儲存狀態](#saving-status)；滑鼠懸停可以看到原因 |
+| **儲存** | 這次請求的[儲存狀態](#saving-status)；滑鼠懸停可以看到原因 |
 | **異常** | 降級請求的異常 |
 
 **記憶**列的寫法：
@@ -89,7 +89,7 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 - token 明細
 - 記憶檢索結果
 - 上下文視窗用量，以及歷史是否經過壓縮、模型是否開啟了新視窗
-- 儲存狀態和下次重試時間
+- 儲存狀態；這次請求儲存了一輪時，還有寫入的訊息數和 OpenViking 會話 ID
 - OpenViking 工具詳情，包括沒有提供工具的原因
 - 客戶端在 `X-OpenViking-Context` 中傳入的配置項，只記名稱；它們只在對話的第一個請求中生效
 
@@ -101,48 +101,45 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 
 | 型別 | 含義 | 記憶 |
 | --- | --- | --- |
-| 新訊息 | 最後一條是新使用者訊息的請求 | 檢索一次，並放回之前的記憶；這一輪會被儲存 |
-| 工具步驟 | 同一輪的延續，例如帶著工具結果繼續 | 放回之前的記憶；隨所在輪次一起儲存 |
-| 輔助請求 | 生成標題、摘要、壓縮、建議和許可權檢查的請求；對話帶過客戶端工具後，同一對話裡不帶工具、也不帶之前回復的單獨請求，例如 Claude Code 彙總抓取的網頁。運維可以在[客戶端規則](13-configuration.md#client-rules)裡補充某個客戶端自己的請求 | 放回之前的記憶；從不儲存 |
+| 新訊息 | 最後一條是新使用者訊息的請求 | 檢索一次，並放回之前的記憶；回覆結束這一輪時儲存這一輪 |
+| 工具步驟 | 同一輪的延續，例如帶著工具結果繼續 | 放回之前的記憶；結束這一輪的那個請求儲存整輪 |
+| 輔助請求 | 生成標題、摘要、壓縮、建議和許可權檢查的請求；對話帶過客戶端工具後，同一對話裡不帶工具、也不帶之前回復的單獨請求，例如 Claude Code 彙總抓取的網頁。運維可以在[客戶端規則](13-configuration.md#client-rules)裡補充某個客戶端自己的請求 | 放回之前的記憶；從不儲存，但 Claude Code 或 Codex 在一輪中間的壓縮請求會寫入它之前的歷史 |
 | 子 Agent | 客戶端的子 Agent 發出的請求 | 放回之前的記憶；從不儲存 |
 | Token 計數 | token 計數請求（`/gateway/v1/messages/count_tokens`） | 放回之前的記憶，計數才和實際傳送的內容一致 |
 | 直接轉發 | 原樣轉發、不帶記憶的請求：其他介面、依賴服務商端狀態的 Responses 請求、壓縮過或無法解析的請求體 | 無 |
-| 記憶同步 | 後臺儲存事件，不是模型請求 | — |
 
 ## 儲存狀態 {#saving-status}
 
-**儲存**列顯示閘道器是否在把一段對話中已完成的輪次[儲存](../guides/15-gateway.md#key-terms)到 OpenViking。正常情況下顯示**正常**。
+**儲存**列顯示這次請求所在對話是否儲存到 OpenViking，以及結束一輪的請求有沒有把這一輪[儲存](../guides/15-gateway.md#key-terms)成功。正常情況下顯示**正常**。
 
 | 狀態 | 含義 | 閘道器怎麼做 |
 | --- | --- | --- |
-| **正常** | 儲存正常進行。 | — |
-| **已關閉** | 這段對話的[上下文配置](08-context-profiles.md#save-conversations)不儲存對話。 | 不儲存任何內容。 |
-| **重試中** | OpenViking 拒絕了儲存或無法訪問。 | 在 10、20、40、80 秒後依次重試。 |
-| **已暫停** | 連續失敗 5 次。 | 之後每 5 分鐘重試一次，直到成功；未儲存的輪次一直保留，直到儲存成功或對話過期。 |
-| **已暫停**，原因為 `gateway_key_revoked` | 這段對話的閘道器金鑰已被吊銷或刪除。 | 不再重試。使用者之後用有效金鑰在這段對話裡發請求時，儲存自動恢復。 |
+| **正常**（`active`） | 儲存已開啟；這次請求結束了一輪時，這一輪已寫入 OpenViking。 | 結束一輪的請求在回覆之後把這一輪寫入 OpenViking。 |
+| **已關閉**（`disabled`） | 這段對話的[上下文配置](08-context-profiles.md#save-conversations)不儲存對話。 | 不儲存任何內容。 |
+| **儲存失敗**（`failed`） | 這次請求結束了一輪，但寫入 OpenViking 失敗。每一輪只嘗試一次，最多等 30 秒。 | 不重試。客戶端在下一輪原樣發回歷史時，閘道器在下一輪結束時把缺的內容一起寫入；沒有下一輪時，這一輪不會儲存。 |
 
-展開的行和**儲存**標記的懸停提示會顯示最近一次變化的原因：
+展開的行和**儲存**標記的懸停提示會顯示原因：
 
 | 顯示的原因 | 程式碼 | 含義 |
 | --- | --- | --- |
 | OpenViking 拒絕了這個金鑰，它可能填錯了或已被吊銷。 | `openviking_http_401` | 使用者的 OpenViking 金鑰已失效。 |
-| OpenViking 無法訪問或響應超時 | `openviking_unavailable` | OpenViking 沒有執行、連不上或響應太慢。 |
-| 儲存到 OpenViking 失敗 | `delivery_failed` | 其他原因導致儲存失敗，閘道器按上表重試。 |
-| 儲存已恢復正常 | `delivery_recovered` | 失敗之後又儲存成功了。 |
-| 對話歷史有改動，後續內容改存到新的 OpenViking 會話 | `history_changed` | 正常現象：客戶端編輯、重新生成或壓縮了對話，閘道器用當前歷史在新的 OpenViking 會話中繼續儲存。 |
-| 儲存過程中對話歷史有改動，後續內容改存到新的 OpenViking 會話 | `history_changed_during_delivery` | 正常現象：同上，只是發生在儲存進行中。 |
-| 已儲存的一輪對話在停頓後又繼續了，後續內容改存到新的 OpenViking 會話 | `continued_after_idle` | 正常現象：已在**最新回覆等待時長**之後儲存的一輪又繼續了。 |
-| 管理員已手動重新同步 | `manual_reset` | 有人用了**重新同步對話…**（見下文）。 |
+| OpenViking 無法訪問或響應超時 | `openviking_unavailable` | OpenViking 沒有執行或連不上。 |
+| OpenViking 響應超時 | `openviking_timeout` | OpenViking 響應太慢。 |
+| OpenViking 對這個帳號持續無響應，暫時跳過 | `openviking_circuit_open` | 這個帳號的 OpenViking 呼叫正被跳過，見[OpenViking 異常](12-troubleshooting.md#openviking-is-degraded)。 |
+| OpenViking 返回了 HTTP …，或 OpenViking 報告了錯誤 … | `openviking_http_<status>`、`openviking_<CODE>` | OpenViking 拒絕了寫入，例如 `402`（未訂購）、`429`（限流），或者 `400`（`capture_memory_types` 中有 OpenViking 不認識的記憶型別）。 |
+| 儲存到 OpenViking 超時 | `save_timeout` | 寫入沒有在 30 秒內完成。 |
+| 儲存到 OpenViking 失敗 | `save_failed` | 其他錯誤。閘道器日誌中有一條 "could not save a finished turn" 警告，附帶呼叫棧。 |
+| 管理員已手動重新同步 | `manual_reset` | 不是失敗：有人用了**重新同步對話…**（見下文），狀態仍為**正常**，這段對話之後的記錄會一直顯示這個原因。 |
 
-之前的輪次留在舊的 OpenViking 會話裡。儲存一直處於**重試中**或**已暫停**時，見[OpenViking 中看不到對話](12-troubleshooting.md#conversations-do-not-appear-in-openviking)。
+在更早版本的閘道器中開始的對話，可能一直帶著當時記下的原因（例如 `history_changed`），狀態為**正常**時不需要處理。儲存一直失敗時，見[OpenViking 中看不到對話](12-troubleshooting.md#conversations-do-not-appear-in-openviking)。
 
 ### 重新同步對話 {#resync-a-conversation}
 
-重新同步會為一段對話新建一個 OpenViking 會話，使用者下次發訊息時，閘道器把完整歷史寫進去。原因已經修復、對話卻仍然暫停，或者想要一份乾淨的對話副本時，可以用它。已經儲存的內容留在舊會話裡，所以 OpenViking 可能會把部分記憶提取兩次。
+重新同步會為一段對話新建一個 OpenViking 會話，這段對話下一輪結束時，閘道器把完整歷史寫進去。儲存一直失敗、修復原因後想補全整段對話，或者想要一份乾淨、完整的對話副本時，可以用它。已經儲存的內容留在舊會話裡，所以 OpenViking 可能會把部分記憶提取兩次。
 
 1. 在**請求日誌**標籤頁展開這段對話的一條記錄。重新同步需要記錄上顯示的那把金鑰；它已被吊銷時，請選同一段對話裡更新的一條記錄。
-2. 點選**重新同步對話…**，再點**重新同步**。頁面會提示“這段對話會在下一條訊息時重新儲存。”
-3. 等使用者在這段對話裡發下一條訊息。訊息到達之前什麼都不會發生；到達後，閘道器把完整歷史儲存到新會話，這段對話的記錄會顯示原因“管理員已手動重新同步”。
+2. 點選**重新同步對話…**，再點**重新同步**。頁面會提示“這段對話會在下一輪結束時重新儲存。”
+3. 等使用者在這段對話裡完成下一輪。在此之前什麼都不會發生；這一輪結束時，閘道器把完整歷史儲存到新會話，這段對話的記錄會顯示原因“管理員已手動重新同步”。
 
 ## 下一步 {#next-steps}
 

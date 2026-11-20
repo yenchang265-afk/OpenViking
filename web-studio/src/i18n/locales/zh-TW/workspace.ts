@@ -69,6 +69,8 @@ const workspace = {
       github: 'GitHub',
       sdkApi: 'SDK 與 API',
       users: '使用者與許可權',
+      version: 'v{{version}}',
+      versionTitle: 'Business Context Platform 版本',
     },
     header: {
       backToConfig: '返回工作區配置',

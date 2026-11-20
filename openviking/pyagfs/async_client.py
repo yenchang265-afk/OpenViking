@@ -14,7 +14,7 @@ from openviking.storage.errors import InvalidPathLockRequestError
 
 from .fs_executor import run_in_fs_executor
 from .leader import LeaderCandidate, leader_candidate
-from .protocols import AGFSSyncClientProtocol
+from .protocols import AGFSSyncClientProtocol, CacheRuntimeHandleProtocol
 from .storage_breaker import guard_storage_call
 
 _SYSTEM_ACCOUNT_ID = "_system"
@@ -95,6 +95,15 @@ class AsyncAGFSClient:
 
     def __init__(self, client: AGFSSyncClientProtocol):
         self._client = client
+
+    def cache_runtime(self, instance: str = "default") -> CacheRuntimeHandleProtocol:
+        """Return the configured cache Runtime selected by instance.
+
+        Pass the owning component's configured instance name. Omitting
+        ``instance`` uses ``default``; an unknown configured name raises
+        ``ValueError``.
+        """
+        return self._client.cache_runtime(instance)
 
     def leader_candidate(
         self,

@@ -14,6 +14,7 @@ from openviking_cli.session.user_id import UserIdentifier
 
 from .agent_evolution_config import AgentEvolutionConfig
 from .agfs_config import TieredStorageConfig
+from .backend_config import backend_name
 from .cache_config import CacheConfig
 from .config_loader import expand_env_vars, resolve_config_path
 from .config_utils import (
@@ -513,16 +514,20 @@ class OpenVikingConfig(BaseModel):
         )
         if uses_canonical_cache and self.cache is None:
             raise ValueError("top-level cache config is required when an AGFS backend uses cache")
+        cachefs_cache = (
+            self.cache.instance(agfs.cachefs.instance) if self.cache is not None else None
+        )
         if (
             agfs.cachefs.multi_instance
-            and self.cache is not None
-            and self.cache.provider.strip() == "redis"
-            and int(self.cache.params.get("default_ttl_seconds", 3600)) == 0
+            and cachefs_cache is not None
+            and cachefs_cache.provider.strip() == "redis"
+            and int(cachefs_cache.params.get("default_ttl_seconds", 3600)) == 0
         ):
             # The TTL bounds how long a failed counter bump can leave other
             # instances serving stale CacheFS entries.
             raise ValueError(
-                "storage.agfs.cachefs.multi_instance requires cache.params.default_ttl_seconds > 0"
+                "storage.agfs.cachefs.multi_instance requires "
+                f"cache.instances.{agfs.cachefs.instance}.params.default_ttl_seconds > 0"
             )
         return self
 
@@ -830,7 +835,20 @@ class OpenVikingConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump()
+        config = self.model_dump()
+        if config["cache"] is None:
+            config.pop("cache")
+        agfs = config["storage"]["agfs"]
+        if agfs["queuefs"]["backend"] != "cache":
+            agfs["queuefs"].pop("instance", None)
+        if agfs["cachefs"]["backend"] != "cache":
+            agfs["cachefs"].pop("instance", None)
+        # Fork selectors serialize the canonical "backend" key.
+        if backend_name(agfs["pathlock"]) != "cache":
+            agfs["pathlock"].pop("instance", None)
+        if backend_name(agfs["coordination"]) != "cache":
+            agfs["coordination"].pop("instance", None)
+        return config
 
     def get_query_planner(self) -> VLMConfig:
         """Return the model config used for retrieval intent analysis and query planning."""

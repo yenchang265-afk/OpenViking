@@ -156,7 +156,7 @@ Claude 訂閱令牌（`sk-ant-oat…`）無論怎麼勾選都會被拒絕，見[
 
 停用一個上游後，原本使用它的對話會轉到下一個候選上游，造成一次服務商快取未命中，並丟掉之前的 Claude 思考塊，這些請求被標為**上游已切換**（見[降級請求的異常](12-troubleshooting.md#issues-on-degraded-requests)）。想保留恢復的餘地，就停用而不是刪除。
 
-閘道器不做故障轉移：選中的上游出錯時，客戶端收到這個錯誤；服務商無法訪問時返回 502 "Model upstream is unavailable"。
+閘道器不做故障轉移：選中的上游出錯時，客戶端收到這個錯誤；服務商無法訪問時返回 502 `upstream_unreachable`，沒有及時回覆時返回 504 `upstream_timeout`。
 
 ### 按請求指定上游 {#upstream-url-header}
 

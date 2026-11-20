@@ -181,8 +181,8 @@ const fixedFetch: typeof fetch = async () =>
 
 `createOvClient` 返回的 `OvClient` 帶有 `request`、`requestEnvelope`、`stream` 和 `baseURL`，是區塊依賴的介面。區塊始終使用最近的 Provider 建立的客戶端，Provider 不接收自己實現的客戶端，所以要改變區塊的傳輸方式，就傳 `fetch`。不管傳輸層怎麼換，這三件事都由 Client 負責，區塊不再重複：拼接服務地址與路徑、把身份欄位轉成請求頭、把響應變成結果或 `OvClientError`。
 
-## 服務端渲染
+## 瀏覽器執行環境
 
-匯入 `@openviking/react/client` 沒有副作用，在服務端渲染階段是安全的。`createOvClient` 需要一個 `fetch`，可以是全域性的，也可以是你傳入的，兩者都沒有就會拋錯。
+Client 面向瀏覽器執行。`createOvClient` 需要一個 `fetch`，可以是全域性的，也可以是你傳入的，兩者都沒有就會拋錯。
 
 客戶端的測試位於 `packages/react/test/client*.test.mjs`，在 `frontend/` 下執行 `npm test`（見[前端工作區 README](../../../../README.md)）。

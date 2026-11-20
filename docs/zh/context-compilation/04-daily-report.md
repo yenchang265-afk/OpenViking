@@ -35,21 +35,23 @@ ov add-skill openviking/system_assets/compile/example-skills/daily-report -p vik
 在 `--instruction` 裡說清楚**日期、時區、報告物件和側重點**，Skill 會據此定位和取捨：
 
 ```bash
-ov compile \
+ov compile create --compile-name daily-report \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
   --skill viking://system/compile/example-skills/daily-report \
   --instruction "按 Asia/Shanghai 時區生成 2026-08-20 的日報，聚焦我的工作產出與決策"
+ov compile --compile-name daily-report
 ```
 
 一次生成多天，把日期範圍寫進 `--instruction` 即可（每天仍是獨立一頁）：
 
 ```bash
-ov compile \
+ov compile create --compile-name report-range \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
   --skill viking://system/compile/example-skills/daily-report \
   --instruction "按 Asia/Shanghai 時區生成 2026-08-18 至 2026-08-20 每天一份日報"
+ov compile --compile-name report-range
 ```
 
 命令會立刻返回 `task_id`：

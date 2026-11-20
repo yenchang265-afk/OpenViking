@@ -9,6 +9,7 @@ from urllib.parse import quote, urlencode
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .backend_config import backend_name
+from .cache_config import normalize_legacy_cache
 
 
 class MySQLTLSConfig(BaseModel):
@@ -218,9 +219,14 @@ def resolve_connections(data: dict[str, Any]) -> dict[str, Any]:
             defaults.pop("use_ssl", None)
         section[field] = {**defaults, **local}
 
+    if isinstance(result.get("cache"), dict):
+        result["cache"] = normalize_legacy_cache(result["cache"])
     cache = block(result, "cache", "cache")
-    if backend_name(cache) == "redis":
-        inherit(cache, "params", "redis", {"endpoints"}, "cache.params")
+    instances = block(cache, "instances", "cache.instances")
+    for name in list(instances):
+        instance = block(instances, name, f"cache.instances.{name}")
+        if str(backend_name(instance) or "").strip() == "redis":
+            inherit(instance, "params", "redis", {"endpoints"}, f"cache.instances.{name}.params")
     if provider == "redis_mysql":
         params = account.setdefault("params", {})
         account_cache = block(params, "cache", "server.account_store.params.cache")

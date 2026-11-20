@@ -174,7 +174,10 @@ class ObserverService:
             has_errors = await observer.has_active_errors_async()
             is_healthy = not has_errors
         except Exception as exc:
-            logger.warning("Queue observer status unavailable: %s", exc)
+            logger.info(
+                "Queue observer status unavailable; returning fallback status",
+                extra={"error_type": type(exc).__name__, "degraded": True},
+            )
             if format == "json":
                 status = {
                     "queues": [],
@@ -337,11 +340,13 @@ class ObserverService:
                 status=status,
             )
         except Exception as exc:
-            logger.warning(
-                "Account model observer failed for account %s: %s",
-                ctx.account_id,
-                exc,
-                exc_info=True,
+            logger.info(
+                "Account model observer failed; returning fallback status",
+                extra={
+                    "account_id": ctx.account_id,
+                    "error_type": type(exc).__name__,
+                    "degraded": True,
+                },
             )
             return ComponentStatus(
                 name="models",
@@ -395,11 +400,13 @@ class ObserverService:
                 status=status,
             )
         except Exception as exc:
-            logger.warning(
-                "Account VectorDB observer failed for account %s: %s",
-                ctx.account_id,
-                exc,
-                exc_info=True,
+            logger.info(
+                "Account VectorDB observer failed; returning fallback status",
+                extra={
+                    "account_id": ctx.account_id,
+                    "error_type": type(exc).__name__,
+                    "degraded": True,
+                },
             )
             return ComponentStatus(
                 name="vikingdb",
@@ -555,7 +562,7 @@ class ObserverService:
         """
         try:
             if self._agfs_client is None:
-                logger.debug("RAGFS client not available, returning empty stats")
+                logger.info("RAGFS client not available; returning empty stats")
                 return {}
 
             # Call get_stats on the RAGFS client
@@ -564,7 +571,10 @@ class ObserverService:
             stats = await asyncio.to_thread(self._agfs_client.get_stats, mount_path)
             return stats
         except Exception as e:
-            logger.error(f"Error getting filesystem stats: {e}")
+            logger.info(
+                "Filesystem stats unavailable; returning empty stats",
+                extra={"error_type": type(e).__name__, "degraded": True},
+            )
             return {}
 
     def system(self, ctx: Optional[RequestContext] = None, *, format: str = "table") -> SystemStatus:

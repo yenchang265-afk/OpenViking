@@ -22,20 +22,29 @@ openviking-server init
 openviking-server doctor
 ```
 
-然後在 `~/.openviking/ov.conf` 中配置頂層 `cache` Provider，並在 `storage.agfs.cachefs` 選擇 `backend=cache`：
+然後在 `~/.openviking/ov.conf` 中配置命名的頂層 `cache.instances`，並在
+`storage.agfs.cachefs` 選擇例項：
 
 ```json
 {
   "service_name": "openviking-server",
   "cache": {
-    "provider": "redis",
-    "params": {
-      "mode": "standalone",
-      "endpoints": ["redis://127.0.0.1:6379"],
-      "pool_size": 32,
-      "connect_timeout_ms": 1000,
-      "command_timeout_ms": 1000,
-      "default_ttl_seconds": 300
+    "instances": {
+      "default": {
+        "provider": "redis",
+        "params": {
+          "mode": "standalone",
+          "endpoints": ["redis://127.0.0.1:6379"],
+          "pool_size": 32,
+          "connect_timeout_ms": 1000,
+          "command_timeout_ms": 1000,
+          "default_ttl_seconds": 300
+        }
+      },
+      "locks": {
+        "provider": "redis",
+        "params": {"endpoints": ["redis://127.0.0.1:6379"]}
+      }
     }
   },
   "storage": {
@@ -43,10 +52,12 @@ openviking-server doctor
     "agfs": {
       "backend": "local",
       "cachefs": {
-        "backend": "cache"
+        "backend": "cache",
+        "instance": "default"
       },
       "pathlock": {
         "provider": "cache",
+        "instance": "locks",
         "lock_expire_secs": 30.0
       }
     }
@@ -89,7 +100,7 @@ CacheRuntime 協調多個 OpenViking 程序的路徑鎖。OpenViking 會從頂�
 `service_name`。Cache PathLock 只支援內建 Redis Provider；多個實例共用 CacheFS 時，分散式路徑鎖不能取代 `storage.agfs.cachefs.multi_instance`。
 
 分散式 PathLock 也可選擇 `provider="postgres"`，通過共享 PostgreSQL 主庫協調，
-無需 Redis 或 CacheRuntime。它獨立於 `cache.provider` 配置，不會啟用 CacheFS
+無需 Redis 或 CacheRuntime。它獨立於 `cache.instances` 配置，不會啟用 CacheFS
 或改變 QueueFS。詳見 [PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
 無論使用哪種 PathLock，CachedFileSystem 都保留單寫者前提。
 
@@ -115,7 +126,7 @@ Redis HASH key 按邏輯路徑 scope 拆分：
 
 | 已刪除配置 | 標準替代配置 |
 |-----------|-------------|
-| `storage.agfs.cache` | 頂層 `cache.provider` + `cache.params`，並設定 `storage.agfs.cachefs.backend="cache"` |
+| `storage.agfs.cache` | 頂層 `cache.instances`，並設定 `storage.agfs.cachefs.backend="cache"` |
 | `storage.agfs.queuefs.backend="redis"` 和 `queuefs.redis` | `storage.agfs.queuefs.backend="cache"`，並複用頂層 `cache` 配置 |
 | Redis `mode="singleton"` | `mode="standalone"` |
 | `tls_enabled=true` | endpoint 使用 `rediss://` |
@@ -146,14 +157,18 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
-| `provider` | str | 無 | Provider 名稱，支援 `redis` 和 `dynamic` |
-| `params` | object | `{}` | Provider 自有引數 |
+| `instances` | object | 啟用 cache consumer 時必填 | 命名 Provider 條目，必須包含 `default` |
+| `instances.<name>.provider` | str | 無 | Provider 名稱，支援 `redis` 和 `dynamic` |
+| `instances.<name>.params` | object | `{}` | 所選 Provider 的自有引數 |
+
+單一 Provider 寫法 `{"backend": "redis", "params": {...}}`（或用 `provider` 代替 `backend`）仍可使用，會載入為 `cache.instances.default`。設定了頂層 `connections.redis` 時，`params` 中沒有連線欄位的 Redis 實例會沿用該連線。
 
 `storage.agfs.cachefs` 支援以下業務配置：
 
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `backend` | str | `"local"` | `local` 沿用原邏輯；`cache` 啟用 CachedFileSystem |
+| `instance` | str | `"default"` | `backend="cache"` 時使用的命名 Runtime |
 | `max_file_size_bytes` | int | `1048576` | CacheFS 快取完整內容的單檔案上限。部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 |
 | `multi_instance` | bool | `false` | 多個實例共用此 cache namespace：每次寫入返回前刪除受影響的 bucket。需要 `backend: "cache"` 且快取預設 TTL 大於 `0`。詳見「多實例」 |
 | `shared_redis_ttl_seconds` | int | `0` | 當 CacheFS 與 QueueFS、cache PathLock 或 expiry 排程共用同一個 Redis 服務時，統一覆蓋查詢 bucket 的 TTL；`0` 表示沿用 Provider 預設 TTL |
@@ -165,6 +180,7 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `provider` | str | `"filesystem"` | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache`；見 [SQLite 配置](../configuration/01-server.md#storage) 和 [PostgreSQL 配置](../configuration/01-server.md#postgresql-pathlock) |
+| `instance` | str | `"default"` | `provider="cache"` 時使用的命名 Redis Runtime |
 | `postgres_dsn_env` | str / null | `null` | `postgres` 必填；儲存 DSN 的服務程序環境變數名 |
 | `lock_expire_secs` | float | `30.0` | 鎖 stale 超時；不得小於 `1.0` |
 
@@ -188,20 +204,37 @@ Redis 配置：
 
 DynamicProvider 配置：
 
-`cache.params.library` 由 OpenViking 用於載入動態庫，其餘欄位由外部 Provider 定義並作為 JSON 傳入 `create`。實際引數以 Provider 釋出說明為準。
+`cache.instances.<name>.params.library` 由 OpenViking 用於載入動態庫，其餘欄位由外部 Provider 定義並作為 JSON 傳入 `create`。實際引數以 Provider 釋出說明為準。
 
 ```json
 {
   "cache": {
-    "provider": "dynamic",
-    "params": {
-      "library": "/opt/openviking/providers/libopenviking_cache_provider.so",
-      "endpoint": "127.0.0.1:31501",
-      "request_timeout_ms": 5000
+    "instances": {
+      "default": {
+        "provider": "dynamic",
+        "params": {
+          "library": "/opt/openviking/providers/libopenviking_cache_provider.so",
+          "endpoint": "127.0.0.1:31501",
+          "request_timeout_ms": 5000
+        }
+      }
     }
   }
 }
 ```
+
+### 命名 Runtime 與 Python API
+
+CacheFS、QueueFS、cache PathLock、coordination 和多寫各自選擇 `instance`，
+預設值都是 `default`。名稱不同但指向同一個 Redis 主節點時，仍共享 CPU 和記憶體。
+Cache PathLock 選擇的例項必須使用 `redis`。
+
+`RAGFSBindingClient.cache_runtime(instance="default")` 和
+`AsyncAGFSClient.cache_runtime(instance="default")` 返回同一個程序內原生
+Runtime 控制代碼，不呼叫 HTTP API，也不新建 Redis 連線。控制代碼提供 KV、Hash、Set、
+Sorted Set、List、`register_script`、`execute_script` 和 `default_ttl_seconds`。
+`RAGFSBindingClient.close()` 負責關閉 Runtime。所有 I/O 方法都可 await；同步呼叫方
+應自行在最外層使用 `asyncio.run()`。
 
 ## 整體架構
 

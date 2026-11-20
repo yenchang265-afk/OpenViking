@@ -14,6 +14,16 @@ from openviking.utils.skill_processor import SkillProcessor
 from openviking_cli.session.user_id import UserIdentifier
 
 
+@pytest.fixture(autouse=True)
+def _no_skill_history(monkeypatch):
+    """Processor history bookkeeping is covered by its own tests."""
+    import openviking.server.skill_history as history
+
+    monkeypatch.setattr(history, "read_skill_history", AsyncMock(return_value=None))
+    monkeypatch.setattr(history, "skill_package_hash", AsyncMock(return_value="hash"))
+    monkeypatch.setattr(history, "record_skill_change", AsyncMock(return_value={}))
+
+
 def _ctx() -> RequestContext:
     return RequestContext(user=UserIdentifier.the_default_user(), role=Role.ROOT)
 
@@ -62,6 +72,7 @@ async def test_install_skills_background_unless_waiting(monkeypatch, wait, expec
 
 def _processor_with_mocks():
     viking_fs = MagicMock()
+    viking_fs.exists = AsyncMock(return_value=False)
     viking_fs._async_agfs.pathlock_acquire_tree = AsyncMock(return_value={"lease_ref": "t"})
     viking_fs._async_agfs.pathlock_release = AsyncMock()
     processor = SkillProcessor(vikingdb=None)

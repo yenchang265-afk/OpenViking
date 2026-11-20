@@ -38,7 +38,10 @@ async def probe(mode, material):
         await process.wait()
         raise
     assert process.returncode == 0, stderr.decode()
-    return json.loads(stdout.decode().splitlines()[-1])
+    # Logging may also write to stdout (before or after the result); the probe's
+    # result is the last JSON object line.
+    lines = [line for line in stdout.decode().splitlines() if line.startswith("{")]
+    return json.loads(lines[-1])
 
 
 @pytest.mark.asyncio

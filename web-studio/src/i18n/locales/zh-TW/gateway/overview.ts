@@ -134,21 +134,17 @@ const overview = {
     description: '為新訊息檢索記憶，並儲存對話。',
     version: '版本',
     unreachable:
-      '連不上 Business Context Platform 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 Business Context Platform 恢復。',
+      '連不上 Business Context Platform 期間，請求照常發給模型，只是不帶記憶，這期間結束的輪次也存不進去；恢復後，每段對話的下一輪結束時會補存缺失的內容。',
     starting:
       '閘道器還沒完成對 Business Context Platform 的首次檢查，請稍後重新整理。',
   },
   saving: {
     title: '儲存對話',
     ok: '最近的請求中沒有儲存失敗的對話。',
-    retrying_one:
-      '有 {{count}} 段對話儲存到 Business Context Platform 失敗，正在重試。',
-    retrying_other:
-      '有 {{count}} 段對話儲存到 Business Context Platform 失敗，正在重試。',
-    paused_one:
-      '有 {{count}} 段對話多次儲存失敗，已暫停儲存；閘道器每 5 分鐘重試一次。',
-    paused_other:
-      '有 {{count}} 段對話多次儲存失敗，已暫停儲存；閘道器每 5 分鐘重試一次。',
+    failed_one:
+      '有 {{count}} 段對話最近一輪沒能儲存到 Business Context Platform，下一輪結束時會補存缺失的內容。',
+    failed_other:
+      '有 {{count}} 段對話最近一輪沒能儲存到 Business Context Platform，下一輪結束時會補存缺失的內容。',
   },
   degraded: {
     title: '降級請求',

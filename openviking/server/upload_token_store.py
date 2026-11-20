@@ -273,11 +273,13 @@ async def transfer_token_lifespan(config):
             from openviking_cli.utils.config.open_viking_config import get_openviking_config
 
             ov_config = get_openviking_config()
-            if ov_config.cache is None or ov_config.cache.provider != "redis":
+            default_cache = ov_config.cache.instance() if ov_config.cache is not None else None
+            if default_cache is None or default_cache.provider != "redis":
                 raise ValueError(
-                    "server.transfer_tokens.provider=redis requires cache.provider=redis"
+                    "server.transfer_tokens.provider=redis requires the default cache "
+                    "instance to use provider redis"
                 )
-            handle = create_redis_client(ov_config.cache.params, asynchronous=False)
+            handle = create_redis_client(default_cache.params, asynchronous=False)
             await asyncio.to_thread(handle.client.ping)
             prefix = f"openviking:{ov_config.service_name}:transfer:"
             upload_token_store.configure(redis=handle.client, namespace=prefix + "upload:")

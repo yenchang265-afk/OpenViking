@@ -1,3 +1,8 @@
+import type { DirectorySummaryLabels } from './file-browser-labels.js';
+import {
+  beginWorkflow,
+  type Workflow,
+} from '../../shared/monitoring/workflow.js';
 import { useEffect, useState } from 'react';
 
 import type {
@@ -7,24 +12,17 @@ import type {
 import type { OvClient, OvRequestOptions } from '../../client/types.js';
 import { directoryIcon } from './fs-icon.js';
 import { resolveLabels, resolveSummaryLabels } from './file-browser-labels.js';
-import { isAbort, toDirectoryTab, type DirectorySummary } from './fs-model.js';
-import { isSystemUri } from './preview-policy.js';
+import { isAbort } from '../../shared/request/fs-errors.js';
+import { toDirectoryTab, type DirectorySummary } from './fs-model.js';
+import { isSystemUri } from '../../shared/resource-uri.js';
 import { readDirectory } from './fs-read-directory.js';
 import { loadingTab } from './fs-preview-loading-tab.js';
 import { toSystemDirectoryTab } from './fs-system-directory-tab.js';
 import { createPreviewImageResolver } from './fs-preview-images.js';
 import { readFile } from './fs-read-file.js';
+import { loadVideoDetails } from './fs-video-details.js';
 import { abortError, readPreviewStat } from './fs-stat.js';
-
-export interface PreviewState {
-  tabs: readonly FilePreviewTab[] | null;
-  activeKey: string | null;
-  error: Error | null;
-  /** 底部元信息，例如字符数。Footer metadata such as the character count. */
-  footer?: string;
-  updatedAt?: string;
-  setActiveKey: (key: string) => void;
-}
+import { useWikiSaveFeedback } from './use-wiki-save-feedback.js';
 
 export interface UseFsPreviewOptions {
   client: OvClient | null;
@@ -48,7 +46,7 @@ export interface UseFsPreviewOptions {
   activeLevelKey?: string;
   onActiveLevelChange?: (key: string) => void;
   /** 目录两级摘要的标题。Titles of the two summary levels. */
-  labels?: { l0: string; l1: string; failure: string };
+  labels?: DirectorySummaryLabels;
   /** 字符数文案；独立 Hook 默认英文。Character count copy; standalone Hooks default to English. */
   formatCharacterCount?: (count: number) => string;
   /**
@@ -92,7 +90,9 @@ export function useFsPreview({
   openParent,
   generation = 0,
   requestOptions,
-}: UseFsPreviewOptions): PreviewState {
+}: UseFsPreviewOptions) {
+  const [monitoring, setMonitoring] =
+    useState<Workflow<'file_browser_preview_load'>>();
   const [directory, setDirectory] = useState<{
     uri: string;
     summary: DirectorySummary;
@@ -103,6 +103,11 @@ export function useFsPreview({
   const [error, setError] = useState<Error | null>(null);
   const [stat, setStat] = useState<{ uri: string; updatedAt: string }>();
   const [saveGeneration, setSaveGeneration] = useState(0);
+  const [wikiSaveFeedback, wikiSave] = useWikiSaveFeedback(
+    client,
+    uri,
+    requestOptions,
+  );
 
   // useEffect 必要性：按 URI、资源类型与请求配置同步远端正文和目录摘要。
   // URI 也会由宿主属性改变，点击事件无法覆盖这些变化，渲染本身不能发请求。
@@ -110,6 +115,7 @@ export function useFsPreview({
   useEffect(() => {
     setDirectory(null);
     setStat(undefined);
+    wikiSave.reset();
     if (!client || !uri) {
       setTabs(null);
       setActiveKey(null);
@@ -126,11 +132,20 @@ export function useFsPreview({
     setTabs([loadingTab(uri, resourceType !== 'file')]);
     setActiveKey(uri);
     setError(null);
-    const options = { ...requestOptions, signal: controller.signal };
+    const { options, onStatus } = wikiSave.bind(controller.signal);
+    const { signal } = options;
     if (contentKind === 'pending') return () => controller.abort();
-    const metadata = readPreviewStat(client, uri, options);
+    const operation = beginWorkflow(
+      client,
+      'file_browser_preview_load',
+      signal,
+    );
+    if (operation) operation.identity = uri;
+    setMonitoring(operation);
+    const api = operation?.client(client) ?? client;
+    const metadata = readPreviewStat(api, uri, options);
     void metadata.then((result) => {
-      if (!controller.signal.aborted && result?.updatedAt)
+      if (!signal.aborted && result?.updatedAt)
         setStat({ uri, updatedAt: result.updatedAt });
     });
 
@@ -149,22 +164,22 @@ export function useFsPreview({
         resourceType === 'unknown'
           ? (await metadata)?.isDirectory
           : resourceType === 'directory';
-      if (controller.signal.aborted) throw abortError();
+      if (signal.aborted) throw abortError();
       if (isDir)
         return isSystemUri(uri)
           ? { tab: toSystemDirectoryTab(uri, openParent) }
-          : { summary: await readDirectory(client, uri, options) };
+          : { summary: await readDirectory(api, uri, options) };
       return {
         tab: await readFile(
-          client,
+          api,
           uri,
           options,
           openParent,
           () => {
-            if (!controller.signal.aborted)
-              setSaveGeneration((value) => value + 1);
+            if (!signal.aborted) setSaveGeneration((value) => value + 1);
           },
           contentKind === 'wiki',
+          onStatus,
         ),
       };
     })();
@@ -182,7 +197,7 @@ export function useFsPreview({
     // no result may land after it.
     void read.then(
       (result) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         if (result.summary) {
           setDirectory({
             uri,
@@ -200,9 +215,14 @@ export function useFsPreview({
         const tab = result.tab;
         setTabs([tab]);
         setActiveKey(tab.key);
+        // Supplemental content can fail independently of the playable video.
+        void loadVideoDetails(client, tab, options, (updatedTab) =>
+          setTabs([updatedTab]),
+        ).catch(() => undefined);
       },
       (cause: unknown) => {
-        if (isAbort(cause) || controller.signal.aborted) return;
+        if (isAbort(cause) || signal.aborted) return;
+        operation?.fail(cause, 'protocol', signal);
         setTabs([]);
         setError(cause instanceof Error ? cause : new Error(String(cause)));
       },
@@ -217,7 +237,7 @@ export function useFsPreview({
     openParent,
     generation,
     saveGeneration,
-    requestOptions,
+    wikiSave,
   ]);
 
   const directoryTab =
@@ -236,23 +256,20 @@ export function useFsPreview({
         }
       : undefined;
   const current = tabs?.[0];
-  const body =
-    !directoryTab &&
-    current?.key === uri &&
-    current.kind === 'file' &&
-    !current.loading
-      ? current.source.content
-      : undefined;
   const count = directoryTab
     ? (
         directoryTab.levels.find((level) => level.key === activeLevelKey)
           ?.source.content ?? ''
       ).length
-    : body?.length;
+    : current?.key === uri && current.kind === 'file' && !current.loading
+      ? current.source.content?.length
+      : undefined;
   return {
+    monitoring,
     tabs: directoryTab ? [directoryTab] : tabs,
     activeKey,
     error,
+    wikiSaveFeedback,
     footer: count === undefined ? undefined : formatCharacterCount(count),
     updatedAt: stat?.uri === uri ? stat.updatedAt : undefined,
     setActiveKey,

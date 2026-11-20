@@ -49,7 +49,6 @@ class InProcessVikingClient:
         ctx: RequestContext,
         *,
         skill_snapshot: Mapping[str, Any] | None = None,
-        edit_source: str | None = None,
     ):
         self._service = service
         self._ctx = ctx
@@ -57,8 +56,6 @@ class InProcessVikingClient:
         if snapshot_id and not re.fullmatch(r"[0-9a-fA-F]{40}", str(snapshot_id)):
             raise ValueError("Skill snapshot_id must be a commit ID")
         self._skill_snapshot = dict(skill_snapshot) if snapshot_id else None
-        # Recorded on published files; "compile" defers indexing to task finalization.
-        self._edit_source = edit_source
 
     def is_pinned_skill_uri(self, uri: str) -> bool:
         """True for URIs inside the pinned Skill package, whose reads use the snapshot."""
@@ -168,7 +165,6 @@ class InProcessVikingClient:
             BatchWriteOperation.model_validate(operation).model_dump(exclude_none=True)
             for operation in operations
         ]
-        compile_edit = self._edit_source == "compile"
         with _mapped_errors(root_uri):
             return await self._service.fs.batch_write(
                 root_uri=root_uri,
@@ -176,9 +172,9 @@ class InProcessVikingClient:
                 ctx=self._ctx,
                 wait=wait,
                 skip_conflicts=skip_conflicts,
-                # Compile output is indexed by the write's own refresh task; the
-                # lifecycle only finalizes the target directory when the run finishes.
-                **({"edit_source": "compile"} if compile_edit else {}),
+                # Compile output is indexed by the write's own refresh task and is not
+                # snapshotted per write; the lifecycle snapshots the target when the run
+                # finishes.
             )
 
     async def get_skill(self, skill_name: str, *, target_uri: str) -> dict[str, Any]:

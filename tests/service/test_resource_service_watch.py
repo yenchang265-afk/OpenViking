@@ -79,6 +79,13 @@ class MockVikingFS:
         # No saved user settings: add targets fall back to server defaults.
         raise FileNotFoundError(uri)
 
+    async def _ensure_access(self, *_args, **_kwargs):
+        return None
+
+    def _get_vector_store(self):
+        # No vector store: target overlap checks have nothing to compare against.
+        return None
+
 
 class MockVikingDB:
     """Mock VikingDBManager for testing."""

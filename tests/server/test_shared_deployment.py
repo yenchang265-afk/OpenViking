@@ -12,6 +12,13 @@ from openviking.server.config import ServerConfig
 from openviking.server.shared_deployment import validate_shared_deployment
 
 
+class _Cache(NS):
+    """Single-instance stand-in for CacheConfig.instance()."""
+
+    def instance(self, name="default"):
+        return self if name == "default" else None
+
+
 def configuration():
     server = ServerConfig(
         deployment_mode="shared",
@@ -26,7 +33,7 @@ def configuration():
         enable_watch_scheduler=True,
         watch_leader_provider="auto",
         git=NS(enabled=True, backend="s3"),
-        cache=NS(provider="redis"),
+        cache=_Cache(provider="redis"),
         gateway=NS(enabled=False),
         oauth=NS(enabled=True, backend="mysql"),
         encryption=NS(enabled=False, provider="local", local=NS(root_key="0" * 64)),

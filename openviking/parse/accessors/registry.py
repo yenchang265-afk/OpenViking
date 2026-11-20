@@ -10,6 +10,7 @@ import inspect
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
+from openviking.observability.log_safety import safe_log_fields, safe_uri_for_log
 from openviking_cli.utils import get_logger
 
 from .base import DataAccessor, LocalResource
@@ -58,7 +59,7 @@ class AccessorRegistry:
 
             self.register(GitAccessor())
         except Exception as e:
-            logger.debug(f"[AccessorRegistry] Failed to register GitAccessor: {e}")
+            logger.info("Git accessor unavailable error_type=%s", type(e).__name__)
 
         # WebFeedAccessor - handles sitemap / RSS / Atom URLs (whole-site ingest)
         try:
@@ -66,7 +67,7 @@ class AccessorRegistry:
 
             self.register(WebFeedAccessor())
         except Exception as e:
-            logger.debug(f"[AccessorRegistry] Failed to register WebFeedAccessor: {e}")
+            logger.info("Web feed accessor unavailable error_type=%s", type(e).__name__)
 
         # HTTPAccessor - handles HTTP/HTTPS URLs
         try:
@@ -74,7 +75,7 @@ class AccessorRegistry:
 
             self.register(HTTPAccessor())
         except Exception as e:
-            logger.debug(f"[AccessorRegistry] Failed to register HTTPAccessor: {e}")
+            logger.info("HTTP accessor unavailable error_type=%s", type(e).__name__)
 
         # LocalAccessor - handles local files (lowest priority)
         try:
@@ -82,7 +83,7 @@ class AccessorRegistry:
 
             self.register(LocalAccessor())
         except Exception as e:
-            logger.debug(f"[AccessorRegistry] Failed to register LocalAccessor: {e}")
+            logger.info("Local accessor unavailable error_type=%s", type(e).__name__)
 
     def register(self, accessor: DataAccessor) -> None:
         """
@@ -104,7 +105,9 @@ class AccessorRegistry:
 
         self._accessors.insert(insert_idx, accessor)
         logger.debug(
-            f"[AccessorRegistry] Registered accessor {accessor.__class__.__name__} with priority {accessor.priority}"
+            "Accessor registered accessor=%s priority=%s",
+            type(accessor).__name__,
+            accessor.priority,
         )
 
     def unregister(self, accessor_name: str) -> bool:
@@ -120,7 +123,9 @@ class AccessorRegistry:
         for i, accessor in enumerate(self._accessors):
             if accessor.__class__.__name__ == accessor_name:
                 del self._accessors[i]
-                logger.debug(f"[AccessorRegistry] Unregistered accessor {accessor_name}")
+                logger.debug(
+                    "Accessor unregistered", extra=safe_log_fields({"operation": accessor_name})
+                )
                 return True
         return False
 
@@ -164,7 +169,9 @@ class AccessorRegistry:
         accessor = self.get_accessor(source, **kwargs)
         if accessor:
             logger.debug(
-                f"[AccessorRegistry] Using accessor {accessor.__class__.__name__} for source: {source_str}"
+                "Accessor selected accessor=%s source=%s",
+                type(accessor).__name__,
+                safe_uri_for_log(source_str),
             )
             return await accessor.access(source, **kwargs)
 
@@ -177,7 +184,7 @@ class AccessorRegistry:
     def clear(self) -> None:
         """Remove all registered accessors."""
         self._accessors.clear()
-        logger.debug("[AccessorRegistry] Cleared all accessors from registry")
+        logger.debug("Accessor registry cleared")
 
 
 # Global registry instance

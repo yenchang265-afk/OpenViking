@@ -41,6 +41,7 @@ def _compile_service(tmp_path, fs=None, config=None):
             side_effect=lambda uri, ctx, **_: {"uri": uri, "isDir": not uri.endswith("SKILL.md")}
         ),
         ensure_write_access=AsyncMock(),
+        ensure_compile_target=AsyncMock(),
     )
     tasks = SimpleNamespace(create=AsyncMock(return_value="task"), recover_submission=AsyncMock())
     service = CompileService(config or CompileApiConfig(), tasks, fs)
@@ -64,13 +65,19 @@ def _request(**overrides):
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "args",
-    [{"api_key": "x"}, {"wiki_links": "yes"}, {"last_compile_time": "not-a-time"}],
+    [{"api_key": "x"}, {"wiki_links": "yes"}],
 )
 async def test_create_rejects_unsupported_args(tmp_path, args):
     service, tasks = _compile_service(tmp_path)
     with pytest.raises(InvalidArgumentError):
         await service.create(_request(args=args), ctx=CTX)
     tasks.create.assert_not_awaited()
+
+
+@pytest.mark.parametrize("control", ["mode", "last_compile_time", "changes"])
+def test_execution_controls_are_server_owned(control):
+    with pytest.raises(ValueError, match="server-owned"):
+        _request(args={control: "x"})
 
 
 @pytest.mark.asyncio
@@ -83,21 +90,20 @@ async def test_create_rejects_memory_targets_for_skill_compile(tmp_path):
 @pytest.mark.asyncio
 async def test_create_queues_normalized_payload(tmp_path):
     service, tasks = _compile_service(tmp_path)
-    await service.create(
-        _request(args={"wiki_links": True, "last_compile_time": 1700000000}), ctx=CTX
-    )
+    await service.create(_request(args={"wiki_links": True}), ctx=CTX)
     kwargs = tasks.create.await_args.kwargs
     assert kwargs["payload"] == {
         "from": ["viking://resources/raw"],
         "to": "viking://resources/wiki",
         "skill": "viking://agent/skills/llm-wiki",
-        "args": {"wiki_links": True, "last_compile_time": 1700000000},
+        "args": {"wiki_links": True},
+        "compile": {"trigger": "manual"},
     }
     assert kwargs["ctx"] is CTX
     # wiki_links is still accepted but no longer reaches the pipeline.
     request = service._sanitized_request(kwargs["payload"])
     assert not hasattr(request, "wiki_links")
-    assert request.last_compile_time.year == 2023
+    assert request.last_compile_time is None
     assert request.instruction_provided is False
 
 

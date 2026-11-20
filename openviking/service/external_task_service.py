@@ -37,6 +37,8 @@ from openviking_cli.utils.logger import get_logger
 logger = get_logger(__name__)
 
 _ACTIVE_STATUSES = frozenset({"pending", "running", "cancelling"})
+# Persisted on a task when submission fails before the queue accepts it.
+ENQUEUE_FAILURE = "Failed to enqueue external task"
 _CREDENTIAL_PROVIDER = "encrypted_external_task"
 # Task auth fields holding forwarded credentials; encrypted at rest.
 _PRIVATE_AUTH_FIELDS = ("external_request_private",)
@@ -270,8 +272,16 @@ class ExternalTaskService:
         scope = [account_id, task_type, "target", target]
         return json.dumps(scope, ensure_ascii=False, separators=(",", ":"))
 
+    @staticmethod
+    def _has_target_claim(task: TaskRecord, auth: Mapping[str, Any]) -> bool:
+        """Return whether Runtime submission or unfinished Compile preparation reserves the target."""
+        if auth.get("external_task_id"):
+            return True
+        checkpoint = auth.get("compile_execution") or {}
+        return task.task_type == "compile" and checkpoint.get("phase") not in (None, "finished")
+
     async def restore_tasks(self, tasks: Iterable[TaskRecord]) -> None:
-        """Reserve submitted work before any recovered queue delivery can run."""
+        """Restore target owners from unacknowledged deliveries before queue consumers start."""
         for task in tasks:
             if (
                 task.task_type not in self._providers
@@ -281,8 +291,12 @@ class ExternalTaskService:
                 continue
             if task.status not in {TaskStatus.RUNNING, TaskStatus.CANCELLING}:
                 continue
-            if task.status == TaskStatus.CANCELLING and task.stage in {None, "queued"}:
-                continue
+            # Queue admission can mark waiting work running before it starts; only an
+            # unfinished Compile preparation checkpoint then still reserves the target.
+            if task.stage in {None, "queued"}:
+                auth = await self._task_auth(task.task_id, task.account_id, task.user_id)
+                if not self._has_target_claim(task, auth):
+                    continue
             key = self._serialization_key(task)
             if key is not None:
                 self._owners.setdefault(key, set()).add(task.task_id)
@@ -304,8 +318,10 @@ class ExternalTaskService:
         ctx: RequestContext,
         idempotency_key: str | None = None,
         submission_payload: Mapping[str, Any] | None = None,
+        submission_private_payload: Mapping[str, Any] | None = None,
         task_id: str | None = None,
         on_task_created: Callable[[TaskRecord], Awaitable[None]] | None = None,
+        retry_enqueue: bool = False,
     ) -> TaskRecord:
         """``submission_payload`` (default ``payload``) is what idempotent retries must match.
 
@@ -322,8 +338,10 @@ class ExternalTaskService:
                 ctx=ctx,
                 idempotency_key=idempotency_key,
                 submission_payload=submission_payload,
+                submission_private_payload=submission_private_payload,
                 task_id=task_id,
                 on_task_created=on_task_created,
+                retry_enqueue=retry_enqueue,
             )
 
         if not idempotency_key and task_id is None:
@@ -346,13 +364,16 @@ class ExternalTaskService:
         ctx: RequestContext,
         idempotency_key: str | None = None,
         submission_payload: Mapping[str, Any] | None = None,
+        submission_private_payload: Mapping[str, Any] | None = None,
         task_id: str | None = None,
         on_task_created: Callable[[TaskRecord], Awaitable[None]] | None = None,
+        retry_enqueue: bool = False,
     ) -> TaskRecord:
         provider = self._provider(task_type)
         tracker = get_task_tracker()
         request_hash = submission_request_hash(
-            payload if submission_payload is None else submission_payload, private_payload
+            payload if submission_payload is None else submission_payload,
+            private_payload if submission_private_payload is None else submission_private_payload,
         )
         token = uuid4().hex
         task_id = task_id or (
@@ -389,7 +410,7 @@ class ExternalTaskService:
             # deliveries are safe: execute claims each task before submitting.
             await self._resume_submission(task, ctx)
             return task
-        enqueued = False
+        fail_on_error = True
         try:
             if on_task_created is not None:
                 await on_task_created(task)
@@ -400,6 +421,7 @@ class ExternalTaskService:
                 user_id=ctx.user.user_id,
             )
             with bind_task_context(task.task_id, ctx.account_id, ctx.user.user_id):
+                fail_on_error = not (retry_enqueue and idempotency_key)
                 await get_queue_manager().enqueue(
                     _external_task_queue(),
                     {
@@ -409,7 +431,7 @@ class ExternalTaskService:
                     },
                     serial_key=self.queue_serial_key(task),
                 )
-            enqueued = True
+            fail_on_error = False
             current = await tracker.get(
                 task.task_id,
                 account_id=ctx.account_id,
@@ -418,10 +440,10 @@ class ExternalTaskService:
             if current is not None:
                 task = current
         except BaseException:
-            if not enqueued:
+            if fail_on_error:
                 await tracker.fail(
                     task.task_id,
-                    "Failed to enqueue external task",
+                    ENQUEUE_FAILURE,
                     account_id=ctx.account_id,
                     user_id=ctx.user.user_id,
                 )
@@ -762,9 +784,9 @@ class ExternalTaskService:
                         snapshot.error_code or "UNKNOWN",
                         snapshot.error_message or "External task failed",
                     ),
+                    result=snapshot.result,
                     account_id=account_id,
                     user_id=user_id,
-                    **({"result": snapshot.result} if snapshot.result else {}),
                 )
             elif snapshot.status == "completed":
                 await tracker.complete(

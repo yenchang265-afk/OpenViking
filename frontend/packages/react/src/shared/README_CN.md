@@ -24,8 +24,10 @@
 - `tooltip`：渲染到 `document.body` 的定位浮層，懸停或聚焦時顯示，也可以點選切換。渲染到 body 是因為祖先容器的 `overflow: hidden` 會裁掉常規浮層。
 - `popover`：`tooltip` 的白底卡片版本，用於結構化或可互動的內容，同樣渲染到 `document.body`，觸發方式與方位選項和 `tooltip` 一致。
 - `divider`：一條 `role="separator"` 的分隔線，長度、粗細和顏色由呼叫方給出。
+- `empty`：空態，內建線稿插畫在上，標題、可選說明和可選操作在下。`default` 用於內容區，`compact` 用於浮層、樹和卡片。失敗場景傳 `role="alert"`，`ErrorBoundary` 的預設兜底即用它配 `crash` 插畫。
 - `resizable`：`ResizableHandle`，可拖拽的 `role="separator"` 分隔條，用指標拖動或方向鍵調整相鄰面板的寬度。寬度由呼叫方持有，每個夾取後的值通過 `onResize` 回傳。
 - `overlay`：`tooltip`、`popover`、`modal`、`drawer` 這類浮層共用的定位與滾動工具。`useOverlayPosition` 在空間不足時把浮層翻到對側並夾在視口內，`lockBodyScroll` 記錄各個持有者，最後一個釋放時恢復宿主的內聯樣式，`OverlayPlacement` 是共用的方位型別。
+- `toast`：頂部居中的輕量提示，見 [Toast](#toast)。
 - `notification`：右上角通知棧，展示任務狀態與結果反饋，見 [Notification](#notification)。
 
 ### `auth/`
@@ -42,6 +44,15 @@
 - `locale-context.tsx`：`useLocale` 與 `LocaleProvider`，各公開入口共用的語言作用域。它與請求 Client 的 Context 分離，因此切換語言不影響請求和狀態。
 
 譯文放在各自所屬目錄的 `locales/en-US.ts` 與 `locales/zh-CN.ts`；`auth/` 和 `primitives/modal/` 採用同樣的佈局。
+
+### Toast
+
+- `useToast` 返回 `[toast, holder]`，把 holder 放在呼叫方語言與主題作用域內；從內部 `primitives/toast/index` 匯入，樣式由呼叫方的 `style.css` 引入 `primitives/toast/style.css`。
+- API 與 Notification 一致，提供 `loading`、`info`、`success`、`warning`、`error`、`normal`、`remove` 和 `clear`；每個方法接收含 `content` 的配置並返回 `id`，同一 `id` 原位更新。Toast 只有正文，不提供 Notification 的 `title` 和 `btn`。
+- `loading` 複用內建 LoadingIcon，預設持續顯示；其他型別預設 3000 ms 自動關閉，顯式 `duration` 優先，`duration: 0` 停用自動關閉。懸停或焦點位於提示內時暫停計時，預設可手動關閉。
+- `onDismiss` 在手動關閉或自動關閉開始時呼叫，`onClose` 在退出動畫結束後呼叫；`remove` 與 `clear` 只觸發 `onClose`。解除安裝清理當前例項，不提供全域性 API。
+- 內建文案支援 `locale` 與逐項 `labels` 覆蓋，切換語言不清空提示；呼叫方提供的正文按原樣保留。Toast 和 Notification 共用內部 `notice` 的狀態、計時、圖示和浮層實現，各自維護例項與外觀。
+- [內部反饋演示](../../../../docs/docs/_demos/toast-feedback.tsx) 對比前端校驗提示與模擬介面錯誤，並演示 loading 更新結果；錯誤來源與文案規則見 [區塊約定](../modules/AGENTS.md#錯誤反饋)。
 
 ### Notification
 

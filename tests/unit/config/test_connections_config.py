@@ -254,17 +254,18 @@ def test_all_shared_connections_and_canonical_selectors(raw_config):
     original = deepcopy(raw_config)
     config = OpenVikingConfig.model_validate(raw_config)
     assert raw_config == original
-    assert config.cache.params["password"] == "redis-secret"
-    assert config.cache.params["default_ttl_seconds"] == 300
+    assert config.cache.instance().params["password"] == "redis-secret"
+    assert config.cache.instance().params["default_ttl_seconds"] == 300
     assert config.storage.agfs.s3.bucket == "test"
     assert config.storage.agfs.s3.prefix == "production/"
     assert config.storage.vectordb.elasticsearch.password == "es-secret"
     assert "redis-secret" not in repr(config)
     assert "es-secret" not in repr(config)
     assert config.storage.task_store.params["host"] == "mysql.internal"
-    dumped = config.model_dump()
-    assert dumped["cache"]["backend"] == "redis"
-    assert "provider" not in dumped["cache"]
+    dumped = config.to_dict()
+    # The legacy single-provider shape dumps as upstream's named default instance.
+    assert dumped["cache"]["instances"]["default"]["provider"] == "redis"
+    assert "backend" not in dumped["cache"]["instances"]["default"]
     assert dumped["embedding"]["dense"]["provider"] == "openai"
     OpenVikingConfig.model_validate(dumped)
 
@@ -302,10 +303,12 @@ def test_partial_connections_never_mix_credentials(kind, section, field, partial
 def test_backend_alias_conflicts_and_legacy_support():
     from openviking_cli.utils.config.cache_config import CacheConfig
 
-    assert CacheConfig(provider="redis").model_dump()["backend"] == "redis"
-    assert CacheConfig(backend="redis", provider="redis").provider == "redis"
+    dumped = CacheConfig.model_validate({"provider": "redis"}).model_dump()
+    assert dumped["instances"]["default"]["provider"] == "redis"
+    both = CacheConfig.model_validate({"backend": "redis", "provider": "redis"})
+    assert both.instance().provider == "redis"
     with pytest.raises(ValueError, match="conflict"):
-        CacheConfig(backend="redis", provider="dynamic")
+        CacheConfig.model_validate({"backend": "redis", "provider": "dynamic"})
 
 
 def test_untiered_s3_git_inherits_connection(raw_config):
@@ -324,7 +327,9 @@ def test_complete_inline_redis_does_not_inherit_auth():
         "cache": {"backend": "redis", "params": {"endpoints": ["redis://local:6379"]}},
     }
     resolved = resolve_mysql_connections(raw)
-    assert resolved["cache"]["params"] == {"endpoints": ["redis://local:6379"]}
+    assert resolved["cache"]["instances"]["default"]["params"] == {
+        "endpoints": ["redis://local:6379"]
+    }
 
 
 def test_redis_mysql_nested_cache_inherits_connection(raw_config):

@@ -57,11 +57,12 @@ ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking:
 ## Step 3: Run compile
 
 ```bash
-ov compile \
+ov compile create --compile-name research-wiki \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
   --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "Organize into a team-searchable Wiki, keeping the source of every claim"
+ov compile --compile-name research-wiki
 ```
 
 - `--from` can be repeated or comma-separated to pass multiple sources at once.

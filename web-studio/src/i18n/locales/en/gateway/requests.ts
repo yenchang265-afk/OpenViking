@@ -95,7 +95,10 @@ const requests = {
     window: 'Window {{number}}, managed by the model',
     windowReset: 'The model started a new window',
     saving: 'Saving to Business Context Platform',
-    nextRetry: 'Next retry at {{time}}',
+    savedMessages_one: '{{count}} message written',
+    savedMessages_other: '{{count}} messages written',
+    openvikingSession: 'Business Context Platform session',
+    copyOpenvikingSession: 'Copy Business Context Platform session ID',
     tools: 'Business Context Platform tools',
     toolsSkipped: 'Not offered: {{reason}}',
     toolRounds:
@@ -110,15 +113,15 @@ const requests = {
   },
   resync: {
     action: 'Resync conversation…',
-    hint: 'Starts saving this conversation again in a new Business Context Platform session. Use it when saving stays paused.',
+    hint: 'Starts a new Business Context Platform session for this conversation; the next finished turn writes the whole history to it. Use it to get a clean copy of the conversation.',
     keyRevoked:
       "The gateway key this conversation used has been revoked, so it can't be resynced.",
     title:
       'Start a fresh Business Context Platform session for this conversation?',
     description:
-      'The gateway writes the full history to the new session the next time the user sends a message. What was already saved stays in the old session, so Business Context Platform may extract some memories twice.',
+      'The gateway writes the full history to the new session when the next turn of this conversation ends. What was already saved stays in the old session, so Business Context Platform may extract some memories twice.',
     confirm: 'Resync',
-    done: 'The conversation will be saved again with its next message.',
+    done: 'The conversation will be saved again when its next turn ends.',
   },
 }
 

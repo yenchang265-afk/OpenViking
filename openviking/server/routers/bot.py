@@ -5,6 +5,7 @@ Vikingbot OpenAPIChannel when the --with-bot option is enabled.
 """
 
 import json
+import re
 from typing import AsyncGenerator, Optional
 from urllib.parse import quote
 
@@ -47,6 +48,21 @@ def set_bot_api_key(api_key: str) -> None:
     """Set the Bot API key used by proxy requests to bot gateway."""
     global BOT_API_KEY
     BOT_API_KEY = api_key or ""
+
+
+# Bot session IDs are UUIDs or client-chosen names. Reject characters that could
+# leave the path segment (separators, queries, fragments, escapes, controls).
+_BOT_SESSION_ID_RE = re.compile(r"[^/?#%\\\x00-\x1f\x7f]{1,256}")
+
+
+def _bot_session_path(session_id: str) -> str:
+    """Return a validated, URL-quoted session path segment for the bot gateway."""
+    if session_id in {".", ".."} or not _BOT_SESSION_ID_RE.fullmatch(session_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid session_id",
+        )
+    return quote(session_id, safe="")
 
 
 def get_bot_url() -> str:
@@ -323,6 +339,7 @@ async def interrupt_session(
     _ctx: RequestContext = Depends(get_request_context),
 ):
     """Interrupt an active or queued bot session via the VikingBot gateway."""
+    session_path = _bot_session_path(session_id)
     bot_url = get_bot_url()
     headers = {
         "X-OpenViking-Account": _ctx.user.account_id,
@@ -338,7 +355,7 @@ async def interrupt_session(
     try:
         async with _create_bot_proxy_client() as client:
             response = await client.post(
-                f"{bot_url}/bot/v1/sessions/{quote(session_id, safe='')}/interrupt",
+                f"{bot_url}/bot/v1/sessions/{session_path}/interrupt",
                 headers=headers,
                 timeout=30.0,
             )
@@ -370,6 +387,7 @@ async def steer_session(
     _ctx: RequestContext = Depends(get_request_context),
 ):
     """Append user input to an active streaming bot session."""
+    session_path = _bot_session_path(session_id)
     bot_url = get_bot_url()
 
     try:
@@ -387,7 +405,7 @@ async def steer_session(
                 headers["X-Gateway-Token"] = BOT_API_KEY
 
             response = await client.post(
-                f"{bot_url}/bot/v1/sessions/{quote(session_id, safe='')}/steer",
+                f"{bot_url}/bot/v1/sessions/{session_path}/steer",
                 json=_attach_openviking_connection(body, request, _ctx),
                 headers=headers,
                 timeout=30.0,

@@ -38,11 +38,12 @@ ov skills list
 ## 第三步：執行編譯
 
 ```bash
-ov compile \
+ov compile create --compile-name research-graph \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
   --skill viking://agent/skills/knowledge-graph \
   --instruction "抽取人物、地點、法寶及其關係，構建可遍歷的知識圖譜"
+ov compile --compile-name research-graph
 ```
 
 命令會立刻返回 `task_id`，之後：

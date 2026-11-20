@@ -35,6 +35,7 @@ async def install_skills(
     source_path_hint: Optional[str] = None,
     telemetry: TelemetryRequest = False,
     background: bool = False,
+    request_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Install the skills found in ``data``; return one result or ``{"installed", "total"}``.
 
@@ -65,6 +66,7 @@ async def install_skills(
                         source_path_hint=source_path_hint,
                         source_metadata=skill_source,
                         summarize_from_header=True,
+                        request_id=request_id,
                     )
                 result = await service.resources.add_skill(
                     data=skill_data,
@@ -76,6 +78,7 @@ async def install_skills(
                     source_metadata=skill_source,
                     # SKILL.md requires a description; reuse it instead of an LLM summary.
                     summarize_from_header=True,
+                    request_id=request_id,
                 )
                 return result
 
@@ -103,6 +106,7 @@ async def ingest_temp_upload_skill(
     names: Optional[list[str]] = None,
     list_only: bool = False,
     source_type: str = "api",
+    request_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Resolve an uploaded SKILL.md, directory archive, or zip and install its skills."""
     resolved = await store.resolve_for_consume(temp_file_id, ctx)
@@ -124,6 +128,7 @@ async def ingest_temp_upload_skill(
             source_metadata=source_metadata,
             allow_local_path_resolution=True,
             source_path_hint=resolved.original_filename,
+            request_id=request_id,
         )
     finally:
         await resolved.cleanup()

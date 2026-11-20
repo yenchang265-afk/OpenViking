@@ -1,0 +1,131 @@
+# 前端監控
+
+通過 `OpenVikingProvider.monitoring` 接收元件異常、前端請求質量和區塊載入結果，並從失敗事件還原庫內前端鏈路。
+
+請求採集覆蓋庫內業務元件和區塊繫結到當前 Provider 的呼叫。獨立使用 `createOvClient` 和宿主自己的網路請求由宿主監控。
+
+## 何時使用
+
+- 定位哪個業務元件或區塊的哪個區域發生異常。
+- 觀察目錄、預覽、搜尋、會話、級聯選擇、流式回覆和後臺輪詢的前端結果。
+- 將型別化事件接入宿主已有的監控平臺。操作和曝光統計使用獨立的[埋點](./analytics)。
+
+## 接入
+
+```tsx
+import { OpenVikingProvider } from '@openviking/react/client';
+import type { OpenVikingMonitoringOptions } from '@openviking/react/client';
+
+const monitoring: OpenVikingMonitoringOptions = {
+  onEvent(event) {
+    if (event.name === 'file_browser_directory_load_fail') {
+      console.log(event.source.component, event.params.traceSnapshot);
+    }
+    // 在此呼叫宿主的監控 SDK。
+  },
+};
+
+<OpenVikingProvider monitoring={monitoring}>{children}</OpenVikingProvider>;
+```
+
+業務元件和區塊的 Props 保持原有互動語義，監控只從 Provider 接入。獨立使用的業務元件也可以包在 Provider 內。
+
+## 程式碼演示
+
+### 接收結果與異常
+
+示例使用模擬的級聯選擇資料，事件只顯示在當前頁面，不傳送到外部平臺。開啟監控後點擊重新載入；模擬失敗可觀察失敗快照和重試結果。
+
+```tsx file="../../_demos/monitoring.tsx" preview
+
+```
+
+## 開關和繼承
+
+| `monitoring`                 | 行為                                             |
+| ---------------------------- | ------------------------------------------------ |
+| 根 Provider 省略             | 預設關閉                                         |
+| 內層 Provider 省略           | 繼承最近的外層配置                               |
+| `false`                      | 關閉當前子樹；更深層可顯式配置重新開啟           |
+| `{ onEvent }`                | 接收全部內建監控事件                             |
+| `{ onEvent, events: [...] }` | 只接收指定事件，內部仍記錄這些失敗所需的前序階段 |
+| `{ onEvent, events: [] }`    | 完全關閉                                         |
+
+關閉時不建立監控 ID、階段、計時器或鏈路快取，不呼叫接收器和診斷轉換。關閉會清理當前採集上下文；重新開啟只觀察之後開始的工作，不補發歷史結果，也不重啟業務請求、會話或編輯器。修改接收器或訂閱列表不重啟正在進行的工作。
+
+巢狀 Provider 顯式配置物件時替換監控配置，事件只交給最近的接收器，不向外層重複投遞。`analytics` 和 `monitoring` 的開關、訂閱和接收器相互獨立。
+
+## API
+
+### OpenVikingMonitoringOptions
+
+| 引數        | 說明                                        | 型別                                                          | 預設值     |
+| ----------- | ------------------------------------------- | ------------------------------------------------------------- | ---------- |
+| onEvent     | 接收事件，拋錯或 Promise 拒絕不改變業務結果 | `(event: OpenVikingMonitoringEvent) => void \| Promise<void>` | 必填       |
+| events      | 允許投遞的事件名                            | `readonly OpenVikingMonitoringEventName[]`                    | 全部事件   |
+| diagnostics | 顯式啟用宿主脫敏轉換                        | `{ transform(input): SanitizedDiagnostics \| undefined }`     | 不採集原文 |
+
+`OpenVikingMonitoringOptions`、`OpenVikingMonitoringEvent`、`OpenVikingMonitoringEventName` 和 `OpenVikingMonitoringEventMap` 從 `@openviking/react/client` 匯出。事件名決定 `source` 和 `params` 型別；事件表是封閉型別，不接受任意字串或追加事件定義。
+
+```ts
+import type { OpenVikingMonitoringEventMap } from '@openviking/react/client';
+
+type DirectoryFailure =
+  OpenVikingMonitoringEventMap['file_browser_directory_load_fail']['params'];
+```
+
+### 事件信封
+
+| 欄位                           | 含義                                                            |
+| ------------------------------ | --------------------------------------------------------------- |
+| schemaVersion / libraryVersion | 事件協議版本 `1` 與實際元件庫版本                               |
+| eventId / occurredAtUnixMs     | 本次事件 ID 與發生時間戳，單位毫秒                              |
+| name                           | 唯一的目標與事件，完整列表見[監控事件目錄](./monitoring-events) |
+| source                         | 所屬元件、區塊、區域和元件路徑                                  |
+| trace                          | 當前階段的鏈路標識與嘗試序號                                    |
+| params                         | 當前事件專屬欄位                                                |
+| diagnostics                    | 宿主顯式返回並通過預算校驗的脫敏診斷                            |
+
+## 定位元件與還原鏈路
+
+`source.component` 包含元件的 `name`、`instanceId` 和 `region`。`module` 是最近的 `FileBrowser`、`Console` 或 `ScopeCascade`，獨立業務元件為 `null`。`componentPath` 按外到內排列庫內元件；`affectedComponents` 表示同一故障向外傳播時已知的受影響元件。
+
+元件名稱表示捕獲區域的歸屬，不等於根因一定是元件庫程式碼。宿主插槽、Adapter 或第三方依賴也可能在該區域拋錯。SDK 不解析 React 私有欄位來猜具體原始碼行；需要原始碼位置時，由宿主配置 source map，並顯式接入脫敏診斷。
+
+失敗事件自帶 `params.traceSnapshot`，即使只訂閱失敗事件，也能看到已觀察到的成功前序：
+
+1. 用 `source.component`、`source.module` 和 `region` 定位異常區域。
+2. 按 `incidentId` 聚合同一故障，沿 `causeEventId` 檢視傳播關係。`faultRole: 'origin'` 是首次觀察，`'propagation'` 是同一故障向上層傳播。
+3. 按 `traceId` 串聯工作，按 `spanId`、`parentSpanId` 和 `rootSpanId` 還原階段。`sequence` 是鏈路內事件順序；`attempt` 是同組件例項同階段的採集嘗試序號，不是 HTTP 自動重試次數。
+4. 從 `causalPath` 定位實際失敗路徑，結合 `spans` 的階段、狀態、耗時和安全請求摘要排查。渲染異常無法可靠確定起點，因此其 `elapsedMs` 和 `startOffsetMs` 為 `null`。
+5. 檢視 `links` 中的程式碼載入重試、後臺任務來源和實際檢視輸入鏈路；不同工作各自使用獨立 trace，不把最近一次請求當成當前檢視的資料來源。
+
+主快照最多保留 64 個階段，優先保留根階段和真實失敗路徑。`omittedSpanCount` 與 `omittedByStage` 統計主鏈路省略的階段；最多保留 8 條關聯，每條關聯最多 8 個階段摘要。超出容量時 `coverage: 'partial'`、`gaps` 包含 `capacity`。
+
+`coverage: 'complete'` 僅表示當前庫內工作已觀察完整，不表示整個頁面或服務端鏈路完整。中途開啟監控、經過關閉的作用域、自定義宿主 Service 無法觀察內部請求時，快照通過 `started-before-enabled`、`disabled-scope` 或 `opaque-host-service` 標記缺口。後臺任務用獨立 trace 關聯提交來源，輪詢失敗不會把已受理的任務改判為失敗。
+
+訂閱過濾隻影響投遞。`causeEventId` 可能指向未訂閱的事件，此時使用當前失敗的 `traceSnapshot` 檢視前序階段。
+
+共享查詢只為實際請求生成請求事件，命中已有快取時不補發歷史事件。共享請求由其他元件發起或發起元件已解除安裝時，仍為當前訂閱元件記錄結果，並以 `shared-query-input` 標記未觀察到的請求階段。切換至沒有原請求鏈路的快取結果時，後續渲染異常也以 `shared-query-input` 標記缺口，不沿用舊查詢鏈路。關閉監控不會清除宿主查詢快取。
+
+## 觸發口徑
+
+- 渲染異常：在客戶端已提交的庫內錯誤邊界捕獲時記錄。普通事件回撥和任意非同步任務由宿主處理。
+- 資源：觀察真實動態匯入、圖片載入和影片後設資料載入；同次嘗試只結算一次。影片後設資料成功不代表影片已經可播放。
+- 請求：JSON 在完整讀體和原生業務信封檢查後才成功；Blob 按原有下載契約結算，不額外解析檔案正文。請求只附帶方法、靜態 `routeKey`、狀態碼、請求嘗試 ID 和可用的服務端 request ID。
+- SSE：連線成功、流讀取完成和業務回覆完成是三個獨立目標。主動取消、消費者提前結束和解除安裝不偽裝為成功或失敗；正常 EOF 才是讀取完成。
+- 區塊載入：資料提交到當前狀態後結算；預覽正文就緒還要求對應目標已切到前臺且載入遮罩退出。空資料是有效成功，取消、舊目標和後臺預載入不能替當前目標報就緒。
+- 任務輪詢：一次故障週期內，請求失敗和協議失敗各首次報告一次；第一份有效響應報告一次恢復。後端任務自身的 `failed` 狀態不屬於前端監控異常。
+- 回覆：第一段非空正文、推理或工具內容記錄首內容；收到合法終態並完成前端提交才記錄回覆完成。歷史儲存失敗單獨報告，不把成功回覆改判為失敗。
+
+就緒事件不代表使用者看見了內容，曝光口徑見[埋點指南](./analytics)。
+
+## 診斷與宿主平臺
+
+預設不上傳 URL、URI、查詢詞、命令、正文、帳號憑證、錯誤原文或堆疊。不安裝全域性 `window.onerror`、`unhandledrejection`、fetch 補丁，也不注入服務端追蹤請求頭。
+
+需要原始診斷時，顯式提供同步 `diagnostics.transform`。輸入包括 `error`、`message`、`stack`、`componentStack`、`requestBody`、`responseBody`；僅在當前捕獲點實際具備時提供，SDK 不為診斷重複讀體或額外發請求。宿主返回同名的可選欄位，其中 body 必須是 JSON 值，其他欄位為字串；`error` 本身不會被轉發。
+
+轉換後單個 body 的 UTF-8 JSON 最大 4 KiB，`message`、`stack`、`componentStack` 合計最大 16 KiB；不合規、超預算或轉換失敗的欄位會被忽略。非同步轉換不生效。返回 `undefined` 表示放棄本次原文診斷，安全事件仍正常投遞。
+
+SDK 不持久化、快取重發或自動重試事件。取樣、批次傳送、告警、平臺鑑權和 source map 上傳由宿主監控平臺負責。只需要排障失敗時可通過 `events` 訂閱目錄中的失敗事件，前序階段摘要仍在失敗快照中。

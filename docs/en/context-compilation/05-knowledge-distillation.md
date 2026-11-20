@@ -49,21 +49,23 @@ ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillat
 Spell out the **analytical question, comparison dimensions, baseline, and scope** in `--instruction` — it directly sets the direction of the distillation:
 
 ```bash
-ov compile \
+ov compile create --compile-name finance-insights \
   --from viking://resources/finance-reports \
   --to viking://resources/finance-insights \
   --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "Compare the last three years of reports; obtain changes and drivers in revenue quality, profitability, and risk"
+ov compile --compile-name finance-insights
 ```
 
 `--from` accepts multiple sources for cross-knowledge-base comparison:
 
 ```bash
-ov compile \
+ov compile create --compile-name finance-comparison \
   --from viking://resources/finance-2024,viking://resources/finance-2025 \
   --to viking://resources/finance-insights \
   --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "Compare the two yearly knowledge bases; surface changes and structural differences in key metrics"
+ov compile --compile-name finance-comparison
 ```
 
 The command returns a `task_id` immediately:

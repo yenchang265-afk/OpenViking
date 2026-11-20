@@ -6,7 +6,7 @@
 
 使用已安裝 Skill 編譯時，需要指定：
 
-- `--from`：一個或多個來源目錄或檔案。
+- `--from`：一個或多個來源目錄。
 - `--to`：輸出目錄。
 - `--skill`：已安裝的 Skill URI，定義輸出內容和結構。
 
@@ -14,23 +14,28 @@
 
 編譯由 OpenViking 伺服器自身執行，與 `add_resource` 一樣作為持久佇列工作（見 [Agent Runtime API](../api/23-agent-runtime.md)）。它以請求使用者的身份讀取來源和 Skill，通過 plan / map / shuffle / reduce 流水線整理並寫入內容。任務非同步執行，返回 `task_id` 後可查詢進度和結果；被伺服器重啟中斷的任務會從頭重新執行。
 
-## 一條命令跑起來
+## 建立配置並提交編譯
 
 先按 [LLM Wiki 示例](02-llm-wiki.md) 匯入來源、安裝 Skill，再執行：
 
 ```bash
-ov compile \
+ov compile create --compile-name research-summary \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
   --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "把研究資料整理成便於團隊檢索的知識庫"
+ov compile --compile-name research-summary
 ```
 
 命令會立即返回一個 `cmp_...` 任務 ID，之後用 `ov task status <id>` 檢視進度、用 `ov task cancel <id>` 取消。完整的欄位說明、任務生命週期和 HTTP 介面見 [Agent Runtime API](../api/23-agent-runtime.md)。
 
+## 複用持久編譯配置
+
+建立必須提供 `compile_name` 並原樣返回，準備並標記輸出目錄，但不執行 Compile。每次執行返回新的 `cmp_...` 任務 ID；首次為完整編譯，後續成功執行推進手動和定時共享的基線。定時計劃通過 `/api/v1/compile/create` 的 `args` 配置。相同輸出目錄的多個配置獨立存在。普通檔案移動或刪除不修改持久配置。
+
 ## 使用 Web Studio
 
-Studio 提供 `/compile` 列表、`/compile/new` 新建表單和 `/compile/tasks/<task_id>` 任務詳情頁。可以選擇並預覽 Skill、瀏覽來源目錄、提交多個來源、檢視或取消任務，以及開啟產物目錄。檔案系統終端也支援 `compile` 和 `task`，並可將引數帶入表單。
+Studio 分開提供儲存配置與一次性全量執行；配置按 `compile_name` 展示和重跑。Studio 提供 `/compile` 列表、`/compile/new` 新建表單和 `/compile/tasks/<task_id>` 任務詳情頁。可以選擇並預覽 Skill、瀏覽來源目錄、提交多個來源、檢視或取消任務，以及開啟產物目錄。檔案系統終端也支援 `compile` 和 `task`，並可將引數帶入表單。
 
 任務列表游標使用程序內金鑰簽名，並繫結呼叫者和篩選條件。服務重啟後舊遊標失效，重新整理列表即可重新開始。一個副本簽發的游標不能直接用於另一個副本。分頁掃描已儲存的任務記錄，不依賴索引，讀取成本仍隨保留的歷史數量增長。
 

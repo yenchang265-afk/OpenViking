@@ -25,7 +25,7 @@ import '@openviking/react/components/command-console/style.css';
 
 ```
 
-示例使用固定的模擬資料：提交後先追加一條執行中的記錄，稍後替換為結果，不傳送請求；點選資源連結只彈出提示。
+示例使用固定的模擬資料：提交後先追加一條執行中的記錄，稍後替換為結果，不傳送請求。`busy` 在等待時鎖定輸入，由結果卡片展示進度；`disabled` 還會顯示不可用提示。點選資源連結只彈出提示。
 
 ### 空態與快捷命令
 
@@ -37,6 +37,14 @@ import '@openviking/react/components/command-console/style.css';
 
 示例的快捷入口都填入完整命令，只有 `compile` 例外：它只填入 `ov compile `，需要繼續輸入 `--compile-name <name>`。
 
+### 渲染失敗
+
+宿主傳入的內容渲染出錯時，元件顯示預設兜底：插畫、提示和「重試顯示」按鈕。需要替換展示時傳入 `slots.errorFallback`。
+
+```tsx file="../../_demos/command-console-crash.tsx" preview
+
+```
+
 ## API
 
 ### CommandConsole
@@ -45,7 +53,9 @@ import '@openviking/react/components/command-console/style.css';
 | ---------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------ |
 | records          | 要展示的命令記錄，按提交順序排列                                                           | `readonly CommandConsoleRecord[]`                                     | 必填                     |
 | value            | 輸入區的文本，受控                                                                         | `string`                                                              | 必填                     |
+| history          | 方向鍵可回填的命令，按提交順序排列                                                         | `readonly Pick<CommandConsoleRecord, 'command'>[]`                    | 同 `records`             |
 | disabled         | 停用輸入和提交，並在輸入區下方顯示 `labels.unavailableMessage`                             | `boolean`                                                             | `false`                  |
+| busy             | 執行中鎖定輸入與提交，由結果卡片展示進度，不顯示不可用提示                                 | `boolean`                                                             | `false`                  |
 | emptyState       | 沒有記錄時顯示的內容，替換內建空態；傳 `null` 時不顯示空態                                 | `ReactNode`                                                           | -                        |
 | quickCommands    | 內建空態裡的快捷入口，沒有可用入口時內建空態不顯示內容                                     | `readonly CommandConsoleQuickCommand[]`                               | -                        |
 | commands         | 命令目錄，用於補全、引數幫助和執行中記錄的骨架；省略時仍可輸入和提交，但沒有候選和引數幫助 | `readonly CommandConsoleCommandDefinition[]`                          | `[]`                     |
@@ -69,7 +79,7 @@ import '@openviking/react/components/command-console/style.css';
 | tasks       | 後臺任務快照，元件僅展示傳入的狀態                                                              | `readonly CommandConsoleTask[]`                    | -      |
 | content     | 執行結果；帶後臺任務的記錄在執行中也顯示它，省略時按狀態顯示骨架或空結果                        | `CommandConsoleRecordContent`                      | -      |
 | createdAtMs | 提交時間，Unix 毫秒時間戳，顯示在命令下方                                                       | `number`                                           | -      |
-| createdAt   | 沒有有效 `createdAtMs` 時顯示的文本，也用於服務端渲染；不會被解析為日期                         | `string`                                           | -      |
+| createdAt   | 沒有有效 `createdAtMs` 時顯示的文本；不會被解析為日期                                           | `string`                                           | -      |
 
 `CommandConsoleTask` 的欄位與 [ConsoleTaskSnapshot](../modules/console#consoletasksnapshot) 一致。
 
@@ -115,6 +125,7 @@ import '@openviking/react/components/command-console/style.css';
 | scoreLabel   | 分數文案，由宿主格式化後顯示                                    | `string`    | -      |
 | scoreDetails | 分數詳情，懸停、聚焦或點選分數時顯示；需要同時提供 `scoreLabel` | `ReactNode` | -      |
 | preview      | 標題下方的內容摘錄                                              | `string`    | -      |
+| content      | 取代摘錄展示的多行正文                                          | `string`    | -      |
 | uri          | 資源 URI，顯示為連結，點選時觸發 `onOpenUri`                    | `string`    | -      |
 
 ### CommandConsoleResourcePreviewContent
@@ -172,11 +183,13 @@ import '@openviking/react/components/command-console/style.css';
 
 ### CommandConsoleWriteResultContent
 
-| 引數    | 說明                                                   | 型別                   | 預設值 |
-| ------- | ------------------------------------------------------ | ---------------------- | ------ |
-| variant | 結果型別，固定為 `'write-result'`                      | `'write-result'`       | 必填   |
-| lines   | 結果行，每行單獨一塊顯示；字串中的資源地址自動成為連結 | `readonly ReactNode[]` | 必填   |
-| title   | 標題，與命令名相同時不顯示                             | `string`               | -      |
+| 引數    | 說明                                                      | 型別                                                         | 預設值 |
+| ------- | --------------------------------------------------------- | ------------------------------------------------------------ | ------ |
+| variant | 結果型別，固定為 `'write-result'`                         | `'write-result'`                                             | 必填   |
+| lines   | 每行單獨一塊顯示。使用顯式 URI 行可保留資源路徑中的空格。 | `readonly (ReactNode \| CommandConsoleWriteResultUriLine)[]` | 必填   |
+| title   | 標題，與命令名相同時不顯示                                | `string`                                                     | -      |
+
+`CommandConsoleWriteResultUriLine` 包含字串欄位 `label` 和 `uri`。
 
 ### CommandConsoleCommandHelpContent
 
@@ -210,19 +223,22 @@ import '@openviking/react/components/command-console/style.css';
 
 ### CommandConsoleCommandDefinition
 
-| 引數        | 說明                                                                                             | 型別                                                                   | 預設值           |
-| ----------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------- |
-| name        | 命令名，目錄內唯一，可由多個片語成，如 `session get`；在候選列表和快捷入口裡顯示，也用於匹配命令 | `string`                                                               | 必填             |
-| inputText   | 接受補全後填入輸入區的命令字首，記錄裡也按它顯示；例如 `name` 為 `find` 時可設為 `ov find`       | `string`                                                               | 同 `name`        |
-| aliases     | 別名，與 `name` 一樣用於 `/` 輸入的補全和命令匹配                                                | `readonly string[]`                                                    | -                |
-| group       | 所屬分組的 `key`，對應 `commandGroups`                                                           | `string`                                                               | -                |
-| description | 命令說明，顯示在引數幫助頂部                                                                     | `string`                                                               | 必填             |
-| usage       | 用法，顯示在參數列上方                                                                           | `string`                                                               | 必填             |
-| summary     | 簡短說明，候選列表和快捷入口優先顯示它                                                           | `string`                                                               | 同 `description` |
-| params      | 引數說明，顯示在參數列裡                                                                         | `readonly CommandConsoleCommandParam[]`                                | -                |
-| options     | 選項說明，顯示在參數列裡                                                                         | `readonly CommandConsoleCommandOption[]`                               | -                |
-| examples    | 示例命令，顯示在引數幫助裡，點選後填入輸入區，不提交                                             | `readonly (string \| CommandConsoleCommandExample)[]`                  | -                |
-| skeleton    | 命令執行中顯示的載入骨架，分別對應檢索、資源預覽、資源樹、狀態、寫入結果和通用形態               | `'search' \| 'resource' \| 'tree' \| 'status' \| 'write' \| 'generic'` | `'generic'`      |
+| 引數        | 說明                                                                                             | 型別                                                                                                               | 預設值           |
+| ----------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| name        | 命令名，目錄內唯一，可由多個片語成，如 `session get`；在候選列表和快捷入口裡顯示，也用於匹配命令 | `string`                                                                                                           | 必填             |
+| inputText   | 接受補全後填入輸入區的命令字首，記錄裡也按它顯示；例如 `name` 為 `find` 時可設為 `ov find`       | `string`                                                                                                           | 同 `name`        |
+| aliases     | 別名，與 `name` 一樣用於 `/` 輸入的補全和命令匹配                                                | `readonly string[]`                                                                                                | -                |
+| group       | 所屬分組的 `key`，對應 `commandGroups`                                                           | `string`                                                                                                           | -                |
+| description | 命令說明，顯示在引數幫助頂部                                                                     | `string`                                                                                                           | 必填             |
+| usage       | 用法，顯示在參數列上方                                                                           | `string`                                                                                                           | 必填             |
+| summary     | 簡短說明，候選列表和快捷入口優先顯示它                                                           | `string`                                                                                                           | 同 `description` |
+| params      | 引數說明，顯示在參數列裡                                                                         | `readonly CommandConsoleCommandParam[]`                                                                            | -                |
+| options     | 選項說明，顯示在參數列裡                                                                         | `readonly CommandConsoleCommandOption[]`                                                                           | -                |
+| examples    | 示例命令，顯示在引數幫助裡，點選後填入輸入區，不提交                                             | `readonly (string \| CommandConsoleCommandExample)[]`                                                              | -                |
+| quickStart  | 引數幫助中可代替示例的有序步驟，可附帶文件連結。點選步驟裡的命令會填入輸入區                     | `{ documentation?: { label: string; href: string }; steps: readonly { description: string; command?: string }[] }` | -                |
+| skeleton    | 命令執行中顯示的載入骨架，分別對應檢索、資源預覽、資源樹、狀態、寫入結果和通用形態               | `'search' \| 'resource' \| 'tree' \| 'status' \| 'write' \| 'generic'`                                             | `'generic'`      |
+
+可選回撥 `resolveUriArguments(text)` 接收命令字首之後的文本。按文本順序返回範圍互不重疊的 `{ start, end, uri }`（UTF-16 偏移，左閉右開），輸入和命令歷史中的連結即可保留完整引數值。其他文本按 URI 逐項生成連結。
 
 ### CommandConsoleCommandParam
 
@@ -313,6 +329,10 @@ import '@openviking/react/components/command-console/style.css';
 - Markdown 文本里的 `http(s)` 連結和地址在新標籤頁開啟，不觸發 `onOpenUri`；`viking://` 的會觸發。
 - JSON 和 Markdown 程式碼塊帶複製按鈕，複製成功後觸發 `onCopy`；瀏覽器拒絕寫入剪貼簿時不顯示成功提示，也不觸發 `onCopy`。
 - `createdAtMs` 不足 1 分鐘顯示「剛剛」，不足 1 小時顯示整分鐘數，不足 24 小時顯示整小時數，之後顯示本地時區的 `YYYY-MM-DD HH:mm`；晚於當前時間的時間戳顯示「剛剛」。文案可用 `labels.justNow`、`labels.formatMinutesAgo`、`labels.formatHoursAgo` 覆蓋。
-- 服務端渲染和 hydration 首屏使用 `createdAt`，沒有則不顯示時間；客戶端接管後改用 `createdAtMs`。時間只在渲染時重新計算，不會定時重新整理。
+- 渲染時優先按有效的 `createdAtMs` 格式化時間，缺失或無效時使用 `createdAt`。時間只在渲染時重新計算，不會定時重新整理。
 - 顏色取自 `--ov-ui-color-*` 主題變數，暗色模式跟隨 `<html>` 上的 `.dark` 類，詳見[快速開始](../guide/getting-started)。
 - 型別從 `@openviking/react/components/command-console` 匯出，包根入口只匯出元件和 `CommandConsoleProps`。
+
+## 埋點
+
+通過 Provider 統一接入，支援的事件和觸發條件見[埋點指南與事件目錄](../guide/analytics)。

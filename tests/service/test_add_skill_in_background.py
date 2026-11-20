@@ -5,6 +5,7 @@
 import asyncio
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -19,6 +20,16 @@ from openviking_cli.session.user_id import UserIdentifier
 from tests.test_task_tracker import _FakeAgfs
 
 SKILL_MD = "---\nname: demo\ndescription: Does the demo thing\n---\n# Demo\n"
+
+
+@pytest.fixture(autouse=True)
+def _no_skill_history(monkeypatch):
+    """Processor history bookkeeping is covered by its own tests."""
+    import openviking.server.skill_history as history
+
+    monkeypatch.setattr(history, "read_skill_history", AsyncMock(return_value=None))
+    monkeypatch.setattr(history, "skill_package_hash", AsyncMock(return_value="hash"))
+    monkeypatch.setattr(history, "record_skill_change", AsyncMock(return_value={}))
 
 
 def _ctx() -> RequestContext:
@@ -138,11 +149,12 @@ async def test_skill_with_source_files_runs_inline(tracker, tmp_path: Path):
 @pytest.mark.asyncio
 async def test_prepared_skill_with_pending_privacy_runs_extraction():
     viking_fs = MagicMock()
+    viking_fs.exists = AsyncMock(return_value=False)
     viking_fs._async_agfs.pathlock_acquire_tree = AsyncMock(return_value={"lease_ref": "t"})
     viking_fs._async_agfs.pathlock_release = AsyncMock()
     processor = SkillProcessor(vikingdb=None)
-    sanitized = {"name": "demo", "description": "d", "content": "{{secret}}"}
-    processor.prepare_skill_privacy = AsyncMock(return_value=(sanitized, {"token": "abc"}))
+    privacy = SimpleNamespace(settings=None, matches=["token"])
+    processor.prepare_skill_privacy = AsyncMock(return_value=privacy)
     processor.apply_skill_privacy = AsyncMock(side_effect=lambda skill, *a, **k: skill)
     processor._write_skill_content = AsyncMock()
     processor._enqueue_skill_package = AsyncMock()
@@ -156,6 +168,6 @@ async def test_prepared_skill_with_pending_privacy_runs_extraction():
     )
 
     processor.prepare_skill_privacy.assert_awaited_once()
-    applied_skill, applied_values = processor.apply_skill_privacy.await_args.args[:2]
-    assert applied_skill == sanitized
-    assert applied_values == {"token": "abc"}
+    applied_skill, applied_privacy = processor.apply_skill_privacy.await_args.args[:2]
+    assert applied_skill["name"] == "demo"
+    assert applied_privacy is privacy

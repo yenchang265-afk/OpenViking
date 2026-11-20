@@ -17,9 +17,10 @@ def validate_shared_deployment(server, config):
         agfs.s3.cache_enabled is False,
         "storage.agfs.s3.cache_enabled must be false to avoid per-replica metadata caches",
     )
+    default_cache = config.cache.instance() if config.cache is not None else None
     require(
-        config.cache is not None and config.cache.provider == "redis",
-        "cache.provider must be redis",
+        default_cache is not None and default_cache.provider == "redis",
+        "the default cache instance must use provider redis",
     )
     require(agfs.queuefs.backend == "cache", "storage.agfs.queuefs.backend must be cache")
     require(agfs.queuefs.mode == "shared", "storage.agfs.queuefs.mode must be shared")

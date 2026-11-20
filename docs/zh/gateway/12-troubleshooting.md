@@ -14,12 +14,13 @@ description: 根據現象、Studio 標籤或錯誤碼，找到 OpenViking 閘道
 | Studio 顯示一張卡片，看不到閘道器標籤頁 | 閘道器沒有開啟、OpenViking API 金鑰缺失或無效，或者閘道器連不上 OpenViking。 | [Studio 顯示設定卡片](#studio-shows-a-setup-card) |
 | “上游”和“上下文配置”標籤頁只讀 | 部署者設定了閘道器管理金鑰。 | [解鎖編輯](06-manage-in-studio.md#unlock-editing)；沒人記得金鑰時，見[忘記閘道器管理金鑰](../guides/22-gateway-operations.md#lost-the-management-key) |
 | **無法簽發金鑰** | 新閘道器金鑰要繫結的 OpenViking API 金鑰沒有通過校驗。 | [簽發金鑰失敗](#issuing-a-key-fails) |
-| 客戶端報錯，請求日誌裡卻沒有這條請求 | 請求在到達服務商之前就被閘道器拒絕了。 | [客戶端收到閘道器返回的錯誤](#clients-get-an-error-from-the-gateway) |
+| 客戶端收到的錯誤響應體裡帶有 `reason` | 閘道器自己拒絕了請求，大多發生在請求到達服務商之前。 | [客戶端收到閘道器返回的錯誤](#clients-get-an-error-from-the-gateway) |
 | 請求日誌中某條請求的狀態碼為 400 及以上 | 服務商拒絕了請求或呼叫失敗。 | [上游返回錯誤](#the-upstream-returned-an-error) |
 | 某段對話沒有召回，也沒有儲存 | 檢測到 OpenViking 外掛，閘道器把召回、儲存和工具都讓給了外掛。 | 正常行為，避免同一份內容被補充、儲存兩次，見[兩者同時使用時](../guides/15-gateway.md#when-both-are-in-use)。 |
 | 請求不帶記憶 | OpenViking 無法訪問或超時、預算用完、沒有相關內容等。 | [沒有補充記憶](#no-memory-is-added) |
-| 儲存顯示**重試中**，之後變成**已暫停** | OpenViking 拒絕儲存或無法訪問；或者這段對話的閘道器金鑰已被吊銷（`gateway_key_revoked`），例如使用者的 OpenViking 金鑰被重新生成過。 | OpenViking 恢復後閘道器會自動恢復儲存。原因為 `gateway_key_revoked` 時：簽發的閘道器金鑰需要重新簽發，之後的下一個請求會恢復儲存；直接使用的 OpenViking 金鑰若記錄過期、被驅逐或儲存時收到 401，使用者的下一個有效請求會恢復儲存（account 租戶模式；`tenancy: key` 下換用新金鑰會開始新的對話）。見[OpenViking 中看不到對話](#conversations-do-not-appear-in-openviking)。 |
-| 上下文配置開啟了工具，對話裡卻沒有 | 還沒有能用工具的請求，第一個能用的請求載入工具清單失敗，客戶端沒有回傳完整歷史，或者客戶端自己接了 OpenViking 工具。 | 在請求日誌裡檢視原因，見[什麼時候不提供工具](04-openviking-tools.md#when-tools-are-not-offered)。客戶端接了 OpenViking MCP 伺服器時出現**客戶端已接入 OpenViking 工具**（`tool_name_collision`）是正常的；其他原因修正後開始新對話。 |
+| 請求的**儲存**列顯示**儲存失敗** | 結束這一輪的請求沒能把它寫入 OpenViking：OpenViking 無法訪問、超時，或拒絕了寫入。 | 閘道器不重試；OpenViking 恢復後，這段對話的下一輪結束時會補上缺的內容。一直失敗時，修復原因。見[OpenViking 中看不到對話](#conversations-do-not-appear-in-openviking)。 |
+| 會話裡有訊息，卻一直沒有歸檔或提取出記憶 | 會話沒有提交。預設由閘道器提交時：空閒提交時間還沒到；提交一直失敗（閘道器日誌中有 `could not commit`，閘道器每分鐘再試一次；被 OpenViking 以 401、403、404 拒絕的不再重試）；或者儲存時用的金鑰在空閒提交執行之前被吊銷或過期，這次提交就不再執行。開啟 `openviking_auto_commit` 時由 OpenViking 提交：對話達不到**提交閾值**，而 OpenViking Server 沒有開啟 `memory.session_auto_commit.enabled`。 | 見[會話出現了，記憶還沒有](#conversations-do-not-appear-in-openviking)。 |
+| 上下文配置開啟了工具，對話裡卻沒有 | 還沒有能用工具的請求，載入工具清單失敗（下一個能用工具的請求會重試），客戶端沒有回傳完整歷史，或者客戶端自己接了 OpenViking 工具。 | 在請求日誌裡檢視原因，見[什麼時候不提供工具](04-openviking-tools.md#when-tools-are-not-offered)。客戶端接了 OpenViking MCP 伺服器時出現**客戶端已接入 OpenViking 工具**（`tool_name_collision`）是正常的；`tools_unavailable` 在 OpenViking 恢復響應後會自行消失；其他原因修正後開始新對話。 |
 | **首次呼叫快取命中率**下降，或者概覽提示快取連續未命中 | 記憶無法原樣放回、對話換了上游，或者客戶端、中轉服務改動了請求開頭的內容。 | [首次呼叫快取命中率下降](#the-first-call-cache-hit-rate-dropped) |
 | 長對話被服務商以過長為由拒絕 | 閘道器不知道模型的實際視窗，壓縮得太晚。 | [長對話超出上下文長度](#long-conversations-hit-the-context-limit) |
 | 檔案匯入或下載連結失敗 | 沒有設定 `public_url` 或設定有誤，或者代理沒有轉發檔案相關路徑。 | [檔案匯入或下載失敗](#file-imports-or-downloads-fail) |
@@ -67,35 +68,45 @@ Studio 無法為你載入閘道器時，會用一張設定卡片代替閘道器�
 | 這個 OpenViking API 金鑰屬於其他帳號。（`other_account`） | 金鑰所屬的帳號不是你在 Studio 中管理的帳號。 |
 | OpenViking 拒絕了這個金鑰。（`openviking_http_401`、`openviking_http_403`） | 金鑰不完整、已被重新生成，或者使用者已被刪除。使用該使用者當前的金鑰。 |
 | OpenViking 無法識別這個金鑰所屬的使用者（`openviking_identity_missing`） | OpenViking 沒有返回這個金鑰對應的使用者。使用本帳號中某個使用者的金鑰。 |
-| 閘道器連不上 OpenViking，無法校驗這個金鑰。（`openviking_unavailable`） | 閘道器訪問不到 OpenViking；獨立閘道器檢查 `openviking_url`。 |
+| 閘道器連不上 OpenViking，無法校驗這個金鑰。（`openviking_unavailable`、`openviking_timeout`） | 閘道器訪問不到 OpenViking；獨立閘道器檢查 `openviking_url`。 |
 | OpenViking 版本低於閘道器的要求。（`openviking_version_mismatch`） | 僅獨立閘道器：OpenViking Server 低於 `min_server_version`（0.4.16），請升級。從原始碼安裝、沒有版本標籤的服務可能報告 `0.1.dev123` 這樣的開發版本號；請安裝正式版本，或者把 `min_server_version` 改成與之匹配的值。 |
 | 沒有執行此操作的許可權。（`forbidden`） | 貼上的 OpenViking API 金鑰不屬於對話方塊中選中的使用者，例如管理員貼上了自己的金鑰，而不是所選使用者的。請貼上所選使用者自己的金鑰，或者改選金鑰所屬的使用者。普通使用者貼上的金鑰不是自己的，也會報這個錯。 |
 | 這個使用者已不在本帳號中，請重新選擇。（`unknown_user`） | 對話方塊開啟期間，所選使用者被移出了本帳號。`unknown_policy` 和 `unknown_upstream` 同理，分別表示所選的上下文配置或上游已被刪除。重新整理後重新選擇。 |
 
 ## 客戶端收到閘道器返回的錯誤 {#clients-get-an-error-from-the-gateway}
 
-閘道器在轉發每個客戶端請求之前，會先檢查閘道器金鑰、模型和是否有匹配的上游。下面這些拒絕都發生在請求到達服務商之前，所以不會出現在請求日誌裡。服務商自己返回的錯誤見[上游返回錯誤](#the-upstream-returned-an-error)。
+閘道器在轉發每個客戶端請求之前，會先檢查閘道器金鑰、模型和是否有匹配的上游。閘道器自己產生的錯誤帶有 JSON 響應體 `{"reason": ..., "detail": ..., "request_id": ...}`，全部原因見[模型路由的錯誤](../api/25-gateway.md#model-route-errors)。這些請求都會以同樣的原因（`error_reason`）記入請求日誌，只是預設的 store 輸出無法儲存金鑰從未確認過的請求（見[請求日誌](10-overview-and-requests.md#requests)）。服務商自己返回的錯誤見[上游返回錯誤](#the-upstream-returned-an-error)。
 
-| 狀態碼和提示 | 原因和處理 |
+| 狀態碼和原因 | 原因和處理 |
 | --- | --- |
-| 401 "Invalid gateway key. It may have been revoked, or removed because its OpenViking API key was regenerated…" | 客戶端沒有傳送閘道器金鑰，傳送了已吊銷的金鑰或服務商的 API Key，或者使用者的 OpenViking API 金鑰重新生成後，閘道器刪除了這把金鑰。檢查客戶端實際傳送的金鑰，必要時[重新簽發](09-gateway-keys.md#issue-a-key)。 |
-| 402 `openviking_http_402` "OpenViking service is not ordered for this API key."，403 `openviking_http_403` "OpenViking request failed." | 閘道器檢查金鑰時，OpenViking 拒絕了這把 OpenViking 金鑰（或閘道器金鑰背後的 OpenViking 金鑰），例如服務未下單；請求不會轉發。請恢復服務訂購或金鑰許可權。 |
-| 403 "Claude subscription OAuth credentials are not supported" | 客戶端傳送了 Claude 訂閱令牌，例如 Claude Code 用訂閱帳號登入且沒有設定 `ANTHROPIC_AUTH_TOKEN`；或者上游儲存的就是訂閱令牌。請改用 API Key。 |
-| 403 "Model is not allowed by this key" | 模型不在金鑰[允許的模型](09-gateway-keys.md#allowed-models)範圍內。簽發一把允許這個模型的金鑰。 |
-| 400 "Request model is missing"、415 "Compressed request bodies are not supported" | 只出現在限定了模型的金鑰上：請求體必須寫明模型，且不能經過壓縮編碼。 |
-| 404 "This upstream is an exact endpoint for … only" | 金鑰繫結的上游關閉了**拼接協議介面路徑**（見[直接發往完整請求地址](07-upstreams.md#exact-endpoint)），只接受該協議的介面地址，而客戶端呼叫了別的路徑，例如 `/v1/models`。 |
-| 404 "No allowed upstream matches this protocol and model" | 金鑰繫結的已啟用上游中，沒有一個使用客戶端呼叫的 API 並提供所請求的模型。檢查上游的協議、模型和別名、是否啟用，以及金鑰繫結了哪些上游。 |
-| 400 `peer_invalid` "X-OpenViking-Actor-Peer must be one path segment…" | 請求的 Peer 不是合法的 Peer ID，例如含有 `/` 或空格。見[按 Peer 區分記憶](03-connect-clients.md#peer)。 |
-| 403 "Upstream URL is not allowed" | `X-OpenViking-Upstream-URL` 與金鑰繫結的任何上游的 Base URL 都不相同。見[按請求指定上游](07-upstreams.md#upstream-url-header)。 |
-| 401 "Upstream API key is missing" | 上游要求每個客戶端在 `X-OpenViking-Upstream-Key` 中自帶 API Key，或者由閘道器保管 API Key 的上游沒有填寫。見[憑證](07-upstreams.md#credentials)。 |
-| 403 "Coding Plan upstreams are disabled; configure a model API key" | 上游被標記為 [Coding Plan 金鑰](07-upstreams.md#coding-plan-keys)。改用模型 API Key，或者有意勾選**允許通過閘道器使用這個套餐**。 |
-| 403 "Context policy is unavailable" | 金鑰繫結的上下文配置已不存在。用現有的上下文配置重新簽發金鑰。 |
-| 404 "Unknown response for this key"、403 "Response upstream is no longer allowed" | 查詢的 Responses 響應不是這把金鑰建立的，或者建立它的上游已停用、不再繫結到這把金鑰。 |
-| 413 "Request exceeds configured body limit" | 請求體超過了 `max_body_bytes`（見[請求大小上限](05-long-conversations.md#side-effects)），或者超過了代理自己的上限。 |
+| 401 `gateway_key_invalid` | 客戶端沒有傳送閘道器金鑰，傳送了已吊銷的金鑰或服務商的 API Key，或者使用者的 OpenViking API 金鑰重新生成後，閘道器刪除了這把金鑰。檢查客戶端實際傳送的金鑰，必要時[重新簽發](09-gateway-keys.md#issue-a-key)。 |
+| 401 `openviking_key_invalid` | OpenViking 拒絕了客戶端傳送的 OpenViking API 金鑰，例如金鑰已重新生成。請使用使用者當前的 OpenViking API 金鑰。 |
+| 402 `openviking_not_ordered`，403 `openviking_forbidden` | 閘道器檢查金鑰時，OpenViking 拒絕了這把 OpenViking 金鑰（或閘道器金鑰背後的 OpenViking 金鑰），例如服務未下單；請求不會轉發。請恢復服務訂購或金鑰許可權。 |
+| 429 `openviking_rate_limited`，503 `openviking_unavailable`，503 `openviking_timeout`，`openviking_error` | 使用 OpenViking 金鑰的第一個請求無法確認：OpenViking 對檢查限流、無法訪問、5 秒內沒有應答或返回了錯誤。稍後重試，並檢查 OpenViking。閘道器已經認識的金鑰不會因此被拒絕，它的請求會帶著 `revocation_check_unavailable` 繼續處理。 |
+| 403 `oauth_credential_unsupported` | 客戶端傳送了 Claude 訂閱令牌，例如 Claude Code 用訂閱帳號登入且沒有設定 `ANTHROPIC_AUTH_TOKEN`；或者上游儲存的就是訂閱令牌。請改用 API Key。 |
+| 403 `model_not_allowed` | 模型不在金鑰[允許的模型](09-gateway-keys.md#allowed-models)範圍內。簽發一把允許這個模型的金鑰。 |
+| 400 `model_missing`、415 `compressed_body_unsupported` | 只出現在限定了模型的金鑰上：請求體必須寫明模型，且不能經過壓縮編碼。 |
+| 404 `upstream_endpoint_mismatch` | 金鑰繫結的上游關閉了**拼接協議介面路徑**（見[直接發往完整請求地址](07-upstreams.md#exact-endpoint)），只接受該協議的介面地址，而客戶端呼叫了別的路徑，例如 `/v1/models`。 |
+| 404 `no_matching_upstream` | 金鑰繫結的已啟用上游中，沒有一個使用客戶端呼叫的 API 並提供所請求的模型。檢查上游的協議、模型和別名、是否啟用，以及金鑰綁定了哪些上游。 |
+| 400 `peer_invalid` | 請求的 Peer 不是合法的 Peer ID，例如含有 `/` 或空格。見[按 Peer 區分記憶](03-connect-clients.md#peer)。 |
+| 400 `context_override_invalid`、403 `context_override_not_allowed` | `X-OpenViking-Context` 不是合法的配置覆蓋，或者金鑰的上下文配置不接受覆蓋。`detail` 會說明是哪一種。 |
+| 403 `upstream_url_not_allowed` | `X-OpenViking-Upstream-URL` 與金鑰繫結的任何上游的 Base URL 都不相同。見[按請求指定上游](07-upstreams.md#upstream-url-header)。 |
+| 401 `upstream_key_missing` | 上游要求每個客戶端在 `X-OpenViking-Upstream-Key` 中自帶 API Key，或者由閘道器保管 API Key 的上游沒有填寫。見[憑證](07-upstreams.md#credentials)。 |
+| 403 `coding_plan_disabled` | 上游被標記為 [Coding Plan 金鑰](07-upstreams.md#coding-plan-keys)。改用模型 API Key，或者有意勾選**允許通過閘道器使用這個套餐**。 |
+| 403 `policy_unavailable` | 金鑰繫結的上下文配置已不存在。用現有的上下文配置重新簽發金鑰。 |
+| 404 `response_unknown`、403 `response_upstream_disallowed` | 查詢的 Responses 響應不是這把金鑰建立的，或者建立它的上游已停用、不再繫結到這把金鑰。 |
+| 413 `body_too_large` | 請求體超過了 `max_body_bytes`（見[請求大小上限](05-long-conversations.md#side-effects)），或者超過了代理自己的上限。 |
 | 426 | 對 Responses API 發起了 WebSocket 連線。這是預期行為，Codex 會改用 HTTP。 |
-| 502 "Model upstream is unavailable" | 閘道器連不上服務商，或者呼叫超過了 `upstream_timeout_seconds`。在上游上點**測試**（見[測試和刪除](07-upstreams.md#test-and-delete)）。 |
+| 503 `gateway_overloaded` | 閘道器程序正在處理的模型請求已達 `max_inflight_requests`。請求沒有發給服務商；按 `Retry-After` 稍後重試，或增加副本。見[擴充套件](../guides/22-gateway-operations.md#scaling)。 |
+| 503 `store_unavailable` | 閘道器在鑑權或路由時狀態儲存出錯。請求沒有發給服務商；按 `Retry-After` 稍後重試。見 [Redis 不可用](#redis-unavailable)。 |
+| 500 `internal_error` | 閘道器意外出錯。呼叫棧在閘道器日誌裡；請求記錄帶有與響應相同的 `request_id`。 |
+| 504 `upstream_timeout` | 服務商沒有在 `upstream_timeout_seconds` 內開始回覆，或者非流式回覆中途這麼久沒有資料。檢查服務商狀態；對回答前思考很久的模型，可以調大 `upstream_timeout_seconds`。 |
+| 502 `upstream_unreachable` | 閘道器連不上服務商：地址無法解析、沒有服務接受連線，或者 TLS 失敗。檢查上游的 Base URL，並在上游上點**測試**（見[測試和刪除](07-upstreams.md#test-and-delete)）。 |
+| 502 `upstream_disconnected` | 服務商或通往它的代理在回覆完成前關閉了連線。重試；如果一直出現，檢查服務商和中間的代理。 |
 
-"Hidden tool request timed out"（504）發生在呼叫服務商之後，會記入請求日誌，見[失敗處理](04-openviking-tools.md#failure-handling)。
+"Hidden tool request timed out"（504 `tool_loop_timeout`）和其他 `tool_*` 原因發生在呼叫服務商之後，見[失敗處理](04-openviking-tools.md#failure-handling)。
+
+已經開始的流式回覆不會因為時間長被切斷，只有服務商超過 `upstream_timeout_seconds` 沒有傳送任何資料、斷開連線，或者使用 OpenViking 工具的請求用完了工具**總時長**時才會中斷。這時 HTTP 狀態碼已經是 200，所以閘道器用一條當前 API 的錯誤事件結束流：Chat Completions 和 Anthropic Messages 是型別為原因（例如 `upstream_timeout`）的 `error`，Responses 是 `response.failed`；訊息開頭是原因。使用 OpenViking 工具的請求收到的是工具迴圈的錯誤事件，用完**總時長**時為 "Hidden tool request timed out"。服務商停在一個事件的中間，或者停在回覆的最後一個事件之後時，無法再追加事件，連線會直接斷開。請求記錄在 `stream_error` 中保留原因。服務商自己在流中傳送的錯誤事件會原樣轉發，記錄中標為 `stream_error: upstream_event`，並帶上服務商的錯誤碼。
 
 ## 上游返回錯誤 {#the-upstream-returned-an-error}
 
@@ -113,10 +124,18 @@ Studio 無法為你載入閘道器時，會用一張設定卡片代替閘道器�
 | 原因 | 處理 |
 | --- | --- |
 | OpenViking 無法訪問或響應超時（`openviking_unavailable`） | OpenViking 沒有執行或無法訪問。獨立閘道器檢查 `openviking_url` 和網路。 |
+| OpenViking 響應超時（`openviking_timeout`） | OpenViking 接受了連線，但在超時前沒有應答。檢查它的負載和服務端日誌。 |
 | OpenViking 返回了 HTTP …（`openviking_http_<status>`），或 OpenViking 報告了錯誤 …（`openviking_<CODE>`） | OpenViking 返回了錯誤。檢視 OpenViking Server 的日誌。 |
 | `trusted_mode_unsupported` | OpenViking 使用 Trusted 模式。把它改為 `api_key` 認證。 |
 
-OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 OpenViking 恢復。閘道器會以逐漸拉長的間隔重新檢查，最長間隔為 `health_interval_seconds`（預設 60 秒）。
+OpenViking 異常期間，請求照常發給模型，只是不帶記憶，結束的輪次儲存失敗；OpenViking 恢復後，每段對話的下一輪結束時補上缺的內容。請求會立即跳過召回、使用者畫像和對閘道器已知金鑰的檢查，原因與卡片上的相同，不再等待 OpenViking。閘道器會以逐漸拉長的間隔重新檢查，最長間隔為 `health_interval_seconds`（預設 60 秒）。
+
+健康檢查比較粗：兩次檢查之間，每個請求仍會等每次 OpenViking 呼叫各自的超時（金鑰檢查 5 秒，召回為配置中的**超時時間**）。OpenViking 卡住而不是拒絕連線時，有兩項設定可以限制等待：
+
+- `openviking_budget_seconds` 給每個請求一個從到達時開始計算的截止時間，覆蓋金鑰檢查、召回、使用者畫像和工具列表。時間用完後，請求不再等剩下的呼叫，按下文的原因繼續處理。閘道器還沒見過的金鑰離開 OpenViking 無法確認，所以它的第一個請求在時間用完時收到 503 `openviking_timeout`。
+- `openviking_breaker_failures` 在某個帳號的 OpenViking 呼叫連續這麼多次沒有應答（超時、連線錯誤、HTTP 5xx 或 429）後，暫停呼叫。在 `openviking_breaker_seconds`（預設 30 秒）內，這個帳號的請求立即跳過金鑰檢查、召回、使用者畫像和工具，不帶記憶發給模型，原因為 `openviking_circuit_open`；之後由一次試探呼叫決定是否恢復。拒絕（401、402、403）和不存在的應答不計數。儲存一輪和其他呼叫一樣計數；暫停期間結束的輪次不寫入，儲存失敗，原因為 `openviking_circuit_open`。[狀態行](../guides/22-gateway-operations.md#status-line)以 `openviking.open_circuits` 報告暫停中的帳號數。
+
+兩項預設都關閉；見[配置](13-configuration.md#gateway-fields)。
 
 ## 沒有補充記憶 {#no-memory-is-added}
 
@@ -127,7 +146,9 @@ OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存
 | **沒有找到相關內容**（`empty`） | 新使用者通常如此。對話提交、OpenViking 提取之後才會有記憶。 | 繼續使用即可；一直沒有記憶時，見[OpenViking 中看不到對話](#conversations-do-not-appear-in-openviking)。 |
 | **召回已關閉或預算已用完**（`disabled`） | 上下文配置關閉了召回，當前上下文視窗剩下的召回預算不足 64 token，或者訊息短於 3 個字元。 | 召回被關閉時，在上下文配置中開啟。 |
 | **剩餘預算不足，未補充記憶**（`budget`） | 這條訊息的召回預算扣掉記憶塊的包裝後，留給檢索結果的不足 64 token，所以沒有檢索。可能是這段對話快用完了**單個上下文視窗預算**（進入下一個上下文視窗後重新計算，例如壓縮之後），也可能是**單條訊息預算**設得太低，接近 64 token 的下限。 | **單條訊息預算**接近下限時，調大它。 |
-| **OpenViking 無法訪問或響應超時**（`openviking_unavailable`）、**召回超時**（`recall_timeout`） | 檢索沒有完成。 | 檢視 OpenViking 卡片（見[OpenViking 異常](#openviking-is-degraded)）。OpenViking 在執行但響應慢時，調長**超時時間**。 |
+| **OpenViking 無法訪問或響應超時**（`openviking_unavailable`）、**OpenViking 響應超時**（`openviking_timeout`）、**召回超時**（`recall_timeout`） | 檢索沒有完成。 | 檢視 OpenViking 卡片（見[OpenViking 異常](#openviking-is-degraded)）。OpenViking 在執行但響應慢時，調長**超時時間**。 |
+| **分配給 OpenViking 呼叫的時間已用完**（`openviking_budget_exhausted`） | 這個請求之前的 OpenViking 呼叫用完了 `openviking_budget_seconds`，檢索沒有執行或被截斷。 | 查明 OpenViking 為什麼慢；如果設得太緊，調大 `openviking_budget_seconds`。 |
+| **OpenViking 對這個帳號持續無響應，暫時跳過**（`openviking_circuit_open`） | 這個帳號最近的呼叫都沒有應答，閘道器暫時跳過了 OpenViking。 | 檢視 OpenViking 卡片和服務端；試探呼叫成功後會自動恢復。 |
 | **OpenViking 拒絕了這個金鑰**（`openviking_http_401`） | 使用者的 OpenViking 金鑰已失效。 | 用當前的金鑰簽發新的閘道器金鑰，見[使用者的 OpenViking API 金鑰變了](09-gateway-keys.md#when-the-openviking-key-changes)。 |
 | **OpenViking 返回了 HTTP …**（`openviking_http_<status>`）或 **OpenViking 報告了錯誤 …**（`openviking_<CODE>`） | 檢索在 OpenViking 內部失敗。OpenViking Server 低於 `min_server_version` 時也可能這樣失敗。 | 檢視 OpenViking Server 的日誌。 |
 | **檢測到 OpenViking 外掛**（`plugin_present`） | 閘道器發現了 OpenViking 外掛，讓出了這段對話。 | 正常行為，見[兩者同時使用時](../guides/15-gateway.md#when-both-are-in-use)。 |
@@ -137,17 +158,19 @@ OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存
 
 ## OpenViking 中看不到對話 {#conversations-do-not-appear-in-openviking}
 
-[儲存](08-context-profiles.md#save-conversations)會把每一輪完成的對話寫進名為 `gateway-…` 的 OpenViking 會話，會話屬於閘道器金鑰背後的 OpenViking 使用者。預期中的某一輪沒有出現時，對照下表：
+[儲存](08-context-profiles.md#save-conversations)會在每一輪的回覆結束時，把這一輪寫進名為 `gateway-…` 的 OpenViking 會話，會話屬於閘道器金鑰背後的 OpenViking 使用者。預期中的某一輪沒有出現時，對照下表：
 
 | 看到的情況 | 原因 | 處理 |
 | --- | --- | --- |
-| 缺少最新的一輪 | 儲存晚一輪：下一條訊息到達時，上一輪才會出現；最後一輪要等**最新回覆等待時長**（預設 10 分鐘）。 | 稍等，或者傳送下一條訊息。 |
+| 缺少最新的一輪 | 這一輪還沒有結束：回覆把這一輪交給了客戶端執行工具，這一輪在客戶端的下一個請求裡繼續；或者回復沒有正常結束，例如流式回覆中斷或客戶端中途斷開。 | 一輪結束時才會儲存；沒有正常結束的回覆，由下一輪結束時隨歷史一起寫入。 |
 | **儲存**列顯示**已關閉** | 上下文配置不儲存對話。 | 在上下文配置中開啟儲存；修改只對新對話生效（見[修改何時生效](06-manage-in-studio.md#when-changes-take-effect)）。 |
-| **重試中**或**已暫停** | 儲存失敗，展開的行會顯示原因。 | 修復原因（例如讓 OpenViking 恢復訪問）後，閘道器會在 5 分鐘內重試。原因為 `gateway_key_revoked` 時：簽發的閘道器金鑰需要重新簽發，之後的下一個請求會恢復儲存；OpenViking 金鑰若記錄過期、被驅逐或收到 401，下一個有效請求會恢復儲存（account 租戶模式；`tenancy: key` 下換用新金鑰會開始新的對話）。修改 `capture_memory_types` 後出現 `openviking_http_400` 時，先在配置中改正名稱，再開始新的對話；進行中的對話保留原來的設定（見[儲存對話](13-configuration.md#profile-saving)）。對話一直暫停時，用**重新同步對話…**（見[重新同步對話](10-overview-and-requests.md#resync-a-conversation)）。 |
+| **儲存**列顯示**儲存失敗**（`failed`） | 結束這一輪的請求寫入 OpenViking 失敗或超過 30 秒，展開的行會顯示原因（見[儲存狀態](10-overview-and-requests.md#saving-status)）。閘道器不重試。 | 修復原因，例如讓 OpenViking 恢復訪問；原因為 `openviking_http_402` 或 `openviking_http_429` 時，檢查 OpenViking 帳號的訂購或限流；原因為 `openviking_http_401` 時，用使用者當前的 OpenViking 金鑰簽發新的閘道器金鑰，見[使用者的 OpenViking API 金鑰變了](09-gateway-keys.md#when-the-openviking-key-changes)；原因為 `save_timeout` 或 `openviking_timeout` 時，檢查 OpenViking 的負載。之後這段對話的下一輪結束時，閘道器會把缺的內容一起寫入，前提是客戶端原樣發回了歷史；沒有下一輪時，失敗的這一輪不會儲存。 |
+| 每一輪都失敗，原因為 `openviking_http_400` | 修改 `capture_memory_types` 後，其中有 OpenViking 不認識或已停用的記憶型別，OpenViking 拒絕建立會話。 | 在配置中改正名稱，再開始新的對話；進行中的對話保留原來的設定（見[儲存對話](13-configuration.md#profile-saving)）。 |
 | **檢測到 OpenViking 外掛**（`plugin_present`） | 檢測到 OpenViking 外掛的對話，閘道器不儲存任何內容。 | 正常行為；同一個客戶端在外掛和閘道器之間二選一。 |
-| 會話裡只有部分對話 | 以下情況下，閘道器會把當前歷史寫進新的 `gateway-…` 會話：客戶端編輯、重新生成或壓縮了歷史（`history_changed`、`history_changed_during_delivery`），已在**最新回覆等待時長**之後儲存的一輪又繼續了（`continued_after_idle`），或者有人用了**重新同步對話…**（`manual_reset`）。之前的輪次留在舊會話裡。 | 到舊會話裡找，見[儲存狀態](10-overview-and-requests.md#saving-status)。 |
+| 同一條使用者訊息出現兩次，或者有兩個版本的回答 | 客戶端重新生成或編輯了回答、自己壓縮了歷史，閘道器從這一輪最新的使用者訊息開始繼續寫入同一個會話；之前寫入的版本保留。一次寫入的響應丟失時，下一輪也會把這些訊息再寫一次。 | 正常行為，見[對話什麼時候儲存](01-how-it-works.md#when-conversations-are-saved)。 |
+| 會話裡只有部分對話 | 有人用了**重新同步對話…**（`manual_reset`），或者閘道器丟失了這段對話的儲存進度時，下一輪結束時完整歷史寫入新的 `gateway-…` 會話，之前的輪次留在舊會話裡。對話也可能在更早版本的閘道器中換過會話（例如原因為 `history_changed`）。 | 到舊會話裡找，見[儲存狀態](10-overview-and-requests.md#saving-status)。 |
 | 完全看不到 `gateway-…` 會話 | 你檢視時用的 OpenViking 使用者，不是閘道器金鑰背後的那個使用者。 | 換成那個使用者檢視。 |
-| 會話出現了，記憶還沒有 | OpenViking 在提交之後才在後臺提取記憶。 | 等提取完成。 |
+| 會話出現了，記憶還沒有 | OpenViking 在提交之後才在後臺提取記憶。預設由閘道器提交：待提交內容達到**提交閾值**的一輪結束時立即提交；否則要等最後一輪結束後的**空閒提交時間**（預設 600 秒），閘道器在這期間重啟只會讓這次提交晚一兩分鐘。一直沒有提交時，可能是提交失敗，閘道器日誌中會有 `could not commit` 警告及原因，閘道器每分鐘再試一次，被 OpenViking 以 401、403、404 拒絕的不再重試；也可能是儲存時用的金鑰在空閒提交執行之前被吊銷或過期，提交時找不到這份金鑰記錄，就不再執行。開啟 `openviking_auto_commit` 時由 OpenViking 提交，空閒提交只在 Server 開啟 `memory.session_auto_commit.enabled` 時發生，最早也要 300 秒；Server 使用本地掃描（`local` 後端）時，最多再晚一個 `check_interval_seconds`（預設 600 秒）。 | 等提交和提取完成。提交失敗時，修復日誌中的原因；金鑰被吊銷或過期時，這段對話的下一輪結束後會重新計時。開啟 `openviking_auto_commit` 時，在 Server 的 `ov.conf` 中設定 `memory.session_auto_commit.enabled: true` 並重啟 Server。見[儲存對話](08-context-profiles.md#save-conversations)。 |
 
 ## 首次呼叫快取命中率下降 {#the-first-call-cache-hit-rate-dropped}
 
@@ -203,6 +226,7 @@ OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存
 | 異常 | 發生了什麼 | 怎麼處理 |
 | --- | --- | --- |
 | 記憶不可用（`memory_store_failure`） | 閘道器無法讀寫自己的儲存，或者該使用者的閘道器資料剛被刪除。請求不帶記憶發給了模型；Claude 對話中之前的思考內容被去掉。 | 檢查磁碟空間、許可權和閘道器日誌。剛[刪除過該使用者的閘道器資料](09-gateway-keys.md#delete-a-users-gateway-data)時出現屬於正常。 |
+| 準備超時（`prepare_timeout`） | 補充記憶的時間超過了 `prepare_timeout_seconds`，例如 OpenViking 或狀態儲存響應慢。請求不帶記憶發給了模型；Claude 對話中之前的思考內容被去掉。 | 檢查 OpenViking 和狀態儲存。Studio 按程式碼顯示這個問題。 |
 | 原樣轉發（`unsafe_json`） | 請求中有無法精確重新編碼的數字或重複的鍵，閘道器逐位元組原樣轉發，沒有補充記憶。 | 通常只與某個客戶端有關，閘道器這邊無需調整。 |
 | 上游已切換（`upstream_changed`） | 對話原來的上游無法再服務，轉到了另一個上游，造成一次快取未命中，之前的 Claude 思考內容也被去掉。 | 重新啟用這個上游，或者讓客戶端改用包含它的金鑰；也可以接受這次切換。 |
 | 記憶記錄缺失（`missing_injection_record`） | Claude 對話中，之前補充的記憶已經沒有記錄，之前的思考內容被去掉一次。 | 儲存丟失後，或者在很久以前的對話裡出現，都在預期之內。反覆出現時，開始新對話。 |
@@ -211,12 +235,12 @@ OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存
 | 工具歷史無法繼續使用（`hidden_tool_history_unavailable`） | Claude 對話用過 OpenViking 工具，但當前請求不能使用這些工具，之前的思考內容已被去掉。 | 檢視請求詳情中的工具停用原因，恢復原設定，或者開始新對話。 |
 | OpenViking 工具呼叫失敗（`hidden_tool_loop_failed`） | 模型使用 OpenViking 工具時未能完成回答，客戶端收到錯誤。 | 見[失敗處理](04-openviking-tools.md#failure-handling)。 |
 | 模型未返回回答（`hidden_reply_without_anchor`） | 模型在這次請求中使用了 OpenViking 工具，但沒有返回可用於繼續對話的內容。客戶端仍收到了回覆，但下一輪無法沿用這次工具呼叫的結果。 | 重試本次提問，或開始一段新對話。 |
-| 回覆未儲存（`capture_parse_failure`） | 流式回覆無法解析，這條回覆沒有儲存，客戶端不受影響。 | 無需處理，僅供瞭解。 |
+| 回覆未儲存（`capture_parse_failure`） | 流式回覆無法解析，這次請求沒有儲存這一輪，客戶端不受影響。 | 無需處理。客戶端在下一輪發回這條回覆時，它隨下一輪一起儲存。 |
 | 金鑰未校驗（`revocation_check_unavailable`） | OpenViking 無法確認這把閘道器金鑰，請求在沒有檢查是否已吊銷的情況下照常處理。 | 檢查 OpenViking 是否可達、執行是否正常。 |
 
 ## Redis 不可用 {#redis-unavailable}
 
-啟動在 Redis PING 處失敗時，檢查 `storage.redis.endpoints`、TLS 信任鏈和密碼環境變數；官方映象之外需要安裝 `openviking[expiry]`。鑑權時返回純文本 `Internal Server Error` 的 HTTP 500 也可能是 Redis 不可用，請檢視 stderr。執行時 Redis 故障期間 `/health` 仍返回健康，不代表 Redis 連線正常。ACL 和超時配置見[儲存後端](13-configuration.md#storage)，持久化配置見 [Redis 記憶體策略](../guides/22-gateway-operations.md#redis-memory-policy)。
+啟動在 Redis PING 處失敗時，檢查 `storage.redis.endpoints`、TLS 信任鏈和密碼環境變數；官方映象之外需要安裝 `openviking[expiry]`。執行時狀態儲存（Redis 或 SQLite）出故障期間，需要它來鑑權或路由的請求收到 503 `store_unavailable`，帶 `Retry-After: 1` 和 `X-OpenViking-Upstream-Attempted: 0`；已經過了這一步的請求不帶記憶發給模型（`memory_store_failure`）。請檢視 stderr。OpenViking 拒絕的金鑰仍然收到 401、402 或 403。每條 Redis 命令連同等待空閒連線的時間最長 `connect_timeout_ms + command_timeout_ms`，所以不再響應的 Redis 會讓請求在這段時間內失敗，而不是一直排隊。執行時 Redis 故障期間 `/health` 仍返回健康，不代表 Redis 連線正常。ACL 和超時配置見[儲存後端](13-configuration.md#storage)，持久化配置見 [Redis 記憶體策略](../guides/22-gateway-operations.md#redis-memory-policy)。
 
 ## 下一步 {#next-steps}
 

@@ -3794,6 +3794,7 @@ dependencies = [
  "machine-uid",
  "mime_guess",
  "ratatui",
+ "regex",
  "reqwest",
  "rustyline",
  "serde",
