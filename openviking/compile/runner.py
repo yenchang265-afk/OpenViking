@@ -30,7 +30,6 @@ from openviking.compile.models import (
     SanitizedCompileRequest,
     has_directory_plan,
 )
-from openviking.compile.ops import finalize as finalize_op
 from openviking.compile.pipeline import Pipeline
 from openviking.compile.renderer import RenderedBundle
 from openviking.compile.scratch import ScratchDir
@@ -179,7 +178,9 @@ async def list_pipeline_source_files(client: Any, request: SanitizedCompileReque
             )
             for change in page["changes"]:
                 uri = str(change.get("uri") or "").rstrip("/")
-                if not uri or not any(uri == root or relative_uri_path(root, uri) for root in roots):
+                if not uri or not any(
+                    uri == root or relative_uri_path(root, uri) for root in roots
+                ):
                     raise ValueError(f"Source inventory returned an out-of-scope URI: {uri}")
                 if change["change_type"] in {"added", "modified"}:
                     files.add(uri)
@@ -249,29 +250,10 @@ class CompileRunner:
             await ensure_target_directory(client, request.to)
             source_files = None
             execution = (request.changes or {}).get("execution") or {}
-            full_execution = execution.get("mode") == "full" or (
-                not execution and request.instruction_provided
-            )
             if has_directory_plan(request.changes) and request.changes.get("head"):
                 pass  # Sources are discovered through the snapshot change plan.
-            elif full_execution:
+            elif execution.get("mode", "full") == "full":
                 source_files = await list_source_files(client, request.from_, allow_empty=True)
-                request = request.model_copy(update={"last_compile_time": None})
-            elif request.last_compile_time is not None:
-                source_files = await list_source_files(
-                    client, request.from_, cutoff=request.last_compile_time
-                )
-            if (
-                source_files is not None
-                and not source_files
-                and not full_execution
-                and request.changes is None
-            ):
-                # An incremental no-op finishes without model calls or target writes.
-                succeeded = True
-                return CompileResult(
-                    from_=request.from_, to=request.to, skill=request.skill
-                ).model_dump(by_alias=True)
             skill_text = await client.read_raw(f"{request.skill}/SKILL.md")
             if not skill_text.strip():
                 raise CompileFailure("SKILL_INVALID", "Compile Skill is empty", stage=stage)
@@ -385,18 +367,7 @@ class CompileRunner:
 
         stage = "pipeline"
         try:
-            try:
-                rendered = await pipeline.run(source_batches())
-            except (CompileFailure, TimeoutError) as exc:
-                if not pipeline.artifacts or getattr(exc, "code", None) == "SKILL_REPAIR_FAILED":
-                    raise
-                pipeline.warnings.append(
-                    f"Partial output; Compile did not finish: {str(exc)[:500]}"
-                )
-                async with asyncio.timeout(self.limits.salvage_grace_seconds):
-                    rendered = await finalize_op.run(
-                        pipeline, list(dict.fromkeys(pipeline.artifacts))
-                    )
+            rendered = await pipeline.run(source_batches())
             # Cancellation must stop the attempt before any target write.
             if await cancelled():
                 raise asyncio.CancelledError()

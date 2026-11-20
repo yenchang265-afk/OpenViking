@@ -563,14 +563,13 @@ class CompileService:
         # Serialize per owner so concurrent submissions cannot all pass the cap.
         async with self._capacity_locks.acquire((ctx.account_id, ctx.user.user_id)):
             await self._ensure_capacity(ctx)
-            # Private task state retains the executor's role and groups for asynchronous
-            # filesystem access; in-process execution forwards no credentials.
+            # The task service records the executor's role and groups as request_identity;
+            # in-process execution forwards no credentials.
             return await self._tasks.create(
                 self.task_type,
                 resource_id=", ".join(normalized.from_),
                 payload=payload,
                 private_payload=private_payload,
-                connection={"role": str(ctx.role), "group_ids": list(ctx.group_ids)},
                 ctx=ctx,
                 idempotency_key=idempotency_key,
                 submission_payload=submitted if idempotency_key else None,
@@ -1095,9 +1094,7 @@ class CompileService:
         payload: Mapping[str, Any], changes: Mapping[str, Any] | None = None
     ) -> Any:
         from openviking.compile.models import DEFAULT_COMPILE_INSTRUCTION, SanitizedCompileRequest
-        from openviking.compile.runner import compile_time
 
-        args = payload.get("args") or {}
         instruction = (payload.get("instruction") or "").strip()
         if changes is not None:
             _validate_changes(changes, list(payload["from"]), payload["skill"])
@@ -1106,14 +1103,7 @@ class CompileService:
                 "from": list(payload["from"]),
                 "to": payload["to"],
                 "instruction": instruction or DEFAULT_COMPILE_INSTRUCTION,
-                "instruction_provided": bool(instruction),
                 "skill": payload["skill"],
-                # A kernel change plan supersedes the modification-time cutoff.
-                "last_compile_time": (
-                    compile_time(args["last_compile_time"])
-                    if "last_compile_time" in args and changes is None
-                    else None
-                ),
                 "changes": dict(changes) if changes is not None else None,
             }
         )

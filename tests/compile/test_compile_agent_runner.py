@@ -11,7 +11,6 @@ from openviking.compile.agent_loop import ScratchFileTool, agent_runner
 from openviking.compile.llm import ChatResponse, CompileProvider, ToolCallRequest
 from openviking.compile.models import CompileLimits
 from openviking.compile.pipeline_io import TaskFiles
-from openviking.compile.plan import ReviewDecision
 from openviking.compile.scratch import ScratchDir
 from openviking.models.vlm.base import ToolCall, VLMResponse
 
@@ -67,47 +66,67 @@ async def test_scratch_tools_confine_and_edit(tmp_path):
         await read.execute(path="../../outside.md")
 
 
-async def test_child_writes_result_file_then_emits_reference(tmp_path):
+def runtime():
+    return SimpleNamespace(resources=None, tools={}, target="viking://resources/wiki")
+
+
+async def test_worker_writes_markdown_and_returns_its_output_root(tmp_path):
     model = child_model(
         tmp_path,
         [
-            call("write_file", {"path": "result.json", "content": '{"action": "continue"}'}),
-            call("emit", {"result_ref": "result.json"}),
+            call("read_file", {"path": "assignment.json"}),
+            call("write_file", {"path": "topic.md", "content": "# Topic\n"}),
+            ChatResponse("Done", [], "stop"),
         ],
     )
     run = agent_runner(CompileLimits())
-    result = await run("system", {}, ReviewDecision, None, model, stage="reduce_agent")
-    assert result.action == "continue"
-    assert model.call.await_count == 2
+    root = await run("system", {"inputs": []}, model, stage="map-0", runtime=runtime())
+    assert root.endswith("/output")
+    assert await model.files.sandbox.read_file(f"{root}/topic.md") == "# Topic\n"
     # Tool results are fed back with the matching call id.
     messages = model.call.await_args.args[1]
     assert {
         "role": "tool",
         "tool_call_id": "id-write_file",
-        "content": "Wrote result.json.",
+        "content": "Successfully wrote topic.md",
     } in messages
+    tool_names = {tool["function"]["name"] for tool in model.call.await_args.args[2]}
+    assert {"read_file", "write_file", "edit_file", "read_target_file"} <= tool_names
+    assert "emit" not in tool_names
 
 
-async def test_child_retries_truncated_output_without_running_tools(tmp_path):
+async def test_worker_retries_truncated_output_without_running_tools(tmp_path):
     model = child_model(
         tmp_path,
         [
-            call("write_file", {"path": "x", "content": "partial"}, finish_reason="length"),
-            call("emit", {"action": "continue"}),
+            call("write_file", {"path": "x.md", "content": "partial"}, finish_reason="length"),
+            ChatResponse("Done", [], "stop"),
         ],
     )
-    result = await agent_runner(CompileLimits())("s", {}, ReviewDecision, None, model)
-    assert result.action == "continue"
+    root = await agent_runner(CompileLimits())("s", {}, model, stage="map", runtime=runtime())
     assert model.metrics["repairs"] == 1
     with pytest.raises(FileNotFoundError):
-        await model.files.sandbox.read_file_bytes("x")
+        await model.files.sandbox.read_file_bytes(f"{root}/x.md")
 
 
-async def test_child_stops_at_iteration_limit(tmp_path):
-    model = child_model(tmp_path, [ChatResponse("thinking aloud")] * 3)
+@pytest.mark.parametrize(
+    "reply,error",
+    [
+        (ChatResponse("", [], "stop"), "empty final reply"),
+        (ChatResponse("Done", [], "error"), "did not complete"),
+    ],
+)
+async def test_worker_requires_natural_completion(tmp_path, reply, error):
+    model = child_model(tmp_path, [reply])
+    with pytest.raises(ValueError, match=error):
+        await agent_runner(CompileLimits())("s", {}, model, stage="map", runtime=runtime())
+
+
+async def test_worker_stops_at_iteration_limit(tmp_path):
+    model = child_model(tmp_path, [call("read_file", {"path": "assignment.json"})] * 3)
     run = agent_runner(CompileLimits(subagent_iterations=3))
-    with pytest.raises(ValueError, match="without validated output"):
-        await run("s", {}, ReviewDecision, None, model)
+    with pytest.raises(ValueError, match="exhausted its tool rounds"):
+        await run("s", {}, model, stage="map", runtime=runtime())
     assert model.call.await_count == 3
 
 

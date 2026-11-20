@@ -15,7 +15,7 @@ from openviking_cli.session.user_id import UserIdentifier
 from .agent_evolution_config import AgentEvolutionConfig
 from .agfs_config import TieredStorageConfig
 from .backend_config import backend_name
-from .cache_config import CacheConfig
+from .cache_config import CacheConfig, normalize_legacy_cache
 from .config_loader import expand_env_vars, resolve_config_path
 from .config_utils import (
     DEFAULT_SERVICE_NAME,
@@ -724,6 +724,9 @@ class OpenVikingConfig(BaseModel):
                 "webfeed",
             ]
 
+            # The single-provider cache shape is supported; check it in its named form.
+            if isinstance(config_copy.get("cache"), dict):
+                config_copy["cache"] = normalize_legacy_cache(config_copy["cache"])
             warn_unknown_config_fields(
                 data=config_copy,
                 model=cls,

@@ -1,7 +1,6 @@
 """CompileRunner attempt lifecycle around a stubbed pipeline."""
 
 import asyncio
-from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -120,17 +119,6 @@ async def test_cancellation_stops_before_any_write(tmp_path, stub_pipeline):
         await attempt
     client.batch_write.assert_not_awaited()
     assert (tmp_path / "acme" / "alice" / "cmp_test").exists()
-
-
-@pytest.mark.asyncio
-async def test_incremental_compile_without_new_sources_is_noop(tmp_path, stub_pipeline):
-    client = _Client()
-    cutoff = datetime(2026, 6, 1, tzinfo=timezone.utc)
-    attempt, _ = _run(tmp_path, client, _request(last_compile_time=cutoff))
-    result = await attempt
-    assert result["created"] == [] and result["to"] == "viking://resources/wiki"
-    assert not stub_pipeline.seen_batches
-    client.batch_write.assert_not_awaited()
 
 
 @pytest.mark.asyncio
