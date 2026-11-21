@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { STUDIO_FEATURES } from '#/shared/lib/studio-service'
+
 import { resources } from './resources'
 
 type Catalog = { readonly [key: string]: string | Catalog }
@@ -44,5 +46,17 @@ describe('locale catalogs', () => {
       )
       .map(([key]) => key)
     expect(mismatched).toEqual([])
+  })
+})
+
+describe('studio feature toggles', () => {
+  it('labels and describes every toggleable feature', () => {
+    const toggleable = STUDIO_FEATURES.filter((f) => f.domain !== 'management')
+    const missing = toggleable.flatMap((f) =>
+      ['features', 'descriptions']
+        .map((group) => `studio.featureToggles.${group}.${f.id}`)
+        .filter((key) => !en.has(key)),
+    )
+    expect(missing).toEqual([])
   })
 })
