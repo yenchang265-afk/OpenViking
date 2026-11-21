@@ -59,4 +59,15 @@ describe('studio feature toggles', () => {
     )
     expect(missing).toEqual([])
   })
+
+  it('labels features with their sidebar names', () => {
+    const mismatched = [en, zhTW].flatMap((catalog) =>
+      STUDIO_FEATURES.map((f) => ({
+        id: f.id,
+        label: catalog.get(`studio.featureToggles.features.${f.id}`),
+        nav: catalog.get(`appShell.navigation.${f.id}.title`),
+      })).filter(({ label, nav }) => nav !== undefined && label !== nav),
+    )
+    expect(mismatched).toEqual([])
+  })
 })
