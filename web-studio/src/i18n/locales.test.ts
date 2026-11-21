@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { STUDIO_FEATURES } from '#/shared/lib/studio-service'
+
 import { resources } from './resources'
 
 type Catalog = { readonly [key: string]: string | Catalog }
@@ -43,6 +45,29 @@ describe('locale catalogs', () => {
           placeholders(value).join() !== placeholders(zhTW.get(key)!).join(),
       )
       .map(([key]) => key)
+    expect(mismatched).toEqual([])
+  })
+})
+
+describe('studio feature toggles', () => {
+  it('labels and describes every toggleable feature', () => {
+    const toggleable = STUDIO_FEATURES.filter((f) => f.domain !== 'management')
+    const missing = toggleable.flatMap((f) =>
+      ['features', 'descriptions']
+        .map((group) => `studio.featureToggles.${group}.${f.id}`)
+        .filter((key) => !en.has(key)),
+    )
+    expect(missing).toEqual([])
+  })
+
+  it('labels features with their sidebar names', () => {
+    const mismatched = [en, zhTW].flatMap((catalog) =>
+      STUDIO_FEATURES.map((f) => ({
+        id: f.id,
+        label: catalog.get(`studio.featureToggles.features.${f.id}`),
+        nav: catalog.get(`appShell.navigation.${f.id}.title`),
+      })).filter(({ label, nav }) => nav !== undefined && label !== nav),
+    )
     expect(mismatched).toEqual([])
   })
 })
