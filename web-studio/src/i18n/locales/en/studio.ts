@@ -27,6 +27,8 @@ const studio = {
       requestLogs: 'Review requests and usage.',
       watches: 'Manage automatic resource refreshes.',
       monitoring: 'Inspect service health and activity.',
+      remoteResources:
+        'Import resources from URLs, Git repositories and web pages when adding resources.',
     },
     title: 'Studio features',
     description:
@@ -48,6 +50,7 @@ const studio = {
       requestLogs: 'Request Logs',
       watches: 'Scheduled Sync',
       monitoring: 'Monitoring',
+      remoteResources: 'Add Remote Resource',
     },
   },
   credentialStorage: {

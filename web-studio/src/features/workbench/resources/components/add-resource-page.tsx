@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { useStudioFeatureToggles } from '#/features/connection/hooks/use-studio-feature-toggles'
 import type { AdditionalResourceOptionsValue } from '#/features/workbench/resources/components/additional-resource-options'
 import { AdditionalResourceOptions } from '#/features/workbench/resources/components/additional-resource-options'
 import { DirectoryPickerDialog } from '#/features/workbench/resources/components/directory-picker-dialog'
@@ -153,8 +154,12 @@ export function AddResourceForm({
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [dirPickerOpen, setDirPickerOpen] = useState(false)
 
+  const featureToggles = useStudioFeatureToggles()
+  // The watch flow is governed by the watches switch, not this one.
+  const remoteAllowed =
+    watchRequired || featureToggles.isEnabled('remoteResources')
   const remotePhase = remoteState.phase
-  const activeMode = mode
+  const activeMode: Mode = remoteAllowed ? mode : 'upload'
   const displayRemoteUrl =
     remotePhase === 'processing' ? remoteState.remoteUrl : remoteUrl
   const skippedFiles = remoteState.skippedFiles
@@ -230,7 +235,7 @@ export function AddResourceForm({
       ignoreDirs,
       include,
       instruction,
-      mode,
+      mode: activeMode,
       reason,
       remoteResourceKind,
       sourceOptionState,
@@ -241,7 +246,7 @@ export function AddResourceForm({
     })
 
   const handleSubmit = () => {
-    if (mode === 'upload') {
+    if (activeMode === 'upload') {
       if (selectedFiles.length === 0 || isScanningSelection(selectedFiles))
         return
       // Options may have changed since the folder was picked.
@@ -312,7 +317,7 @@ export function AddResourceForm({
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-5">
-        {!watchRequired ? (
+        {!watchRequired && remoteAllowed ? (
           <div className="flex gap-1 rounded-lg bg-muted p-1">
             <button
               type="button"

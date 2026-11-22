@@ -89,6 +89,15 @@ export const STUDIO_FEATURES = [
   probe?: string
 }>
 
+// Switches for capabilities inside a page. They have no route or sidebar entry.
+export const STUDIO_FEATURE_OPTIONS = [
+  { id: 'remoteResources', domain: 'workspace' },
+] as const satisfies ReadonlyArray<{ id: string; domain: StudioDomain }>
+
+export type StudioToggleId =
+  | (typeof STUDIO_FEATURES)[number]['id']
+  | (typeof STUDIO_FEATURE_OPTIONS)[number]['id']
+
 export function featureForPath(pathname: string) {
   return STUDIO_FEATURES.find(
     (f) => pathname === f.to || pathname.startsWith(`${f.to}/`),

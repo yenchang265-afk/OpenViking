@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { StudioFeatureSettings } from '#/features/connection/components/studio-feature-settings'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
@@ -93,4 +99,15 @@ it('shows a retry action and disables toggles when loading fails', () => {
           input.getAttribute('aria-disabled') === 'true' || input.disabled,
       ),
   ).toBe(true)
+})
+it('lets root switch remote resource imports from the workspace group', () => {
+  render(<StudioFeatureSettings />)
+  const workspace = screen.getByRole('region', {
+    name: 'featureToggles.groups.workspace',
+  })
+  const toggle = within(workspace).getByRole('switch', {
+    name: 'featureToggles.features.remoteResources',
+  })
+  fireEvent.click(toggle)
+  expect(state.mutate).toHaveBeenCalledWith({ remoteResources: false })
 })

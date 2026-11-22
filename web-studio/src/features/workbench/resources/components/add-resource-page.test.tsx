@@ -38,9 +38,55 @@ vi.mock('#/features/workbench/resources/hooks/use-resource-upload', () => ({
   }),
 }))
 
+const featureState = vi.hoisted(() => ({ remoteResources: true }))
+
+vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
+  useStudioFeatureToggles: () => ({
+    isEnabled: (id: string) =>
+      id !== 'remoteResources' || featureState.remoteResources,
+  }),
+}))
+
 afterEach(() => {
   cleanup()
+  featureState.remoteResources = true
   vi.clearAllMocks()
+})
+
+describe('AddResourceForm remote resource switch', () => {
+  function renderForm(props: Parameters<typeof AddResourceForm>[0] = {}) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddResourceForm {...props} />
+      </QueryClientProvider>,
+    )
+  }
+
+  it('offers the remote URL mode when enabled', () => {
+    renderForm()
+    expect(screen.getByRole('button', { name: 'mode.remote' })).toBeTruthy()
+  })
+
+  it('hides the remote URL mode and falls back to upload when disabled', () => {
+    featureState.remoteResources = false
+    renderForm({ initialMode: 'remote' })
+    expect(screen.queryByRole('button', { name: 'mode.remote' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'remoteUrl' })).toBeNull()
+    expect(screen.getByTestId('folder-input')).toBeTruthy()
+  })
+
+  it('keeps the watch creation flow governed by its own switch', () => {
+    featureState.remoteResources = false
+    renderForm({
+      initialMode: 'remote',
+      initialWatchEnabled: true,
+      watchRequired: true,
+    })
+    expect(screen.getByRole('textbox', { name: 'remoteUrl' })).toBeTruthy()
+  })
 })
 
 describe('AddResourceForm watch options', () => {
