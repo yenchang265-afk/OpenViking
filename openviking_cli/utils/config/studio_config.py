@@ -16,6 +16,7 @@ class StudioFeaturesConfig(BaseModel):
     sessions: bool = RuntimeField(default=True, strict=True)
     tasks: bool = RuntimeField(default=True, strict=True)
     home: bool = RuntimeField(default=True, strict=True)
+    arranger: bool = RuntimeField(default=True, strict=True)
     vikingbot: bool = RuntimeField(default=True, strict=True)
     compile: bool = RuntimeField(default=True, strict=True)
     agentExperience: bool = RuntimeField(default=True, strict=True)
