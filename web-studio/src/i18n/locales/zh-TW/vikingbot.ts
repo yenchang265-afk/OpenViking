@@ -1,6 +1,6 @@
 export default {
   managementTitle: 'VikingBot 管理',
-  managementHint: '管理帳號下的機器人渠道、應用憑據及平臺會話歷史。',
+  managementHint: '管理帳號下的機器人渠道、應用憑據及平臺工作階段歷史。',
   workbenchUnavailable:
     'VikingBot 服務暫不可用，請聯絡服務管理員確認已啟用並配置完成。',
   operationFailed: '操作未完成，請重試。錯誤詳情：',
@@ -59,7 +59,7 @@ export default {
   resume: '恢復',
   state: { connected: '已連線', connecting: '連線中', paused: '已暫停' },
   historyHint: '僅展示此連線建立後機器人收到的訊息，不包含完整群歷史。',
-  readonly: '此會話來自訊息平臺，請前往該平臺繼續對話。',
+  readonly: '此工作階段來自訊息平臺，請前往該平臺繼續對話。',
   unknownSender: '群成員',
   noHistory: '暫無收到的訊息',
   earlier: '載入更早訊息',

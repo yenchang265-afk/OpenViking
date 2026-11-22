@@ -34,7 +34,7 @@ describe('ResourceRefList', () => {
     )
 
     expect(screen.getByText('工具結果')).not.toBeNull()
-    expect(screen.getByText('會話')).not.toBeNull()
+    expect(screen.getByText('工作階段')).not.toBeNull()
     expect(screen.getByText('L0 · 0.82')).not.toBeNull()
     expect(screen.getByText('constructor')).not.toBeNull()
   })

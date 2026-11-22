@@ -2,7 +2,7 @@
 
 [English](README.md) / 中文
 
-Web Studio 是 OpenViking 的 React/Vite 前端工作臺，面向開發者使用。它是一個靜態單頁應用，用於資源管理、檢索、Bot 會話和運維診斷。
+Web Studio 是 OpenViking 的 React/Vite 前端工作臺，面向開發者使用。它是一個靜態單頁應用，用於資源管理、檢索、Bot 工作階段和運維診斷。
 
 Web Studio 不內嵌 OpenViking 的儲存、索引、檢索、任務佇列或 VikingBot 執行時。它必須連線一個正在執行的 OpenViking Server。
 
@@ -14,7 +14,7 @@ Web Studio 不內嵌 OpenViking 的儲存、索引、檢索、任務佇列或 Vi
 http://127.0.0.1:1933
 ```
 
-會話介面依賴 OpenViking Server 代理出來的 VikingBot API：
+工作階段介面依賴 OpenViking Server 代理出來的 VikingBot API：
 
 ```text
 GET  /bot/v1/health
@@ -91,7 +91,7 @@ VITE_OV_BASE_URL=http://127.0.0.1:1933 npm run dev
 
 開啟 `/filesystem` 可瀏覽和預覽上下文、執行終端命令或使用 Agent 面板。Studio 部署在 `/studio` 下時，頁面地址為 `/studio/filesystem`。
 
-原 `/playground` 地址會重定向至 `/filesystem`，並保留選中的檔案、目錄、面板、會話和 URL 片段。瀏覽器中已有的佈局和歷史記錄仍可使用。
+原 `/playground` 地址會重定向至 `/filesystem`，並保留選中的檔案、目錄、面板、工作階段和 URL 片段。瀏覽器中已有的佈局和歷史記錄仍可使用。
 
 ## 連線與鑑權
 
@@ -190,7 +190,7 @@ curl https://ov-api.example.com/ready
 curl https://ov-api.example.com/bot/v1/health
 ```
 
-`/bot/v1/health` 是 Web Studio 部署契約的一部分。只有 core server 健康但 bot proxy 不健康時，會話介面仍然不可用。
+`/bot/v1/health` 是 Web Studio 部署契約的一部分。只有 core server 健康但 bot proxy 不健康時，工作階段介面仍然不可用。
 
 ### 2. 構建靜態檔案
 
@@ -362,7 +362,7 @@ docker run -d \
   ghcr.io/volcengine/openviking:latest
 ```
 
-官方映象預設會啟動 VikingBot。用於 Web Studio 會話頁時，不要傳 `--without-bot`，也不要設定 `OPENVIKING_WITH_BOT=0`。
+官方映象預設會啟動 VikingBot。用於 Web Studio 工作階段頁時，不要傳 `--without-bot`，也不要設定 `OPENVIKING_WITH_BOT=0`。
 
 Web Studio 靜態檔案仍需單獨構建和託管，除非你的部署映象或平臺顯式把 `web-studio/dist` 打包進去。
 

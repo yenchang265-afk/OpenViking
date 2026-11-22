@@ -40,11 +40,11 @@ const enums = {
   },
   captureReason: {
     history_changed:
-      '對話歷史有改動，後續內容改存到新的 Business Context Platform 會話',
+      '對話歷史有改動，後續內容改存到新的 Business Context Platform 工作階段',
     continued_after_idle:
-      '已儲存的一輪對話在停頓後又繼續了，後續內容改存到新的 Business Context Platform 會話',
+      '已儲存的一輪對話在停頓後又繼續了，後續內容改存到新的 Business Context Platform 工作階段',
     history_changed_during_delivery:
-      '儲存過程中對話歷史有改動，後續內容改存到新的 Business Context Platform 會話',
+      '儲存過程中對話歷史有改動，後續內容改存到新的 Business Context Platform 工作階段',
     manual_reset: '管理員已手動重新同步',
     delivery_recovered: '儲存已恢復正常',
     delivery_failed: '儲存到 Business Context Platform 失敗',

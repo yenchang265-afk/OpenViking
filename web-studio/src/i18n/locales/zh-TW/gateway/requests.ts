@@ -92,8 +92,8 @@ const requests = {
     saving: '儲存到 Business Context Platform',
     savedMessages_one: '寫入了 {{count}} 條訊息',
     savedMessages_other: '寫入了 {{count}} 條訊息',
-    openvikingSession: 'Business Context Platform 會話',
-    copyOpenvikingSession: '複製 Business Context Platform 會話 ID',
+    openvikingSession: 'Business Context Platform 工作階段',
+    copyOpenvikingSession: '複製 Business Context Platform 工作階段 ID',
     tools: 'Business Context Platform 工具',
     toolsSkipped: '未提供：{{reason}}',
     toolRounds:
@@ -107,11 +107,11 @@ const requests = {
   },
   resync: {
     action: '重新同步對話…',
-    hint: '為這段對話開啟新的 Business Context Platform 會話，下一輪結束時把完整歷史寫入新會話。需要一份乾淨的對話副本時使用。',
+    hint: '為這段對話開啟新的 Business Context Platform 工作階段，下一輪結束時把完整歷史寫入新工作階段。需要一份乾淨的對話副本時使用。',
     keyRevoked: '這段對話使用的閘道器金鑰已被吊銷，無法重新同步。',
-    title: '為這段對話開啟新的 Business Context Platform 會話？',
+    title: '為這段對話開啟新的 Business Context Platform 工作階段？',
     description:
-      '這段對話的下一輪結束時，閘道器會把完整歷史寫入新會話。已儲存的內容仍留在舊會話中，因此 Business Context Platform 可能會重複提取部分記憶。',
+      '這段對話的下一輪結束時，閘道器會把完整歷史寫入新工作階段。已儲存的內容仍留在舊工作階段中，因此 Business Context Platform 可能會重複提取部分記憶。',
     confirm: '重新同步',
     done: '這段對話會在下一輪結束時重新儲存。',
   },

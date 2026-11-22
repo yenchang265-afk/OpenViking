@@ -256,13 +256,13 @@ describe('session commit re-trigger feedback', () => {
       'no_messages',
       'No new task created: this session has no pending messages',
     ],
-    ['zh-TW', 'no_messages', '未建立新任務：該會話沒有待提交訊息'],
+    ['zh-TW', 'no_messages', '未建立新任務：該工作階段沒有待提交訊息'],
     [
       'en',
       'all_within_keep_window',
       'No new task created: this session commit was skipped',
     ],
-    ['zh-TW', 'all_within_keep_window', '未建立新任務：本次會話提交已跳過'],
+    ['zh-TW', 'all_within_keep_window', '未建立新任務：本次工作階段提交已跳過'],
     ['en', undefined, 'No new task created: this session commit was skipped'],
   ])(
     'reports skipped commits without success in %s (%s)',

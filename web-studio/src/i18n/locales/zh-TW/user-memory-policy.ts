@@ -4,7 +4,7 @@ export default {
     selfHint: 'self.enabled · 包含使用者資訊和 Agent 經驗',
     peer: 'Peer 記憶',
     peerHint: 'peer.enabled · 為參與者分別儲存記憶',
-    working_memory: '會話摘要',
+    working_memory: '工作階段摘要',
     working_memoryHint: 'working_memory.enabled · 生成歸檔摘要',
     typesHint:
       'memory_types · 對 User 和 Peer 共用；Agent 經驗三種類型聯動，Peer 不抽取 cases。型別是否可用由服務端校驗。',
@@ -50,19 +50,19 @@ export default {
     specified: '指定型別',
     typesTitle: '長期記憶型別',
     workingHint:
-      '會話提交歸檔時，將這段對話整理成摘要，便於後續回顧。關閉後不生成這份摘要，仍可按上方設定抽取長期記憶。',
-    workingEnable: '生成會話摘要',
+      '工作階段提交歸檔時，將這段對話整理成摘要，便於後續回顧。關閉後不生成這份摘要，仍可按上方設定抽取長期記憶。',
+    workingEnable: '生成工作階段摘要',
     peerHint:
       '同一個 User 服務多人時，為每個人分別積累記憶，例如客服分別記住各位客戶的偏好。需要應用在訊息中標記參與者（peer_id）。',
     selfHint:
-      '在多次會話中積累這個 User 的記憶，例如個人助理記住你的偏好，或任務 Agent 積累執行經驗。',
+      '在多次工作階段中積累這個 User 的記憶，例如個人助理記住你的偏好，或任務 Agent 積累執行經驗。',
     scopeTitle: '長期記憶儲存給誰',
     configurable: '可配置',
     name: '自定義策略',
     edit: '自定義記憶策略',
     self: '為當前 User 積累記憶',
     peer: '為不同參與者分別記憶',
-    working_memory: '會話摘要',
+    working_memory: '工作階段摘要',
     all: '全部已啟用型別',
     availability:
       '以下為內建型別參考，當前服務端可用型別以儲存時校驗為準。已有擴充型別會保留，也可手動新增。',
