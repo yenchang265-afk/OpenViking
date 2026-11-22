@@ -38,7 +38,7 @@ const studio = {
       memories: '記憶',
       retrieval: '檢索',
       skills: '技能',
-      sessions: '會話',
+      sessions: '工作階段',
       tasks: '任務中心',
       home: '首頁',
       arranger: '編排',

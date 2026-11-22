@@ -129,7 +129,7 @@ const workspace = {
         title: '檢索',
       },
       sessions: {
-        title: '會話',
+        title: '工作階段',
       },
       filesystem: {
         title: '檔案系統',
