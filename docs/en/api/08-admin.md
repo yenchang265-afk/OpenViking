@@ -671,7 +671,10 @@ Studio reads its presentation switches with `GET /api/v1/studio/features`; any
 authenticated user may call it. ROOT changes them with
 `PATCH /api/v1/admin/studio/features`, sending only the switches to change. The
 values are saved in the Cluster runtime configuration (`studio_features`) and the
-response returns the full effective set.
+response returns the full effective set. Most switches hide a Studio page;
+`remoteResources` hides the Remote URL option when adding resources (the
+Scheduled Sync page keeps it). The switches only change Studio; the resource
+API still accepts remote URLs.
 
 ```http
 GET /api/v1/studio/features

@@ -23,3 +23,4 @@ class StudioFeaturesConfig(BaseModel):
     requestLogs: bool = RuntimeField(default=True, strict=True)
     watches: bool = RuntimeField(default=True, strict=True)
     monitoring: bool = RuntimeField(default=True, strict=True)
+    remoteResources: bool = RuntimeField(default=True, strict=True)

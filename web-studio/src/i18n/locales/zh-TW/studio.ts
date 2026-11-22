@@ -27,6 +27,7 @@ const studio = {
       requestLogs: '檢視請求與用量。',
       watches: '管理資源的自動更新。',
       monitoring: '檢視服務健康狀態與活動。',
+      remoteResources: '新增資源時可從網址、Git 儲存庫與網頁匯入。',
     },
     title: 'Studio 功能',
     description:
@@ -48,6 +49,7 @@ const studio = {
       requestLogs: '請求日誌',
       watches: '定時同步',
       monitoring: '監控',
+      remoteResources: '新增遠端資源',
     },
   },
   credentialStorage: {

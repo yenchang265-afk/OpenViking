@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { STUDIO_FEATURES } from '#/shared/lib/studio-service'
+import {
+  STUDIO_FEATURE_OPTIONS,
+  STUDIO_FEATURES,
+} from '#/shared/lib/studio-service'
 
 import { resources } from './resources'
 
@@ -51,7 +54,10 @@ describe('locale catalogs', () => {
 
 describe('studio feature toggles', () => {
   it('labels and describes every toggleable feature', () => {
-    const toggleable = STUDIO_FEATURES.filter((f) => f.domain !== 'management')
+    const toggleable = [
+      ...STUDIO_FEATURES.filter((f) => f.domain !== 'management'),
+      ...STUDIO_FEATURE_OPTIONS,
+    ]
     const missing = toggleable.flatMap((f) =>
       ['features', 'descriptions']
         .map((group) => `studio.featureToggles.${group}.${f.id}`)

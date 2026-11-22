@@ -4898,6 +4898,11 @@ async def test_studio_features_root_permissions_validation_and_persistence(
     )
     assert restored.status_code == 200
     assert restored.json()["result"]["compile"] is True
+    remote = await lightweight_admin_client.patch(
+        url, json={"remoteResources": False}, headers=root_headers()
+    )
+    assert remote.status_code == 200, remote.text
+    assert remote.json()["result"]["remoteResources"] is False
     arranger = await lightweight_admin_client.patch(
         url, json={"arranger": False}, headers=root_headers()
     )

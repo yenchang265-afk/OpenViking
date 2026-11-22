@@ -1,7 +1,10 @@
 import { useAppConnection } from '#/features/connection/hooks/use-app-connection'
 import { useStudioFeatureToggles } from '#/features/connection/hooks/use-studio-feature-toggles'
 import { useStudioService } from '#/features/connection/hooks/use-studio-service'
-import { STUDIO_FEATURES } from '#/shared/lib/studio-service'
+import {
+  STUDIO_FEATURE_OPTIONS,
+  STUDIO_FEATURES,
+} from '#/shared/lib/studio-service'
 import { Badge } from '#/shared/ui/badge'
 import { Button } from '#/shared/ui/button'
 import { Switch } from '#/shared/ui/switch'
@@ -14,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 const FEATURE_DOMAINS = ['workspace', 'extensions'] as const
+const TOGGLES = [...STUDIO_FEATURES, ...STUDIO_FEATURE_OPTIONS]
 
 export function StudioFeatureSettings() {
   const { connectionRole } = useAppConnection()
@@ -94,7 +98,7 @@ export function StudioFeatureSettings() {
             {t(`featureToggles.groups.${domain}`)}
           </h2>
           <div className="divide-y px-5">
-            {STUDIO_FEATURES.filter((feature) => feature.domain === domain).map(
+            {TOGGLES.filter((feature) => feature.domain === domain).map(
               (feature) => (
                 <div
                   key={feature.id}
