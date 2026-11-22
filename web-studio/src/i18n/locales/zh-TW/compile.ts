@@ -64,7 +64,7 @@ export default {
   },
   builtinSkills: '內建',
   installedSkills: '我的和共享能力',
-  specializedSkill: '需專用會話資料',
+  specializedSkill: '需專用工作階段資料',
   skillDescriptionUnavailable: '暫未提供用途說明，可檢視 Skill 定義。',
   skillMetadataFailed: '無法讀取此能力的最新說明。',
   skillContentEmpty: '此 Skill 暫無內容。',
@@ -123,7 +123,7 @@ export default {
       description: '從活動記錄中整理指定日期的進展、結果和待辦。',
       inputs: '帶日期的工作記錄、會議紀要、任務或對話記錄。',
       outputs: '每個報告日期一份 Markdown 日報，如 YYYY-MM-DD.md。',
-      limits: '請在補充要求中寫明日期；不會自動讀取 Studio 會話。',
+      limits: '請在補充要求中寫明日期；不會自動讀取 Studio 工作階段。',
     },
     'knowledge-graph': {
       name: '知識圖譜',
@@ -133,11 +133,12 @@ export default {
       limits: '生成的是圖譜資料檔案，當前不提供互動式圖譜展示。',
     },
     'ov-session-report': {
-      name: '會話問答週報',
-      description: '基於專用會話 JSONL 資料生成問答週報。',
-      inputs: '符合 Skill 要求的會話 JSONL 和 sessions_root 引數。',
+      name: '工作階段問答週報',
+      description: '基於專用工作階段 JSONL 資料生成問答週報。',
+      inputs: '符合 Skill 要求的工作階段 JSONL 和 sessions_root 引數。',
       outputs: '一份包含統計、主題和問題分析的 Markdown 週報。',
-      limits: '預設輸出英文；需要專用輸入和引數，不會自動讀取 Studio 會話。',
+      limits:
+        '預設輸出英文；需要專用輸入和引數，不會自動讀取 Studio 工作階段。',
     },
   },
   errors: {

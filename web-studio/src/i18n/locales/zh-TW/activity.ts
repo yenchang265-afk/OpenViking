@@ -1,38 +1,38 @@
 const activity = {
   sessions: {
     page: {
-      placeholder: '會話和 VikingBot 工作區功能正在開發中。',
+      placeholder: '工作階段和 VikingBot 工作區功能正在開發中。',
     },
     threadList: {
-      title: '會話',
-      backToList: '返回會話列表',
-      newSession: '新建會話',
-      count: '{{count}} 個會話',
-      count_other: '{{count}} 個會話',
-      loading: '正在載入會話...',
-      loadFailed: '會話載入失敗',
+      title: '工作階段',
+      backToList: '返回工作階段列表',
+      newSession: '新建工作階段',
+      count: '{{count}} 個工作階段',
+      count_other: '{{count}} 個工作階段',
+      loading: '正在載入工作階段...',
+      loadFailed: '工作階段載入失敗',
       retry: '重試',
-      emptyTitle: '還沒有會話',
+      emptyTitle: '還沒有工作階段',
       emptyDescription: '點選右上角的加號開始一段新對話。',
       deleteSession: '刪除“{{title}}”',
-      deleteConfirmTitle: '刪除會話？',
+      deleteConfirmTitle: '刪除工作階段？',
       deleteConfirmDescription:
         '“{{title}}”及其對話記錄將被永久刪除，此操作無法撤銷。',
       cancel: '取消',
       confirmDelete: '刪除',
       deleting: '正在刪除...',
-      deleteSuccess: '會話已刪除',
-      deleteFailed: '會話刪除失敗：{{error}}',
-      shortcut: '⌘ N 新建會話',
+      deleteSuccess: '工作階段已刪除',
+      deleteFailed: '工作階段刪除失敗：{{error}}',
+      shortcut: '⌘ N 新建工作階段',
     },
     chat: {
-      emptyReadDescription: '當前會話暫無訊息。',
-      historyLoadFailed: '會話記錄載入失敗：{{error}}',
+      emptyReadDescription: '當前工作階段暫無訊息。',
+      historyLoadFailed: '工作階段記錄載入失敗：{{error}}',
       sendFailed: '訊息傳送失敗：{{error}}',
       copy: '複製',
       emptyDescription: '探索你的知識庫，開始一段對話。',
       placeholder: '輸入訊息...',
-      emptyState: '選擇或建立一個會話開始聊天。',
+      emptyState: '選擇或建立一個工作階段開始聊天。',
       thinking: '思考中...',
       generating: '生成中',
       reasoning: '思考過程',
@@ -89,7 +89,7 @@ const activity = {
     },
     impact: {
       title: '記憶影響',
-      open: '檢視本次會話造成的記憶影響',
+      open: '檢視本次工作階段造成的記憶影響',
       description: '由 {{commits}} 次提交產生 {{changes}} 項記憶變更',
       kinds: {
         add: '新增',
@@ -106,12 +106,12 @@ const activity = {
       loading: '正在載入記憶變更...',
       loadFailed: '記憶變更載入失敗',
       retry: '重試',
-      empty: '本次會話提交沒有產生記憶變更。',
+      empty: '本次工作階段提交沒有產生記憶變更。',
       viewExperienceImpact: '檢視該經驗的應用效果',
     },
     empty: {
-      description: '從左側選擇一個會話，或建立新會話。',
-      title: '未選擇會話',
+      description: '從左側選擇一個工作階段，或建立新工作階段。',
+      title: '未選擇工作階段',
     },
   },
   oauth: {
@@ -364,20 +364,20 @@ const activity = {
       },
     },
     agent: {
-      history: '歷史會話',
-      newSession: '新建會話',
-      creating: '正在建立檔案系統會話...',
+      history: '歷史工作階段',
+      newSession: '新建工作階段',
+      creating: '正在建立檔案系統工作階段...',
       detectingBot: '正在檢查 VikingBot 是否可用...',
-      createFailed: '建立會話失敗：{{error}}',
+      createFailed: '建立工作階段失敗：{{error}}',
       retry: '重試',
       botDisabledFooter: '啟用 VikingBot 後即可與 Agent 對話',
-      historyTitle: 'Agent 會話歷史',
+      historyTitle: 'Agent 工作階段歷史',
       historyDescription:
-        '檔案系統與 VikingBot 共用對話記錄，也包含當前瀏覽器儲存的舊 Agent 會話。',
-      loadingSessions: '正在載入會話...',
-      noSessions: '暫無歷史會話',
-      createTimeout: '建立檔案系統會話超時，請檢查連線設定後重試。',
-      newSessionTitle: '新建檔案系統會話',
+        '檔案系統與 VikingBot 共用對話記錄，也包含當前瀏覽器儲存的舊 Agent 工作階段。',
+      loadingSessions: '正在載入工作階段...',
+      noSessions: '暫無歷史工作階段',
+      createTimeout: '建立檔案系統工作階段超時，請檢查連線設定後重試。',
+      newSessionTitle: '新建檔案系統工作階段',
       botPrompt: {
         title: '請啟用 VikingBot',
         description:
@@ -460,17 +460,18 @@ const activity = {
         '用法：/session [current|list|create|switch|get|context|messages|archive|commit|message|tool-results|tool-result|tool-search|delete] ...',
       sessionDeleteUsage: '用法：/session delete <session_id>',
       sessionMissing:
-        '當前沒有會話，請先開啟 Agent 面板建立會話，或指定 session_id。',
-      sessionCurrentBody: '當前會話：{{id}}',
-      sessionListBody: '共有 {{count}} 個會話。',
-      sessionCreatedBody: '已建立並切換到會話：{{id}}',
-      sessionSwitchedBody: '已切換到會話：{{id}}',
-      sessionDeletedBody: '已刪除會話：{{id}}',
-      sessionMessageAddedBody: '已向會話 {{id}} 新增訊息。',
+        '當前沒有工作階段，請先開啟 Agent 面板建立工作階段，或指定 session_id。',
+      sessionCurrentBody: '當前工作階段：{{id}}',
+      sessionListBody: '共有 {{count}} 個工作階段。',
+      sessionCreatedBody: '已建立並切換到工作階段：{{id}}',
+      sessionSwitchedBody: '已切換到工作階段：{{id}}',
+      sessionDeletedBody: '已刪除工作階段：{{id}}',
+      sessionMessageAddedBody: '已向工作階段 {{id}} 新增訊息。',
       unknownCommand: '未知命令。輸入 / 可瀏覽可用命令。',
-      addMemoryUsage: '用法：/add-memory "記憶內容" [--session-id <會話 ID>]',
-      addMemorySubmitted: '會話已提交，記憶正在後臺提取。',
-      memoryCompleted: '會話 {{id}} 的後臺處理已完成。',
+      addMemoryUsage:
+        '用法：/add-memory "記憶內容" [--session-id <工作階段 ID>]',
+      addMemorySubmitted: '工作階段已提交，記憶正在後臺提取。',
+      memoryCompleted: '工作階段 {{id}} 的後臺處理已完成。',
       skillCompleted: 'Skill 處理完成；可在「技能」頁面檢視。',
       addSkillUsage:
         '用法：/add-skill <Git URL> [-p viking://agent/skills]。本地檔案請到「技能」頁面上傳。',
@@ -498,7 +499,7 @@ const activity = {
       refMeta: {
         archive: '歸檔',
         dir: '目錄',
-        session: '會話',
+        session: '工作階段',
         toolResult: '工具結果',
         toolSearch: '工具搜尋',
       },
@@ -514,7 +515,7 @@ const activity = {
         status: '配置與狀態',
         history: '歷史命令',
         resource: '資源路徑',
-        subcommand: '會話命令',
+        subcommand: '工作階段命令',
       },
       quickStart: {
         title: '快速開始',
@@ -533,7 +534,7 @@ const activity = {
         addMemory: {
           title: '新增記憶',
           command: '/add-memory',
-          code: '輸入記憶內容；可選指定已有會話 ID',
+          code: '輸入記憶內容；可選指定已有工作階段 ID',
         },
         find: {
           title: '查詢相關上下文',
@@ -638,7 +639,7 @@ const activity = {
         },
         searchSessionId: {
           name: '--session-id <id>',
-          description: '可選。將檢索關聯到指定會話。',
+          description: '可選。將檢索關聯到指定工作階段。',
         },
         pattern: {
           name: '<模式>',
@@ -655,11 +656,11 @@ const activity = {
         taskId: { name: '<task_id>', description: 'status 和 cancel 必填。' },
         memoryContent: {
           name: '<記憶內容>',
-          description: '必填。寫入會話的文本；包含空格時請用引號包裹。',
+          description: '必填。寫入工作階段的文本；包含空格時請用引號包裹。',
         },
         memorySessionId: {
-          name: '--session-id <會話 ID>',
-          description: '可選。指定已有會話；省略時自動新建會話。',
+          name: '--session-id <工作階段 ID>',
+          description: '可選。指定已有工作階段；省略時自動新建工作階段。',
         },
         query: {
           name: '查詢詞',
@@ -678,11 +679,11 @@ const activity = {
         sessionId: {
           name: 'session_id',
           description:
-            '可選。省略時，多數子命令使用當前 Agent 會話；delete 必須顯式指定。',
+            '可選。省略時，多數子命令使用當前 Agent 工作階段；delete 必須顯式指定。',
         },
         archiveId: {
           name: 'archive_id',
-          description: '讀取會話歸檔時必填。',
+          description: '讀取工作階段歸檔時必填。',
         },
         messageRole: {
           name: 'role',
@@ -690,7 +691,7 @@ const activity = {
         },
         messageContent: {
           name: 'content',
-          description: '用於 message 子命令，指定要追加到會話的文本內容。',
+          description: '用於 message 子命令，指定要追加到工作階段的文本內容。',
         },
         keepRecent: {
           name: '--keep-recent 數量',
@@ -745,7 +746,7 @@ const activity = {
         addMemory: {
           default: {
             code: '/add-memory "需要記住的內容"',
-            description: '新建會話並提取記憶',
+            description: '新建工作階段並提取記憶',
           },
         },
         status: {
@@ -884,35 +885,35 @@ const activity = {
         session: {
           current: {
             code: '/session',
-            description: '檢視當前會話',
+            description: '檢視當前工作階段',
           },
           list: {
             code: '/session list',
-            description: '列出所有會話',
+            description: '列出所有工作階段',
           },
           create: {
             code: '/session create [session_id]',
-            description: '建立並切換到新會話',
+            description: '建立並切換到新工作階段',
           },
           switch: {
             code: '/session switch <session_id>',
-            description: '切換 Agent 面板會話',
+            description: '切換 Agent 面板工作階段',
           },
           get: {
             code: '/session get [session_id]',
-            description: '檢視會話後設資料',
+            description: '檢視工作階段後設資料',
           },
           context: {
             code: '/session context [session_id] --token-budget 8000',
-            description: '讀取組裝後的會話上下文',
+            description: '讀取組裝後的工作階段上下文',
           },
           messages: {
             code: '/session messages [session_id]',
-            description: '讀取會話訊息列表',
+            description: '讀取工作階段訊息列表',
           },
           archive: {
             code: '/session archive [session_id] <archive_id>',
-            description: '讀取指定會話歸檔',
+            description: '讀取指定工作階段歸檔',
           },
           commit: {
             code: '/session commit [session_id] --keep-recent 10',
@@ -920,7 +921,7 @@ const activity = {
           },
           message: {
             code: '/session message [session_id] user hello',
-            description: '向會話追加訊息',
+            description: '向工作階段追加訊息',
           },
           toolResults: {
             code: '/session tool-results [session_id] --limit 20',
@@ -936,7 +937,7 @@ const activity = {
           },
           delete: {
             code: '/session delete <session_id>',
-            description: '刪除指定會話',
+            description: '刪除指定工作階段',
           },
         },
         tree: {
@@ -1018,8 +1019,8 @@ const activity = {
           usage: '/add-skill <Git URL> [-p <目標根目錄>]',
         },
         addMemory: {
-          description: '向指定會話寫入訊息並提取記憶',
-          usage: '/add-memory "記憶內容" [--session-id <會話 ID>]',
+          description: '向指定工作階段寫入訊息並提取記憶',
+          usage: '/add-memory "記憶內容" [--session-id <工作階段 ID>]',
         },
         addResource: {
           description: '新增外部資源',
@@ -1059,7 +1060,7 @@ const activity = {
           usage: '/task <list|status|cancel> [<任務 ID>]',
         },
         session: {
-          description: '管理 Agent 會話',
+          description: '管理 Agent 工作階段',
           usage: '/session <子命令>',
         },
         tree: {

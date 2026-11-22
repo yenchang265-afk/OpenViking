@@ -71,7 +71,7 @@ const connect = {
         start: '照常啟動 `claude`。',
       },
       identity:
-        'Claude Code 會發送自己的會話 ID，閘道器能自動識別每段對話，`--resume` 之後也一樣。',
+        'Claude Code 會發送自己的工作階段 ID，閘道器能自動識別每段對話，`--resume` 之後也一樣。',
       notes: {
         address: '地址不要帶 `/v1`，Claude Code 會自己補全路徑。',
         hints:
@@ -93,7 +93,7 @@ const connect = {
         start: '照常啟動 `codex`。',
       },
       identity:
-        'Codex 會發送自己的會話 ID，閘道器能自動識別每段對話，`codex resume` 之後也一樣。',
+        'Codex 會發送自己的工作階段 ID，閘道器能自動識別每段對話，`codex resume` 之後也一樣。',
       notes: {
         websocket:
           'Codex 會先嚐試 WebSocket 連線，閘道器拒絕後它會自動改用 HTTP。',
@@ -150,7 +150,7 @@ const connect = {
         key: '在執行 OpenCode 的環境裡設定閘道器金鑰。',
         start: '啟動 OpenCode，選擇 `openviking/<model>`。',
       },
-      identity: 'OpenCode 會發送自己的會話 ID，閘道器能自動識別每段對話。',
+      identity: 'OpenCode 會發送自己的工作階段 ID，閘道器能自動識別每段對話。',
       notes: {
         plugin:
           '如果同時安裝了 OpenViking 的 OpenCode 外掛，閘道器會讓出這些對話。',

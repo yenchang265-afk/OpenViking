@@ -41,7 +41,7 @@ it('previews requirements using the keyboard without selecting until Enter', asy
   await user.tab()
   await user.keyboard('{ArrowDown}')
   const search = await screen.findByRole('combobox', { name: '搜尋 Skill' })
-  await user.type(search, '會話')
+  await user.type(search, '工作階段')
   await user.keyboard('{ArrowDown}')
   const details = within(screen.getByRole('region', { name: '能力說明' }))
   expect(details.getByText(/sessions_root/)).toBeTruthy()

@@ -145,7 +145,7 @@ const workspace = {
         workspace: '工作區',
       },
       loadingSessions: '載入中...',
-      noSessions: '暫無會話',
+      noSessions: '暫無工作階段',
       workspaceGroupLabel: 'Business Context Platform',
     },
   },
@@ -184,7 +184,7 @@ const workspace = {
       semantic: '語義處理',
       externalParse: '外部解析',
       addResource: '新增資源',
-      sessionCommit: '會話提交',
+      sessionCommit: '工作階段提交',
       userDeletion: '刪除使用者',
     },
     tabs: {
@@ -264,7 +264,7 @@ const workspace = {
         vectorCount: '向量數',
       },
       descriptions: {
-        queue: '資源處理、語義生成和會話提交佇列。',
+        queue: '資源處理、語義生成和工作階段提交佇列。',
         vikingdb: '向量資料儲存與索引服務。',
         models: 'VLM、Embedding 和 Rerank 模型服務。',
         filesystem: 'Business Context Platform 檔案系統與掛載點。',
@@ -338,11 +338,11 @@ const workspace = {
       copied: '安裝命令已複製',
       copyFailed: '複製失敗，請展開命令後手動複製。',
       enable: '啟用 Agent 進化',
-      enableHint: '由帳號管理員開啟 Agent 進化，讓後續會話提交生成經驗。',
+      enableHint: '由帳號管理員開啟 Agent 進化，讓後續工作階段提交生成經驗。',
     },
     title: 'Agent 經驗',
     description:
-      '跟蹤從會話提交中沉澱的經驗資產，以及經驗被應用後的執行軌跡與結果分佈。',
+      '跟蹤從工作階段提交中沉澱的經驗資產，以及經驗被應用後的執行軌跡與結果分佈。',
     refresh: '重新整理',
     searchPlaceholder: '搜尋經驗',
     searchClear: '清除',
@@ -355,8 +355,8 @@ const workspace = {
     connectionSettings: '開啟連線設定',
     empty: '還沒有 Agent 經驗',
     emptyDescription:
-      '經驗由已提交的會話自動提取。提交一個會話後，可複用的經驗會出現在這裡。',
-    emptyAction: '前往會話',
+      '經驗由已提交的工作階段自動提取。提交一個工作階段後，可複用的經驗會出現在這裡。',
+    emptyAction: '前往工作階段',
     directoryHint: 'memories / experiences',
     updated: '更新於 {{time}}',
     updatedBadge: '有更新',
@@ -375,22 +375,22 @@ const workspace = {
     help: {
       title: '一直無經驗產生？請檢查：',
       reasonConnected: 'Agent 是否已接入 Business Context Platform',
-      reasonSessions: '接入後是否產生了新的會話',
-      reasonCommit: '會話是否已提交（commit）到 Business Context Platform',
+      reasonSessions: '接入後是否產生了新的工作階段',
+      reasonCommit: '工作階段是否已提交（commit）到 Business Context Platform',
     },
     settings: {
       toggleLabel: '經驗提取',
-      toggleHint: 'Account {{account}} · 從新提交的會話中提取經驗與軌跡。',
+      toggleHint: 'Account {{account}} · 從新提交的工作階段中提取經驗與軌跡。',
       title: '經驗設定',
       description:
-        '作用帳號的 Agent Evolution 開關。關閉後，該帳號的新會話提交將停止提取經驗與軌跡。',
+        '作用帳號的 Agent Evolution 開關。關閉後，該帳號的新工作階段提交將停止提取經驗與軌跡。',
       scopeMismatch:
         '介面返回的作用帳號與當前帳號不一致或無法確認，已禁止修改。請使用當前帳號的管理憑證。',
       loading: '正在讀取開關狀態...',
       loadFailed: '開關狀態讀取失敗',
       statusEnabled: '已啟用',
       statusDisabled: '已停用',
-      statusEnabledHint: '會話提交會提取經驗與軌跡。',
+      statusEnabledHint: '工作階段提交會提取經驗與軌跡。',
       statusDisabledHint:
         '停用期間不會產生新的經驗與軌跡，應用效果將始終為空。',
       pending: '正在生效...',
@@ -408,7 +408,8 @@ const workspace = {
       contentLoading: '正在載入經驗內容...',
       contentLoadFailed: '經驗內容載入失敗',
       analysisTitle: '應用效果',
-      analysisDescription: '讀取過該經驗的會話提交所產生的軌跡與任務結果分佈。',
+      analysisDescription:
+        '讀取過該經驗的工作階段提交所產生的軌跡與任務結果分佈。',
       tabImpact: '應用效果',
       tabSource: '來源追溯',
       sourceTitle: '來源追溯',
@@ -625,11 +626,11 @@ const workspace = {
       individualTasks: '逐條任務',
     },
     retry: {
-      noPendingMessages: '未建立新任務：該會話沒有待提交訊息',
-      commitSkipped: '未建立新任務：本次會話提交已跳過',
+      noPendingMessages: '未建立新任務：該工作階段沒有待提交訊息',
+      commitSkipped: '未建立新任務：本次工作階段提交已跳過',
     },
     title: '任務中心',
-    description: '集中檢視資源處理、會話提交和重建索引等後臺任務。',
+    description: '集中檢視資源處理、工作階段提交和重建索引等後臺任務。',
     refresh: '重新整理',
     loading: '正在載入任務...',
     empty: '暫無後臺任務',
@@ -707,8 +708,8 @@ const workspace = {
         pending: '等待中',
       },
       step: {
-        sessionPersistence: '會話狀態持久化',
-        sessionCommit: '會話提交',
+        sessionPersistence: '工作階段狀態持久化',
+        sessionCommit: '工作階段提交',
         connectorAuth: '連接器鑑權',
         resourceFetching: '資源拉取',
         externalParse: '外部解析',
@@ -742,7 +743,7 @@ const workspace = {
     },
     types: {
       compile: '編譯',
-      session_commit: '會話提交',
+      session_commit: '工作階段提交',
       add_resource: '資源處理',
       add_skill: '技能匯入',
       connector_import: '連接器匯入',
@@ -1646,7 +1647,7 @@ const workspace = {
   home: {
     contextCommits: {
       description:
-        '按 4 小時聚合資源、技能、會話訊息和提交寫入，滑鼠懸停可檢視明細。',
+        '按 4 小時聚合資源、技能、工作階段訊息和提交寫入，滑鼠懸停可檢視明細。',
       empty: '過去一年暫無上下文提交',
       hourRange: '{{start}}-{{end}}',
       legend: {
@@ -1661,8 +1662,8 @@ const workspace = {
       operations: {
         addResource: '資源寫入',
         addSkill: '技能寫入',
-        sessionAddMessage: '會話訊息',
-        sessionCommit: '會話提交',
+        sessionAddMessage: '工作階段訊息',
+        sessionCommit: '工作階段提交',
       },
       stats: {
         activeDays: '活躍天數',

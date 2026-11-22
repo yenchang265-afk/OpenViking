@@ -491,7 +491,7 @@ const resources = {
   retrieval: {
     modeDescriptions: {
       find: '按語義查詢相關上下文，適合單次問題。',
-      search: '按語義檢索，可結合會話上下文查詢相關內容。',
+      search: '按語義檢索，可結合工作階段上下文查詢相關內容。',
       grep: '按文本或正規表示式匹配檔案內容。',
       glob: '按路徑萬用字元查詢檔案，例如 **/*.md。',
     },
@@ -499,7 +499,7 @@ const resources = {
     searchPlaceholder: '輸入檢索內容',
     placeholders: {
       find: '輸入語義檢索內容',
-      search: '輸入需要結合會話理解的問題',
+      search: '輸入需要結合工作階段理解的問題',
       grep: '輸入正規表示式或精確文本',
       glob: '輸入檔案模式，例如 **/*.md',
     },
@@ -532,7 +532,7 @@ const resources = {
           label: '自定義 URI',
         },
       },
-      sessionId: '會話 ID',
+      sessionId: '工作階段 ID',
       sessionPlaceholder: 'session_id（可選）',
     },
     advanced: {
