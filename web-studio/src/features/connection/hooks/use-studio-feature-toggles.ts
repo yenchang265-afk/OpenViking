@@ -2,6 +2,7 @@ import i18n from '#/i18n/core'
 import { useAppConnection } from '#/features/connection/hooks/use-app-connection'
 import { useStudioService } from '#/features/connection/hooks/use-studio-service'
 import { createOvClient, getOvResult } from '#/shared/api/ov-client/index'
+import { isStudioToggleEnabled } from '#/shared/lib/studio-service'
 import type { StudioToggleId } from '#/shared/lib/studio-service'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -47,6 +48,6 @@ export function useStudioFeatureToggles() {
   return {
     ...query,
     mutation,
-    isEnabled: (id: StudioToggleId) => query.data?.[id] !== false,
+    isEnabled: (id: StudioToggleId) => isStudioToggleEnabled(query.data, id),
   }
 }

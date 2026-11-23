@@ -556,7 +556,8 @@ PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執�
 Studio 透過 `GET /api/v1/studio/features` 讀取介面開關，任何已認證使用者都可呼叫。
 ROOT 透過 `PATCH /api/v1/admin/studio/features` 修改開關，只需傳送要變更的項目。
 開關儲存在 Cluster 執行時配置（`studio_features`）中，響應返回完整的生效值。
-多數開關隱藏 Studio 頁面；`remoteResources` 隱藏新增資源時的遠端資源選項（定時同步頁面仍保留）。
+多數開關隱藏 Studio 頁面；`remoteResources` 隱藏新增資源時的遠端資源選項，並同時關閉只匯入遠端資源的定時同步（`watches`）。
+`watches` 自身的儲存值會保留，重新開啟 `remoteResources` 後再次生效。
 開關只影響 Studio，資源 API 仍接受遠端網址。
 
 ```http

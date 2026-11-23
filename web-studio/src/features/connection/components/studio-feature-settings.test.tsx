@@ -11,6 +11,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
   role: 'root',
+  disabled: ['compile'] as string[],
   pending: false,
   error: false,
   refetch: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
     data: { compile: false },
     isError: state.error,
     refetch: state.refetch,
-    isEnabled: (id: string) => id !== 'compile',
+    isEnabled: (id: string) => !state.disabled.includes(id),
     mutation: {
       isPending: state.pending,
       isError: false,
@@ -41,6 +42,7 @@ vi.mock('react-i18next', () => ({
 afterEach(() => {
   cleanup()
   state.role = 'root'
+  state.disabled = ['compile']
   state.pending = false
   state.error = false
   vi.clearAllMocks()
@@ -110,4 +112,26 @@ it('lets root switch remote resource imports from the workspace group', () => {
   })
   fireEvent.click(toggle)
   expect(state.mutate).toHaveBeenCalledWith({ remoteResources: false })
+})
+it('locks scheduled sync off while remote resources are off', () => {
+  state.disabled = ['remoteResources', 'watches']
+  render(<StudioFeatureSettings />)
+  const toggle = screen.getByRole('switch', {
+    name: 'featureToggles.features.watches',
+  })
+  expect(toggle.getAttribute('aria-checked')).toBe('false')
+  expect(
+    toggle.getAttribute('aria-disabled') === 'true' ||
+      (toggle as HTMLButtonElement).disabled,
+  ).toBe(true)
+  expect(screen.getByText('featureToggles.requires')).toBeTruthy()
+})
+it('leaves scheduled sync editable while remote resources are on', () => {
+  render(<StudioFeatureSettings />)
+  const toggle = screen.getByRole('switch', {
+    name: 'featureToggles.features.watches',
+  })
+  expect(toggle.getAttribute('aria-checked')).toBe('true')
+  expect(toggle.getAttribute('aria-disabled')).not.toBe('true')
+  expect(screen.queryByText('featureToggles.requires')).toBeNull()
 })
