@@ -155,7 +155,8 @@ export function AddResourceForm({
   const [dirPickerOpen, setDirPickerOpen] = useState(false)
 
   const featureToggles = useStudioFeatureToggles()
-  // The watch flow is governed by the watches switch, not this one.
+  // The watch flow is reachable only while the watches switch, which
+  // requires this one, is on.
   const remoteAllowed =
     watchRequired || featureToggles.isEnabled('remoteResources')
   const remotePhase = remoteState.phase

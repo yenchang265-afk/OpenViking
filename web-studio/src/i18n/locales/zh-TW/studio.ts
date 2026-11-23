@@ -6,6 +6,7 @@ const studio = {
     saving: '正在儲存變更…',
     saved: '所有變更已儲存',
     loading: '正在載入功能…',
+    requires: '需先開啟「{{feature}}」才能使用。',
     retry: '重試',
     groups: {
       workspace: '工作區',
@@ -27,7 +28,8 @@ const studio = {
       requestLogs: '檢視請求與用量。',
       watches: '管理資源的自動更新。',
       monitoring: '檢視服務健康狀態與活動。',
-      remoteResources: '新增資源時可從網址、Git 儲存庫與網頁匯入。',
+      remoteResources:
+        '從網址、Git 儲存庫與網頁匯入資源。定時同步也需要此功能。',
     },
     title: 'Studio 功能',
     description:

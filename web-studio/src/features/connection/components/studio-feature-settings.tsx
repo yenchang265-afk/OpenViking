@@ -4,7 +4,9 @@ import { useStudioService } from '#/features/connection/hooks/use-studio-service
 import {
   STUDIO_FEATURE_OPTIONS,
   STUDIO_FEATURES,
+  studioToggleRequirement,
 } from '#/shared/lib/studio-service'
+import type { StudioToggleId } from '#/shared/lib/studio-service'
 import { Badge } from '#/shared/ui/badge'
 import { Button } from '#/shared/ui/button'
 import { Switch } from '#/shared/ui/switch'
@@ -27,6 +29,15 @@ export function StudioFeatureSettings() {
   if (connectionRole !== 'root' || service.provider !== 'opensource')
     return null
   const hasError = toggles.isError || toggles.mutation.isError
+  // A switch whose requirement is off stays off and cannot be changed here.
+  const requirementHint = (id: StudioToggleId) => {
+    const required = studioToggleRequirement(id)
+    return required && !toggles.isEnabled(required)
+      ? t('featureToggles.requires', {
+          feature: t(`featureToggles.features.${required}`),
+        })
+      : undefined
+  }
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -117,15 +128,28 @@ export function StudioFeatureSettings() {
                     >
                       {t(`featureToggles.descriptions.${feature.id}`)}
                     </p>
+                    {requirementHint(feature.id) ? (
+                      <p
+                        id={`studio-feature-${feature.id}-requirement`}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {requirementHint(feature.id)}
+                      </p>
+                    ) : null}
                   </div>
                   <Switch
                     id={`studio-feature-${feature.id}`}
-                    aria-describedby={`studio-feature-${feature.id}-description`}
+                    aria-describedby={
+                      requirementHint(feature.id)
+                        ? `studio-feature-${feature.id}-description studio-feature-${feature.id}-requirement`
+                        : `studio-feature-${feature.id}-description`
+                    }
                     checked={toggles.isEnabled(feature.id)}
                     disabled={
                       !toggles.data ||
                       toggles.isError ||
-                      toggles.mutation.isPending
+                      toggles.mutation.isPending ||
+                      Boolean(requirementHint(feature.id))
                     }
                     onCheckedChange={(checked) =>
                       toggles.mutation.mutate({ [feature.id]: checked })

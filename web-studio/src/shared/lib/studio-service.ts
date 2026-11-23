@@ -64,6 +64,8 @@ export const STUDIO_FEATURES = [
     domain: 'extensions',
     to: '/watches',
     probe: '/api/v1/watches',
+    // Scheduled sync only imports remote resources.
+    requires: 'remoteResources',
   },
   {
     id: 'monitoring',
@@ -87,6 +89,7 @@ export const STUDIO_FEATURES = [
   domain: StudioDomain
   to: string
   probe?: string
+  requires?: string
 }>
 
 // Switches for capabilities inside a page. They have no route or sidebar entry.
@@ -97,6 +100,23 @@ export const STUDIO_FEATURE_OPTIONS = [
 export type StudioToggleId =
   | (typeof STUDIO_FEATURES)[number]['id']
   | (typeof STUDIO_FEATURE_OPTIONS)[number]['id']
+
+export function studioToggleRequirement(
+  id: StudioToggleId,
+): StudioToggleId | undefined {
+  const feature = STUDIO_FEATURES.find((f) => f.id === id)
+  return feature && 'requires' in feature ? feature.requires : undefined
+}
+
+// A switch is on unless it, or a switch it requires, is explicitly off.
+export function isStudioToggleEnabled(
+  toggles: Partial<Record<StudioToggleId, boolean>> | undefined,
+  id: StudioToggleId,
+): boolean {
+  if (toggles?.[id] === false) return false
+  const required = studioToggleRequirement(id)
+  return required ? isStudioToggleEnabled(toggles, required) : true
+}
 
 export function featureForPath(pathname: string) {
   return STUDIO_FEATURES.find(

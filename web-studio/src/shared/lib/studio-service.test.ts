@@ -4,6 +4,7 @@ import {
   classifyCapabilityError,
   classifyCapabilityResponse,
   featureForPath,
+  isStudioToggleEnabled,
   identifyServiceProvider,
   isStudioFeatureVisible,
   resolveConfiguredServiceProvider,
@@ -190,4 +191,36 @@ describe('capability response contracts', () => {
       )
     },
   )
+})
+
+describe('isStudioToggleEnabled', () => {
+  it('treats unset switches as enabled', () => {
+    expect(isStudioToggleEnabled(undefined, 'watches')).toBe(true)
+    expect(isStudioToggleEnabled({}, 'remoteResources')).toBe(true)
+  })
+
+  it('honours an explicit off', () => {
+    expect(isStudioToggleEnabled({ compile: false }, 'compile')).toBe(false)
+  })
+
+  it('turns scheduled sync off with remote resources', () => {
+    expect(
+      isStudioToggleEnabled(
+        { remoteResources: false, watches: true },
+        'watches',
+      ),
+    ).toBe(false)
+    expect(
+      isStudioToggleEnabled(
+        { remoteResources: true, watches: true },
+        'watches',
+      ),
+    ).toBe(true)
+    expect(
+      isStudioToggleEnabled(
+        { remoteResources: true, watches: false },
+        'watches',
+      ),
+    ).toBe(false)
+  })
 })

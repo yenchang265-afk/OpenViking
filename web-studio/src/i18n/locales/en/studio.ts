@@ -6,6 +6,7 @@ const studio = {
     saving: 'Saving changes…',
     saved: 'All changes saved',
     loading: 'Loading features…',
+    requires: 'Turn on {{feature}} to use this.',
     retry: 'Retry',
     groups: {
       workspace: 'Workspace',
@@ -28,7 +29,7 @@ const studio = {
       watches: 'Manage automatic resource refreshes.',
       monitoring: 'Inspect service health and activity.',
       remoteResources:
-        'Import resources from URLs, Git repositories and web pages when adding resources.',
+        'Import resources from URLs, Git repositories and web pages. Scheduled Sync also needs this.',
     },
     title: 'Studio features',
     description:
