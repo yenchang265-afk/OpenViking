@@ -36,6 +36,8 @@ MCP uses the server authentication configuration. In API Key mode, use a User/Ad
 
 Only `dev` mode disables authentication; binding to localhost alone does not. OAuth clients follow the authorization flow below; see [Authentication](04-authentication.md) for other server modes.
 
+Tool discovery needs no credentials: a request whose JSON-RPC messages are only `initialize`, `notifications/initialized` or `tools/list` is served without a key, so any MCP client can see the tool list. The list is the same for every caller. Every other request, including `tools/call` and `ping`, still needs a key and gets `401` (with the OAuth `WWW-Authenticate` challenge when OAuth is enabled) without one.
+
 ## Client Configuration
 
 ### Generic MCP Clients

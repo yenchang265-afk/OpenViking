@@ -2684,21 +2684,22 @@ async def test_forget_directory_with_recursive_succeeds(service):
 @pytest.mark.parametrize(
     ("uri", "sentinel_uri", "expected_message"),
     [
-        # 'viking://user' is the container of user spaces, never a deletable path.
+        # Namespace roots are built-in directories: FSService rejects deleting
+        # them for every role before any ACL check runs.
         (
             "viking://user",
             "viking://user/test_user/memories/forget_root_guard.md",
-            "Deleting viking://user is not supported",
+            "built-in directory cannot be deleted: viking://user",
         ),
         (
             "viking://~",
             "viking://user/test_user/memories/forget_home_guard.md",
-            "namespace root",
+            "built-in directory cannot be deleted: viking://user/test_user",
         ),
         (
             "viking://resources",
             "viking://resources/forget_root_guard/sentinel.md",
-            "namespace root",
+            "built-in directory cannot be deleted: viking://resources",
         ),
     ],
 )
@@ -2715,7 +2716,7 @@ async def test_forget_rejects_namespace_roots_for_non_root(
 
     token = _mcp_ctx.set(ctx)
     try:
-        with pytest.raises(PermissionDeniedError, match=re.escape(expected_message)):
+        with pytest.raises(InvalidArgumentError, match=f"{re.escape(expected_message)}$"):
             await forget(uri=uri, recursive=True)
     finally:
         _mcp_ctx.reset(token)

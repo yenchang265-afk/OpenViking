@@ -36,6 +36,8 @@ MCP 使用服務端認證配置。API Key 模式下，用 User/Admin key 傳入�
 
 只有 `dev` 模式無需認證，監聽 localhost 本身不會關閉認證。OAuth 客戶端使用下文授權流程，其他模式見[認證指南](04-authentication.md)。
 
+查看工具清單不需要憑證：JSON-RPC 訊息只有 `initialize`、`notifications/initialized` 或 `tools/list` 的請求不帶 key 也會被處理，所以任何 MCP 客戶端都能看到工具清單，且每個呼叫者看到的清單都相同。其他請求（包括 `tools/call` 與 `ping`）仍需要 key，沒有 key 會收到 `401`（啟用 OAuth 時附帶 `WWW-Authenticate` 挑戰）。
+
 ## 客戶端配置
 
 ### 通用 MCP 客戶端

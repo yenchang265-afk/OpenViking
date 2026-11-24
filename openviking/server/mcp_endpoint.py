@@ -184,6 +184,59 @@ def _oauth_enabled(scope: Scope) -> bool:
     return getattr(app.state, "oauth_provider", None) is not None
 
 
+# JSON-RPC methods a client without credentials may send: the handshake and the
+# tool listing, so any MCP client can see which tools exist before it has a key.
+# The tool list is static (the same for every caller), so it reveals no caller
+# data. Every other method (tools/call, ping, ...) still needs an identity, so an
+# OAuth client still gets its 401 + WWW-Authenticate challenge on first real use.
+_ANONYMOUS_MCP_METHODS = frozenset({"initialize", "notifications/initialized", "tools/list"})
+# Discovery requests are tiny; cap what an unauthenticated caller can make us buffer.
+_ANONYMOUS_MCP_BODY_LIMIT = 64 * 1024
+
+
+async def _read_body_within(receive: Receive, limit: int) -> Optional[bytes]:
+    """Read the whole request body, or return None once it exceeds ``limit`` bytes."""
+    chunks: list[bytes] = []
+    size = 0
+    while True:
+        message = await receive()
+        if message["type"] != "http.request":
+            return None
+        chunk = message.get("body", b"")
+        size += len(chunk)
+        if size > limit:
+            return None
+        chunks.append(chunk)
+        if not message.get("more_body", False):
+            return b"".join(chunks)
+
+
+def _is_anonymous_discovery(body: bytes) -> bool:
+    """True when every JSON-RPC message in ``body`` is an anonymous discovery request."""
+    try:
+        payload = json.loads(body)
+    except ValueError:  # covers JSONDecodeError and invalid UTF-8
+        return False
+    messages = payload if isinstance(payload, list) else [payload]
+    return bool(messages) and all(
+        isinstance(message, dict)
+        and message.get("method") in _ANONYMOUS_MCP_METHODS
+        and "result" not in message
+        and "error" not in message
+        for message in messages
+    )
+
+
+def _replay_body(body: bytes, receive: Receive) -> Receive:
+    """Hand an already-read body to the downstream app, then defer to ``receive``."""
+    pending = [{"type": "http.request", "body": body, "more_body": False}]
+
+    async def replay():
+        return pending.pop() if pending else await receive()
+
+    return replay
+
+
 class _IdentityASGIMiddleware:
     """ASGI middleware: delegates to auth.resolve_identity (the same function
     used by all REST API routes) so authentication logic is never duplicated."""
@@ -216,6 +269,12 @@ class _IdentityASGIMiddleware:
                 api_key=_extract_api_key(x_api_key, authorization),
             )
         except (UnauthenticatedError, PermissionDeniedError, InvalidArgumentError) as exc:
+            # No identity: serve discovery (handshake + tools/list) anonymously.
+            # The tools themselves call _get_ctx(), so nothing else can run.
+            if isinstance(exc, UnauthenticatedError) and scope.get("method") == "POST":
+                body = await _read_body_within(receive, _ANONYMOUS_MCP_BODY_LIMIT)
+                if body is not None and _is_anonymous_discovery(body):
+                    return await self.app(scope, _replay_body(body, receive), send)
             status = (
                 401
                 if isinstance(exc, UnauthenticatedError)
