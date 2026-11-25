@@ -4,6 +4,8 @@ Observer API 提供佇列、向量庫、模型、鎖、檢索和檔案系統等�
 
 ## Observer API
 
+queue、lock、retrieval、system HTTP 介面支援 `scope=account`，帳號取當前鑑權身份；省略 scope 或傳 `scope=runtime` 沿用原行為，其他值無效。帳號 queue 的 `pending` / `in_progress` 按該帳號所有使用者的非 Inline Work 的 pending / running 狀態統計，包含尚未取出的工作。Work 完成後即退出計數，即使 ACK 失敗；runtime 計數仍來自 QueueFS。帳號 queue 累計計數、鎖和檢索統計來自本地記憶體。models/vikingdb 已按帳號選擇 provider；system 的健康和錯誤彙總這五個帳號元件，filesystem 保留在回包中但不參與健康和錯誤彙總。響應欄位、格式、reset 和 metrics 匯出保持不變。
+
 以下 Python 示例使用 `SyncHTTPClient`。Observer 介面是返回字典的屬性，使用 `client.observer.queue`，不加括號。每次訪問都會請求服務端；需要讀取多個欄位時，先儲存返回值。
 
 ### observer.queue

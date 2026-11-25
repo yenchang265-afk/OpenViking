@@ -3,18 +3,19 @@
 """Grep and search-backend mixin for VikingFS."""
 
 import asyncio
-import re
 import sys
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from openviking.core.namespace import is_session_uri
 from openviking.observability.log_safety import safe_uri_for_log
+from openviking.pyagfs import compile_grep_pattern
 from openviking.pyagfs.exceptions import AGFSNotSupportedError
 from openviking.server.identity import RequestContext
 from openviking.storage.expr import FilterExpr, RawDSL
 from openviking.storage.scope_filter import build_scope_filter, merge_filters
 from openviking.storage.viking_fs._base import logger
 from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
+from openviking_cli.utils.uri import VikingURI
 
 _GREP_LS_PAGE_SIZE = 1000
 _FULLTEXT_UNSUPPORTED_CACHE_TTL = 60.0
@@ -22,6 +23,13 @@ _FULLTEXT_UNSUPPORTED_CACHE_TTL = 60.0
 
 def _pkg():
     return sys.modules[__package__]
+
+
+async def _compile_grep_pattern(pattern: str, case_insensitive: bool):
+    try:
+        return await asyncio.to_thread(compile_grep_pattern, pattern, case_insensitive)
+    except ValueError as exc:
+        raise InvalidArgumentError(f"Invalid grep pattern: {exc}") from exc
 
 
 def _build_grep_scope_filter(
@@ -125,22 +133,19 @@ class _GrepMixin:
                 if record.get("uri")
             }
 
-        try:
-            result = await self._grep_fs(
-                uri=uri,
-                pattern=pattern,
-                exclude_uri=exclude_uri,
-                case_insensitive=case_insensitive,
-                node_limit=node_limit,
-                level_limit=level_limit,
-                ctx=ctx,
-                content_transform=content_transform,
-                allowed_uris=allowed_uris,
-                before_context=before_context,
-                after_context=after_context,
-            )
-        except re.error as exc:
-            raise InvalidArgumentError(f"Invalid grep pattern: {exc}") from exc
+        result = await self._grep_fs(
+            uri=uri,
+            pattern=pattern,
+            exclude_uri=exclude_uri,
+            case_insensitive=case_insensitive,
+            node_limit=node_limit,
+            level_limit=level_limit,
+            ctx=ctx,
+            content_transform=content_transform,
+            allowed_uris=allowed_uris,
+            before_context=before_context,
+            after_context=after_context,
+        )
         return self._attach_grep_tags(result, tags_by_uri)
 
     async def _grep_fs(
@@ -291,7 +296,9 @@ class _GrepMixin:
             after_context: Number of lines to include after each match
 
         Returns:
-            Dict with matches, count, match_count, files_scanned
+            Dict with matches, count, match_count, files_scanned, limit_reached.
+            limit_reached indicates possible truncation before ACL filtering,
+            not a confirmed count of omitted or visible matches.
         """
         path = self._uri_to_path(uri, ctx=ctx)
 
@@ -324,6 +331,9 @@ class _GrepMixin:
             raise
 
         matches = result.get("matches", [])
+        # The backend applies node_limit before ACL filtering. Preserve only the
+        # cap signal, never the denied matches or their count.
+        limit_reached = bool(node_limit and len(matches) >= node_limit)
         results = []
         files_scanned_set = set()
         real_ctx = self._ctx_or_default(ctx)
@@ -385,6 +395,7 @@ class _GrepMixin:
             "count": len(results),
             "match_count": len(results),
             "files_scanned": files_scanned,
+            "limit_reached": limit_reached,
         }
 
     async def _grep_encrypted(
@@ -418,8 +429,7 @@ class _GrepMixin:
         Returns:
             Dict with matches, count, match_count, files_scanned
         """
-        flags = re.IGNORECASE if case_insensitive else 0
-        compiled_pattern = re.compile(pattern, flags)
+        compiled_pattern = await _compile_grep_pattern(pattern, case_insensitive)
         excluded_prefix = None
         if exclude_uri:
             excluded_prefix = exclude_uri.rstrip("/")
@@ -498,7 +508,7 @@ class _GrepMixin:
                     return
 
                 for entry in entries:
-                    entry_uri = f"{normalized_current_uri.rstrip('/')}/{entry['name']}"
+                    entry_uri = VikingURI(normalized_current_uri).join(entry["name"]).uri
                     if excluded_prefix and (
                         entry_uri == excluded_prefix or entry_uri.startswith(excluded_prefix + "/")
                     ):
@@ -543,7 +553,7 @@ class _GrepMixin:
     async def _grep_files_parallel(
         self,
         file_uris: List[str],
-        compiled_pattern: re.Pattern,
+        compiled_pattern,
         node_limit: Optional[int],
         ctx: Optional[RequestContext] = None,
         content_transform: Optional[Callable[[str, str], str]] = None,
@@ -581,7 +591,7 @@ class _GrepMixin:
     async def _grep_single_file(
         self,
         entry_uri: str,
-        compiled_pattern: re.Pattern,
+        compiled_pattern,
         ctx: Optional[RequestContext] = None,
         node_limit: Optional[int] = None,
         content_transform: Optional[Callable[[str, str], str]] = None,
@@ -595,27 +605,36 @@ class _GrepMixin:
             if content_transform is not None:
                 content = content_transform(content, entry_uri)
 
-            matches: List[Dict[str, Any]] = []
-            lines = content.split("\n")
-            for line_index, line in enumerate(lines):
-                if compiled_pattern.search(line):
-                    matches.append(
-                        self._build_grep_match(
-                            entry_uri,
-                            lines,
-                            line_index,
-                            before_context,
-                            after_context,
-                        )
-                    )
-                    if node_limit and len(matches) >= node_limit:
-                        break
+            matches = await self._grep_matching_lines(
+                entry_uri,
+                content.split("\n"),
+                compiled_pattern,
+                node_limit,
+                before_context,
+                after_context,
+            )
             return matches, 1
         except Exception as e:
             logger.debug(
                 "Failed to grep %s: %s", safe_uri_for_log(str(entry_uri)), type(e).__name__
             )
             return [], 1
+
+    async def _grep_matching_lines(
+        self,
+        uri: str,
+        lines: List[str],
+        compiled_pattern,
+        node_limit: Optional[int],
+        before_context: int,
+        after_context: int,
+    ) -> List[Dict[str, Any]]:
+        limit = min(len(lines), max(1, node_limit)) if node_limit else len(lines)
+        indices = await asyncio.to_thread(compiled_pattern.matching_lines, lines, limit)
+        return [
+            self._build_grep_match(uri, lines, index, before_context, after_context)
+            for index in indices
+        ]
 
     @staticmethod
     def _build_grep_match(

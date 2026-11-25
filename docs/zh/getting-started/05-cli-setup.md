@@ -11,8 +11,8 @@
 | 準備項 | 獲取方式 |
 | --- | --- |
 | Node.js 和 npm | 從 [Node.js 官網](https://nodejs.org/en/download)安裝 LTS 版本，npm 隨安裝包提供；已有可用的 `ov` 時可直接進入[連線](#連線) |
-| OpenViking 服務 | 使用已開通的火山引擎雲服務或正在執行的自建服務；還沒有服務時，先完成[快速開始](02-quickstart.md#開通或啟動服務)中的開通或啟動步驟 |
-| 訪問憑據 | 雲服務使用控制台提供的 API Key；開啟認證的自建服務使用管理員提供的 User/Admin Key；預設無鑑權的本機服務可留空 |
+| OpenViking 服務 | 使用已開通的 BytePlus 或火山引擎雲服務，或正在執行的自建服務；還沒有服務時，先完成[快速開始](02-quickstart.md#開通或啟動服務)中的開通或啟動步驟 |
+| 訪問憑據 | 雲服務使用該 OpenViking 例項的 API Key；開啟認證的自建服務使用管理員提供的 User/Admin Key；預設無鑑權的本機服務可留空 |
 | 一份可訪問的資料 | 使用服務中已有的資料；首次體驗可在連線成功後[匯入燈塔樣例](02-quickstart.md#匯入樣例) |
 
 安裝 Node.js 後，重新開啟終端，確認 Node.js 和 npm 可用：
@@ -63,7 +63,8 @@ ov config
 | --- | --- | --- |
 | 本機預設服務 | 自定義（Custom） | URL 為 `http://127.0.0.1:1933`；預設無鑑權模式下金鑰留空 |
 | 遠端自建服務 | 自定義（Custom） | 使用管理員提供的服務 URL 和 User/Admin Key |
-| 火山引擎雲服務 | OpenViking Service | 使用嚮導提供的服務地址，輸入控制台取得的 API Key |
+| BytePlus 雲服務 | OpenViking 託管服務 → BytePlus | 輸入 BytePlus OpenViking 例項的服務地址和 API Key，詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md) |
+| 火山引擎雲服務 | OpenViking 託管服務 → Volcengine | 使用嚮導提供的服務地址，輸入控制台取得的 API Key |
 
 可以將連線命名為 `local`、`cloud` 等便於識別的名稱。服務 URL 指向 OpenViking 資料服務；模型的 API 地址配置在服務端。
 

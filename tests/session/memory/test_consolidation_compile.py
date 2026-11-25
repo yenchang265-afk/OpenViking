@@ -483,7 +483,6 @@ def language_config(monkeypatch):
         "openviking.session.memory.session_extract_context_provider",
         "openviking.session.memory.extract_loop",
         "openviking.session.memory.utils.language",
-        "openviking_cli.utils.config",
     ):
         monkeypatch.setattr(f"{module}.get_openviking_config", lambda: config)
     monkeypatch.setattr("openviking.service.memory_compile.get_default_registry", lambda: registry)
@@ -726,31 +725,25 @@ async def test_provider_binds_isolation_before_prefetch(peer_id):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("snapshot_failure", [None, "start", "finish"])
 @pytest.mark.parametrize(
-    "change, has_error, has_operations, expected_status",
+    "change, has_error, has_operations, expected_status, snapshot_failure",
     [
-        (None, True, True, TaskStatus.FAILED),
-        ("written", True, True, TaskStatus.COMPLETED),
-        ("edited", True, True, TaskStatus.COMPLETED),
-        ("deleted", True, True, TaskStatus.COMPLETED),
-        ("written", False, True, TaskStatus.COMPLETED),
-        (None, False, True, TaskStatus.COMPLETED),
-        (None, False, False, TaskStatus.COMPLETED),
-    ],
-    ids=[
-        "all-failed",
-        "partial-add",
-        "partial-edit",
-        "partial-delete",
-        "success",
-        "no-op",
-        "no-operations",
+        pytest.param(None, True, True, TaskStatus.FAILED, None, id="all-failed-None"),
+        pytest.param("written", True, True, TaskStatus.COMPLETED, None, id="partial-add-None"),
+        pytest.param("edited", True, True, TaskStatus.COMPLETED, None, id="partial-edit-None"),
+        pytest.param("deleted", True, True, TaskStatus.COMPLETED, None, id="partial-delete-None"),
+        pytest.param("written", False, True, TaskStatus.COMPLETED, None, id="success-None"),
+        pytest.param("written", False, True, TaskStatus.COMPLETED, "start", id="success-start"),
+        pytest.param("written", False, True, TaskStatus.COMPLETED, "finish", id="success-finish"),
+        pytest.param(None, False, True, TaskStatus.COMPLETED, None, id="no-op-None"),
+        pytest.param(None, False, False, TaskStatus.COMPLETED, None, id="no-operations-None"),
     ],
 )
 async def test_compile_task_apply_outcomes(
     monkeypatch,
     language_config,
+    caplog,
+    request,
     change,
     has_error,
     has_operations,
@@ -763,8 +756,11 @@ async def test_compile_task_apply_outcomes(
     monkeypatch.setattr(
         "openviking.service.memory_compile.tracer.get_trace_id", lambda: "test-trace"
     )
-    warning = Mock()
-    monkeypatch.setattr("openviking.service.memory_compile.logger.warning", warning)
+    from openviking.service import memory_compile as log_module
+
+    log_module.logger.addHandler(caplog.handler)
+    request.addfinalizer(lambda: log_module.logger.removeHandler(caplog.handler))
+    caplog.set_level("INFO", logger="openviking.service.memory_compile")
     directory = "viking://user/u1/memories/entities"
     uri = f"{directory}/person/alice.md"
     operations = ResolvedOperations(upsert_operations=[], delete_file_contents=[], errors=[])
@@ -840,19 +836,34 @@ async def test_compile_task_apply_outcomes(
         finalize.assert_awaited_once_with(directory, ctx)
         assert [call[0] for call in calls.mock_calls] == ["snapshot", "extract", "snapshot"]
     assert all(call.kwargs["paths"] == [directory] for call in commit.await_args_list)
+    # The handler sits on the module logger and on root, so a record may arrive twice.
+    records = list({id(record): record for record in caplog.records}.values())
+    snapshot_failures = [
+        record
+        for record in records
+        if "memory compile snapshot failed; continuing" in record.getMessage()
+    ]
+    if snapshot_failure:
+        [failure] = snapshot_failures
+        assert failure.degraded is True
+        assert f"phase={snapshot_failure}" in failure.getMessage()
+    else:
+        assert not snapshot_failures
     if has_operations:
         apply.assert_awaited_once()
         viking_fs._async_agfs.pathlock_release.assert_awaited_once_with(lease)
     else:
         apply.assert_not_awaited()
         viking_fs._async_agfs.pathlock_release.assert_not_awaited()
-    if change and has_error:
-        # Snapshot failures add their own warnings.
-        warning.assert_any_call(
-            "Memory-mode compile %s partially succeeded: %s", "cmp_outcome", ["write failed"]
-        )
-    else:
-        assert not any("partially succeeded" in call.args[0] for call in warning.call_args_list)
+    partial = [
+        record
+        for record in records
+        if getattr(record, "task_id", None) == "cmp_outcome" and getattr(record, "failed", None) == 1
+    ]
+    assert len(partial) == int(bool(change and has_error))
+    if partial:
+        assert partial[0].levelname == "INFO" and partial[0].degraded is True
+        assert "write failed" not in partial[0].getMessage()
 
 
 @pytest.fixture

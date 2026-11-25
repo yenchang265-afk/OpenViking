@@ -217,7 +217,7 @@ Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源�
 - 原生 HTTPS Git 的 `args.auth_config` 在 `watch_interval <= 0` 時只用於本次請求；當 `watch_interval > 0` 時，OpenViking 會把與倉庫 URL 繫結的 username/token 儲存到 Watch 私有鑑權狀態，並只在後續 Git 拉取時恢復使用。憑據不會進入普通持久佇列，也不會出現在 Watch API/MCP/CLI 返回中。Git PAT 沒有通用重新整理流程，過期或撤銷後需要重建 Watch 來更換 token。為相容已有用法，系統仍接受 `https://user:token@host/repo.git` 形式的 URL 內嵌憑據並原樣傳遞；由於該 URL 同時也是資源來源標識，它可能被記錄到程序引數、日誌、佇列、資源後設資料和 Watch 狀態中。新接入建議使用 `args.auth_config`。`args.auth_config` 的明文 HTTP 鑑權和帶鑑權重定向仍會被拒絕。
 - token 會放在 HTTPS 請求體中傳輸。生產環境應保持診斷請求體 dump 關閉；顯式啟用該功能可能記錄秘密。
 - `reason` 觸發的記憶生成複用 `session.commit` 的抽取鏈路，只使用 `reason`、資源 URI、可用的資源名稱和目錄摘要，不會讀取或展開完整資源正文；系統會寫入 `entities`、`events`、`preferences` 等已有記憶型別，不建立獨立的資源記憶目錄。
-- 刪除資源時，系統會在刪除前掃描本次上下文對應的 self 或 peer 記憶中的 `resource_refs`，清理對應資源 URI 和由該 `reason` 引入的內容，並重新重新整理相關記憶的語義索引。
+- 刪除資源後，已生成的記憶內容及其資源引用會保留。
 - 其他來源在 `wait=false` 時會在響應前完成來源解析、目標解析和 AGFS 寫入，僅 semantic 與 embedding 佇列繼續非同步處理。
 - `processing_mode=vectors_only` 不呼叫 VLM 語義理解階段，也不會生成或重新整理 `.abstract.md` / `.overview.md`。對已存在目標，它會保留舊的語義產物和舊的語義向量；仍會更新資源樹，在 `build_index=true` 時向量化當前非隱藏檔案，並清理由本次重新整理刪除的檔案 detail 向量。
 - `processing_mode` 只屬於 `add_resource`。管理員維護已有資料時，`reindex` API/CLI 仍使用 `mode`（`vectors_only`、`semantic_and_vectors`）。
@@ -924,6 +924,8 @@ curl -X POST http://localhost:1933/api/v1/resources/mv \
 刪除 `viking://resources/` 下的資源。此操作要求 MANAGE 許可權，
 會刪除關聯向量記錄、重新整理父目錄語義後設資料，並同步受影響的 Watch。
 
+已有記憶會保留原有內容和 `resource_refs`，包括匯入時由 `reason` 生成的記憶。
+
 **HTTP**
 
 ```http
@@ -934,7 +936,7 @@ DELETE /api/v1/resources?uri={uri}
 |----------|------|------|--------|------|
 | `uri` | string | 是 | - | 要刪除的共享資源 URI；不允許刪除共享資源根 |
 | `recursive` | boolean | 否 | `false` | 遞迴刪除目錄 |
-| `wait` | boolean | 否 | `true` | 等待語義清理和重新整理完成 |
+| `wait` | boolean | 否 | `true` | 等待父目錄語義重新整理完成 |
 
 ```bash
 curl -X DELETE "http://localhost:1933/api/v1/resources" \

@@ -189,23 +189,28 @@ OpenViking 會把受管的 `peers/` 容器作為使用者 namespace 的一部分
 
 外掛通過 `viking://user/...` 寫入和檢索 user-scoped memory；OpenViking 會根據請求裡的租戶身份和 actor peer context 解析這個別名。legacy agent URI namespace 已由 OpenViking 廢棄，外掛不再使用。
 
-## assemble 召回鏈路
+## 自動召回鏈路
 
 ![Prompt 前的自動召回流程](./images/openclaw-plugin-recall-flow.png)
 
-自動召回現在由 `assemble()` 承接。OpenClaw 會在同一個 context engine 上呼叫兩次 `assemble()`，外掛按呼叫形態區分職責：
+自動召回在 `before_prompt_build` hook 中每個 user turn 執行一次，記憶塊以 `prependContext` 返回。OpenClaw 會把這段文本凍結到本輪 user turn 上，後續模型呼叫和後續輪次都原樣重放，歷史字首因此可以命中 prompt cache。`assemble()` 繼續負責重建歷史，並把 session guide 和 user profile 放進 `systemPromptAddition`，不再注入每輪變化的召回內容。
 
-1. preflight assemble：呼叫引數裡帶 `prompt`，`messages` 還是舊歷史；外掛從 OpenViking 回讀 archive/session context 並重建歷史。
-2. transformContext assemble：呼叫引數裡不帶 `prompt`，最後一條 `messages` 已經是本輪 user；外掛只做長期記憶召回，並把記憶塊 prepend 到這條 user message 的 content 開頭。
+OpenClaw 只有在顯式授權時才會向非內建外掛派發 `before_prompt_build`。`openclaw openviking setup` 和安裝指令碼會自動寫入：
+
+```json
+{ "plugins": { "entries": { "openviking": { "hooks": { "allowConversationAccess": true } } } } }
+```
+
+未授權（或設定了 `allowPromptModification: false`，舊版本宿主為 `allowPromptInjection: false`）時，外掛保持原有行為，在 `assemble()` 中召回：召回內容進入 `systemPromptAddition`，每輪都會變化，可能使其後歷史的 provider prompt cache 失效。
 
 召回階段會：
 
-1. 從最後一條 user message 提取查詢文本。
+1. 以本輪請求文本（`currentUserMessage`，舊版本宿主回退到 `prompt`）作為查詢。
 2. 基於當前 `sessionId/sessionKey` 解析本輪的 agent 路由。
 3. 先做一次快速可用性檢查，避免在 OpenViking 不可用時拖慢模型請求。
 4. 按配置的 `recallTargetTypes` 發起一次帶 session 上下文的 context search（預設 `user,agent`；可選 `resource`；原始 session 歷史仍可用 `ov_archive_search` 和 `ov_archive_expand` 檢視）。
 5. 由 OpenViking 服務端結合 session 歷史擴充查詢，完成候選過濾與排序、跨輪去重、內容層級選擇和預算內組裝。
-6. 把服務端渲染的上下文以 `<relevant-memories>` 形式 prepend 到當前 user message；不會追加獨立 synthetic user message。
+6. 以 `<relevant-memories>` 形式返回服務端渲染的上下文；同一輪重試複用第一次的結果。
 
 ## Session 生命週期
 

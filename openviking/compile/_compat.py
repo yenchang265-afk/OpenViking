@@ -47,5 +47,5 @@ class VikingMultiReadTool:
         return "image" if media.is_inline_image(uri) else None
 
     @staticmethod
-    async def _read_image(client: Any, uri: str) -> dict[str, Any]:
-        return await media.read_image(client, uri)
+    async def _read_image(client: Any, uri: str, *, for_compile: bool = False) -> dict[str, Any]:
+        return await media.read_image(client, uri, for_compile=for_compile)

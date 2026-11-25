@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -55,6 +55,8 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
     """In-memory I/O boundary for exercising the real transfer methods."""
 
     def __init__(self, records: list[dict[str, Any]]) -> None:
+        with patch("openviking.storage.viking_vector_index_backend.init_cpp_logging"):
+            super().__init__(None)
         self.records = {str(record["id"]): dict(record) for record in records}
         self.upsert_calls = 0
         self.fail_upsert_at: int | None = None
@@ -68,7 +70,6 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
         self.filter_calls = []
         self.query_calls = []
         self.scroll_output_fields = []
-        self.acl_manager = None
 
     @property
     def mode(self) -> str:
@@ -103,7 +104,11 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
         del output_fields, ctx
         self.scroll_filters.append(filter)
         offset = int(cursor or 0)
-        ordered = [dict(self.records[key]) for key in sorted(self.records)]
+        ordered = [
+            dict(self.records[key])
+            for key in sorted(self.records)
+            if _matches_filter(filter, self.records[key])
+        ]
         page = ordered[offset : offset + limit]
         next_cursor = str(offset + limit) if offset + limit < len(ordered) else None
         return page, next_cursor
@@ -166,8 +171,8 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
         return deleted
 
     async def _strict_transfer_count(self, ctx, filter):
-        del ctx, filter
-        return len(self.records)
+        del ctx
+        return sum(_matches_filter(filter, record) for record in self.records.values())
 
     async def _strict_transfer_page(self, ctx, filter, *, limit, cursor, output_fields):
         return await self.scroll(
@@ -203,6 +208,8 @@ def _matches_filter(expr, record: dict[str, Any]) -> bool:
         return expr.substring in str(record.get(expr.field, ""))
     if isinstance(expr, Range):
         value = record[expr.field]
+        if value is None:
+            return False
         return (
             (expr.gte is None or value >= expr.gte)
             and (expr.gt is None or value > expr.gt)
@@ -231,6 +238,11 @@ class _RealAclMemoryTransferBackend(_MemoryTransferBackend):
         self.acl_manager = AclManager(self, _EnabledAclConfig())
         self.scroll_output_fields = []
 
+    async def _get_backend_for_context(self, ctx):
+        backend = await super()._get_backend_for_context(ctx)
+        backend.delete_by_filter = self.delete_by_filter
+        return backend
+
     async def scroll(
         self,
         filter=None,
@@ -252,6 +264,16 @@ class _RealAclMemoryTransferBackend(_MemoryTransferBackend):
         page = ordered[offset : offset + limit]
         next_cursor = str(offset + limit) if offset + limit < len(ordered) else None
         return page, next_cursor
+
+    async def delete_by_filter(self, filter):
+        ids = [
+            record_id
+            for record_id, record in self.records.items()
+            if _matches_filter(filter, record)
+        ]
+        for record_id in ids:
+            del self.records[record_id]
+        return len(ids)
 
     async def _strict_transfer_count(self, ctx, filter):
         del ctx
@@ -1179,18 +1201,45 @@ async def test_direct_recursive_transfer_keeps_complete_target_scan(transfer_met
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("transfer_method", ["copy_uri_mapping", "update_uri_mapping"])
-async def test_target_replacement_cleans_exact_entries_across_batches(transfer_method):
+async def test_target_replacement_cleans_exact_entries_across_batches(transfer_method, monkeypatch):
     source, target = "viking://resources/source", "viking://resources/target"
     source_records = [_record(f"source-{i}", f"{source}/file-{i}.md") for i in range(101)]
+    source_records.extend(
+        [
+            _record("source-l0", source, level=0),
+            _record("source-l1", source, level=1, updated_at=None),
+        ]
+    )
     old_records = [_record(f"old-{i}", f"{target}/file-{i}.md") for i in range(101)]
-    backend = _RealAclMemoryTransferBackend(source_records + old_records)
-    backend.acl_manager = None
+    backend = _MemoryTransferBackend(source_records + old_records)
+    backend.backend_mode = "pgvector"
 
-    result = await getattr(backend, transfer_method)(_ctx(), source, target, recursive=True)
+    async def query(*, filter, limit, offset=0, order_by=None, order_desc=False, **kwargs):
+        records = [r for r in backend.records.values() if _matches_filter(filter, r)]
+        if order_by == "updated_at":
+            records.sort(
+                key=lambda r: (r["updated_at"] is None, r["updated_at"] or 0),
+                reverse=order_desc,
+            )
+        return records[offset : offset + limit]
 
-    assert result.written == 101
-    assert len(_records_under(backend, target)) == 101
+    monkeypatch.setattr(backend, "_query", query)
+    count = AsyncMock(side_effect=RuntimeError("count unavailable"))
+    monkeypatch.setattr(backend, "_strict_transfer_count", count)
+    result = await getattr(backend, transfer_method)(
+        _ctx(),
+        source,
+        target,
+        recursive=True,
+        source_uris=sorted({record["uri"] for record in source_records}),
+    )
+
+    assert result.written == len(source_records)
+    assert {(record["uri"], record["level"]) for record in _records_under(backend, target)} == {
+        (record["uri"].replace(source, target, 1), record["level"]) for record in source_records
+    }
     assert not set(backend.records).intersection(record["id"] for record in old_records)
+    count.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -1261,12 +1310,20 @@ async def test_uri_mapping_source_uris_limits_source_and_target_replacement_scop
         ]
     )
 
-    result = await getattr(backend, transfer_method)(
+    transfer = getattr(backend, transfer_method)
+    original_records = dict(backend.records)
+    empty = await transfer(_ctx(), source, target, recursive=True, source_uris=[])
+    assert (empty.scanned, empty.written, empty.deleted, empty.batches) == (0, 0, 0, 0)
+    assert backend.records == original_records
+    assert not backend.query_calls
+
+    result = await transfer(
         _ctx(),
         source,
         target,
         recursive=True,
         source_uris=[source, f"{source}/a.md"],
+        source_expected_levels={source: {2}, f"{source}/a.md": {2}},
     )
 
     assert result.scanned == 2

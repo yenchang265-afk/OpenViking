@@ -384,6 +384,7 @@ class _StopInitialize(Exception):
 def _bare_service(egress_proxies):
     service = OpenVikingService.__new__(OpenVikingService)
     service._initialized = False
+    service._shared_initialized = False
     service._config = SimpleNamespace(code=SimpleNamespace(egress_proxies=egress_proxies))
     return service
 

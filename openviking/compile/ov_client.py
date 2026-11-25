@@ -102,6 +102,15 @@ class InProcessVikingClient:
                 return blob["bytes"]
             return await self._service.fs.read_file_bytes(uri, ctx=self._ctx)
 
+    async def git_show_bytes(self, uri: str, snapshot_id: str) -> bytes:
+        """Read a frozen snapshot blob, as upstream's recovery check does through git show."""
+        with _mapped_errors(uri):
+            try:
+                blob = await self._service.fs.show_blob_raw(snapshot_id, path=uri, ctx=self._ctx)
+            except ValueError as exc:
+                raise InvalidArgumentError(str(exc)) from exc
+            return blob["bytes"]
+
     async def diff_paths(
         self,
         dirs: list[str],

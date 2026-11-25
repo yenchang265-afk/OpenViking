@@ -82,7 +82,8 @@ Observability Event Bus
 | 欄位 | 預設值 | 說明 |
 | --- | --- | --- |
 | `enabled` | `true` | 是否啟用 Usage/Audit |
-| `backend` | `"sqlite"` | 當前僅支援 SQLite |
+| `backend` | `"sqlite"` | `sqlite`（本地檔案）或 `postgres`（共享 PostgreSQL） |
+| `postgres` | `{}` | PostgreSQL 連線引數，選擇 `postgres` 時必填；見下方示例 |
 | `sqlite_path` | `null` | SQLite 檔案路徑；為空時使用當前 OpenViking workspace 下的 `_system/usage_audit/usage_audit.sqlite3` |
 | `queue_size` | `10000` | 後臺寫入佇列大小 |
 | `batch_size` | `500` | 單次批次寫入的最大事件數 |
@@ -94,8 +95,71 @@ Observability Event Bus
 | `timezone` | `"local"` | Console 請求未傳 `timezone` 時的兜底查詢時區；寫入始終按 UTC 儲存。`"local"` 表示 server 程序所在機器/容器的本地時區 |
 | `inventory_ttl_seconds` | `10.0` | 上下文當前資料量查詢快取時間 |
 
-本地版使用 SQLite 沒問題。分散式生產環境如果多例項同時提供 Console，建議後續增加共享
-store backend，而不是讓多個例項各寫各的本地 SQLite。
+本地版預設使用 SQLite。多例項同時提供 Console 時，可選擇共享 PostgreSQL 後端。
+所有例項使用相同的 database 和 schema，各自執行後臺 worker。
+
+### PostgreSQL
+
+安裝 `openviking[postgres]`，由管理員一次性執行
+[`sql/001_usage_audit_postgres.sql`](sql/001_usage_audit_postgres.sql)。
+執行時只校驗版本、列型別、主鍵、文本排序規則及 identity，不建立或遷移表。
+PostgreSQL schema 版本獨立管理，當前為 `2`，不使用 SQLite 的版本號。
+已使用預覽版 v1 schema 時，由管理員執行
+[`sql/002_usage_audit_deletion_fence.sql`](sql/002_usage_audit_deletion_fence.sql)；
+升級前停止所有寫入例項，遷移後全部部署新版本，不混跑舊 writer。
+
+```json
+{
+  "server": {
+    "observability": {
+      "usage_audit": {
+        "backend": "postgres",
+        "postgres": {
+          "host": "127.0.0.1",
+          "port": 5432,
+          "user": "openviking_runtime",
+          "password": "<password>",
+          "database": "openviking",
+          "schema": "openviking_usage_audit",
+          "maxsize": 10,
+          "connect_timeout": 10,
+          "lock_timeout_ms": 1000,
+          "sslmode": "verify-full",
+          "sslrootcert": "/path/to/ca.pem"
+        }
+      }
+    }
+  }
+}
+```
+
+`user` 和 `database` 必填，`host` 預設 `127.0.0.1`，`port` 預設 `5432`。
+`schema` 預設 `openviking_usage_audit`，只接受 1–63 字元的小寫 SQL 識別符號；
+自定義 schema 時先替換建表指令碼中所有同名 schema。
+連線引數還支援 `sslcert`、`sslkey`，不接受 DSN。`sslmode` 預設 `prefer`，
+生產環境應按資料庫 TLS 配置設定校驗模式。
+`lock_timeout_ms` 預設 `1000`，範圍 `1..60000`，在每個寫入/刪除事務中限制
+advisory lock 和表/行鎖的單次等待時間。超時回滾整批寫入，worker 按現有 best-effort
+語義記錄失敗並丟棄該批；刪除超時向呼叫者報錯。關閉仍等待已開始的事務完成，
+該配置限制資料庫鎖等待，不將 shutdown timeout 改為強制取消期限。
+runtime role 需要 schema 的 `USAGE`、表的 `SELECT/INSERT/UPDATE/DELETE`，
+以及 sequence 的 `USAGE/SELECT`，無需 `CREATE` 許可權。
+
+四類投影的累加和裁剪在同一事務中完成，並使用 account 級事務 advisory lock
+協調多例項寫入與刪除。Usage 按當前 batch 中各 account 最新 UTC 日期裁剪；
+Audit 按已持久化的最新 UTC 日期裁剪，再按插入 ID 保留最近 N 條，
+與 SQLite 口徑一致。查詢始終限制 account，支援 user 過濾及讀端時區轉換。
+Audit 分頁的計數和明細使用同一資料庫快照。
+
+刪除還會在同一事務中遞增共享刪除版本並儲存帳號或使用者範圍的 fence。
+事件入隊時捕獲 writer 已觀察到的版本；其他例項隨後寫入舊佇列時會先比較版本，
+拒絕已刪除範圍的舊事件，再生成投影。判斷不依賴事件時間或機器時鐘。
+writer 每次寫入會重新整理版本；遠端刪除後、重新整理前接收的同範圍新事件也會保守丟棄，
+重新整理後接收的事件可以正常寫入，包括重新建立的同名身份。
+fence 不隨投影保留策略或帳號資料刪除而清理，以防止舊佇列重新寫回。
+
+切換 backend 不會自動遷移已有 SQLite 資料。事件佇列仍是程序內 bounded queue，
+不提供重啟恢復或 exactly-once 投遞；資料庫事務只保證一個 batch 的原子寫入。
 
 ## 資料口徑
 
@@ -480,4 +544,14 @@ Console BFF 查詢的是帳號級聚合和審計明細，當前只允許 `ROOT` 
 
 ### 生產多例項怎麼部署？
 
-當前實現只有 SQLite backend，更適合單機本地版。多例項生產環境需要共享 store backend，避免每個例項只持有自己的區域性統計。後續擴充時應實現 `UsageAuditStore` 協議，而不是改 Console BFF。
+配置 `backend=postgres`，預建 schema，並讓各例項連線同一 database/schema。
+該配置只共享 Usage/Audit 投影，業務儲存、鎖及其他多例項條件仍需獨立配置。
+
+真實 PostgreSQL 合同測試使用隨機隔離 schema，測試後自動刪除：
+
+```bash
+OV_TEST_USAGE_AUDIT_POSTGRES='host=localhost dbname=testdb user=testuser' \
+  python -m pytest tests/observability/test_usage_audit_postgres.py
+```
+
+未設定該環境變數時資料庫測試會 skip，不能據此證明真實 PostgreSQL 行為。

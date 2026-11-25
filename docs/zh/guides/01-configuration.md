@@ -17,7 +17,11 @@ openviking-server init
 openviking-server doctor
 ```
 
-`openviking-server init` 會分別引導你填寫 Embedding 和 VLM 的配置。對於 `OpenAI`、`Kimi`、`GLM` 這類 API 型 VLM，按提示填寫對應的 VLM API Key；如果要使用 Codex 作為 VLM，請選擇 `OpenAI Codex`，嚮導會自動幫你處理已有 Codex 鑑權的匯入，或直接引導你完成登入。
+嚮導配置 Embedding 和 VLM。API 型 Provider 需要填寫憑證；`OpenAI Codex` 支援匯入已有鑑權或登入。
+
+`enable_default_resources` 預設為 `true`，補齊預設的本地 Embedding/VectorDB，並預置預設 Account 目錄。`false` 關閉這些預設行為，顯式 Cluster 資源仍生效。系統檔案按 `reconcile_system_assets_on_startup` 同步。
+
+`dev` 和 `trusted` 要求 Cluster VLM、Embedding、VectorDB 配置完整合法。關閉預設資源後，`api_key` 可在沒有 Cluster 資源時啟動，由 ROOT 在 [Account 建立配置](../api/08-admin.md#account-configuration-介面參考)中提供資源。`api_key` 和 `trusted` 僅在 Cluster 資源合法時自動建立預設 Account 記錄。
 
 ## 快速開始
 
@@ -1203,7 +1207,7 @@ Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 
 | `agfs` | object | RAGFS（Rust 實現的 AGFS）配置 | {} |
 | `vectordb` | object | 向量庫儲存配置 | {} |
 | `task_store` | object | 持久化 Task/Work 後端配置 | `{"provider":"file"}` |
-| `watch_store` | object | Watch 儲存：`file`（單節點）或 `mysql`（多節點共享） | `{"provider":"file"}` |
+| `watch_store` | object | Watch 儲存：`file`（單程序）、`sqlite`（同機）或 `mysql` / `postgres`（多節點共享） | `{"provider":"file"}` |
 
 
 ```json
@@ -1304,32 +1308,62 @@ Task/Work/Event 更新使用 READ COMMITTED 事務，先鎖 Task 行，再修改
 
 #### watch_store
 
-默认的 `file` provider 与旧版本一样，把 Watch 任务保存在内部控制文件
-`viking://resources/.watch_tasks.json` 中，只供单个 OpenViking 进程使用。任务启动时
-一次性加载到内存；开始运行和关联 Task 只更新内存，创建、配置、checkpoint、
-结果、删除及目标变化时写完整任务快照，内容相同的 patch 不落盘。即使其它 Watch
-发生变化，也不会保存运行占用；重启后与旧版本一样，按保存的计划重新调度过期 Watch。
-快照及其 tmp/backup 文件均为内部控制状态。当 Watch
-元数据本身需要共享存储时使用 `mysql`：安装 `openviking[mysql]`，并执行
-`openviking/service/sql/001_watch_tasks.sql`。MySQL 的 `params` 与 `task_store`
-使用相同的连接字段；`params.table` 默认为 `ov_watch_tasks`。必须配置
-`params.credential_encryption_key`：一个 base64 编码的 32 字节密钥，用于以 AES-GCM
-加密存储每个 Watch 的私有 `auth_state`（数据源 token）和 `connector_states`，密文与
-task ID 绑定。所有节点必须使用同一密钥，更换密钥会导致已有 Watch 凭证无法解密。
-`file` 模式下这些状态仍由 VikingFS 文件加密保护。
+需要本地持久化 Watch 後設資料時，安裝 `openviking[sqlite]` 並選擇 `sqlite`。
+資料庫和表會自動建立，預設路徑為
+`{storage.workspace}/_system/watch/watch.db`。可通過 `params.path` 指定本地磁碟上的
+絕對路徑；`params.table` 預設為 `ov_watch_tasks`，
+`params.busy_timeout_ms` 預設為 `5000`，必須為正整數。
+SQLite 在讀取事務狀態前獲取寫鎖。事務（包括讀取）序列執行，
+適用於 Watch 流量較低的本地部署。同一主機的多個程序可以共享資料庫及
+`service_name`，不同 service name 的資料互相隔離。資料庫不能放在 NFS/EFS 上，
+也不能跨主機共享。選擇 SQLite 不會更改 Task store 或 PathLock 後端；
+多程序執行排程器時仍需單獨配置共享協調和目標鎖。SQLite 不會自動啟用 Redis 協調。
 
-候选查询按剩余并发容量分批读取 Watch ID、归属和目标 URI。Manager 的 `due()` 在
-目标 PathLock 内调用 `begin_run()`，在同一事务中读取一次当前 Watch 并占用，
-提交时直接使用快照，不再读取 Watch。占用后的参数修改从下一轮生效。
-`running()` 只读取归属和运行 ID、开始时间、Connector 标记、
-instruction 及数据库时间，不搬运或解密鉴权、Connector 状态和 checkpoint。
+```json
+{
+  "storage": {
+    "watch_store": {
+      "provider": "sqlite",
+      "params": {
+        "credential_encryption_key": "base64-encoded-32-byte-key"
+      }
+    }
+  }
+}
+```
 
-MySQL 持久化占用、真实 Task 关联和终态结算，本轮 checkpoint 版本与之前一样
-保存在 payload 中，结算不会用旧 checkpoint 覆盖新配置。缺失 Task
-沿用现有宽限期及重试语义，创建 Task 后、关联 Watch 前崩溃的窗口仍可能造成重复导入。
+與 MySQL 一樣，SQLite 必須配置 `params.credential_encryption_key`（base64 編碼的
+32 位元組金鑰），以 AES-GCM 加密私有 `auth_state` 和 `connector_states`。
+重啟時須保留金鑰，共享資料的程序須使用相同金鑰。執行佔用、Task 關聯、
+已刪除但仍執行的 Watch 和 checkpoint 版本均在重啟後保留，沿用缺失 Task 的寬限期。
+已有 file provider 的 Watch 不會自動匯入。
 
-Watch 列表分页使用建表脚本中的 `list` 和 `list_all` 索引。若此前已创建 Watch 表，
-需执行一次索引更新；自定义表名时同步替换表名及索引名：
+預設的 `file` provider 與舊版本一樣，把 Watch 任務儲存在內部控制檔案
+`viking://resources/.watch_tasks.json` 中，只供單個 OpenViking 程序使用。任務啟動時
+一次性載入到記憶體；開始執行和關聯 Task 只更新記憶體，建立、配置、checkpoint、
+結果、刪除及目標變化時寫完整任務快照，內容相同的 patch 不落盤。即使其它 Watch
+發生變化，也不會儲存執行佔用；重啟後與舊版本一樣，按儲存的計劃重新排程過期 Watch。
+快照及其 tmp/backup 檔案均為內部控制狀態。當 Watch
+後設資料本身需要共享儲存時使用 `mysql`：安裝 `openviking[mysql]`，並執行
+`openviking/service/sql/001_watch_tasks.sql`。MySQL 的 `params` 與 `task_store`
+使用相同的連線欄位；`params.table` 預設為 `ov_watch_tasks`。必須配置
+`params.credential_encryption_key`：一個 base64 編碼的 32 位元組金鑰，用於以 AES-GCM
+加密儲存每個 Watch 的私有 `auth_state`（資料來源 token）和 `connector_states`，密文與
+task ID 繫結。所有節點必須使用同一金鑰，更換金鑰會導致已有 Watch 憑證無法解密。
+`file` 模式下這些狀態仍由 VikingFS 檔案加密保護。
+
+候選查詢按剩餘併發容量分批讀取 Watch ID、歸屬和目標 URI。Manager 的 `due()` 在
+目標 PathLock 內呼叫 `begin_run()`，在同一事務中讀取一次當前 Watch 並佔用，
+提交時直接使用快照，不再讀取 Watch。佔用後的引數修改從下一輪生效。
+`running()` 只讀取歸屬和執行 ID、開始時間、Connector 標記、
+instruction 及資料庫時間，不搬運或解密鑑權、Connector 狀態和 checkpoint。
+
+MySQL 和 PostgreSQL 持久化佔用、真實 Task 關聯和終態結算，本輪 checkpoint 版本與之前一樣
+儲存在 payload 中，結算不會用舊 checkpoint 覆蓋新配置。缺失 Task
+沿用現有寬限期及重試語義，建立 Task 後、關聯 Watch 前崩潰的視窗仍可能造成重複匯入。
+
+MySQL Watch 列表分頁使用建表指令碼中的 `list` 和 `list_all` 索引。若此前已建立 MySQL Watch 表，
+需執行一次索引更新；自定義表名時同步替換表名及索引名：
 
 ```sql
 ALTER TABLE ov_watch_tasks
@@ -1359,14 +1393,76 @@ ALTER TABLE ov_watch_tasks
 }
 ```
 
+使用 PostgreSQL 時，安裝 `openviking[postgres]` 並執行
+`openviking/service/sql/001_watch_tasks_postgres.sql`（PostgreSQL 14+）。
+初始化會檢查必需列的型別、可空性、排序規則和複合主鍵，在缺表、缺列或表結構不匹配時
+給出建表/遷移提示，並在索引缺失、無效或定義不匹配時發出警告，
+不會自動建立或遷移表及索引；自定義 `params.table` 時同步替換指令碼中的表名和索引名。
+
+已有 PostgreSQL Watch 表若缺少帳號/使用者分頁索引，需要由管理員執行以下遷移（不能放在事務中）：
+
+```sql
+CREATE INDEX CONCURRENTLY ix_ov_watch_tasks_list
+    ON ov_watch_tasks (service_name, md5(account_id), md5(user_id), deleted, created_at, task_id);
+```
+
+請使用配置中的表名和對應索引名。雜湊用於限制 B-tree 索引鍵寬度；查詢仍保留完整帳號/使用者等值校驗，
+並按 `(created_at, task_id)` 掃描游標範圍。分頁繼續返回精確的 `total`。
+
+```json
+{
+  "storage": {
+    "watch_store": {
+      "provider": "postgres",
+      "params": {
+        "user": "openviking",
+        "password": "change-me",
+        "database": "openviking",
+        "host": "127.0.0.1",
+        "port": 5432,
+        "maxsize": 10,
+        "connect_timeout": 10,
+        "sslmode": "verify-full",
+        "sslrootcert": "/etc/openviking/postgres-ca.pem",
+        "table": "ov_watch_tasks",
+        "credential_encryption_key": "base64-encoded-32-byte-key"
+      }
+    }
+  }
+}
+```
+
+PostgreSQL 必須配置 `user`、`database`，以及所有節點一致的 32 位元組
+`credential_encryption_key`。資料庫鑑權允許時可以省略 `password`。
+連線預設值為 host `127.0.0.1`、埠 `5432`、連線池大小 `10`、連線超時 `10` 秒、
+`sslmode=prefer`。TLS 引數為 `sslmode`、`sslrootcert`、`sslcert`、`sslkey`；
+需要驗證 TLS 時使用 `verify-full` 並指定 CA。應用角色需要已有表的
+SELECT/INSERT/UPDATE/DELETE 許可權，以及 schema 的 USAGE 許可權。
+可以執行一次
+`python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`
+生成金鑰，再通過部署的金鑰配置注入。
+
+事務採用 READ COMMITTED；排程使用 PostgreSQL 的語句級穩定時鐘 `statement_timestamp()`，
+同一語句內各行及表示式共享時間值，且該時鐘可作為索引範圍條件。URI 精確匹配和路徑範圍使用
+`"C"` 排序規則；字首索引只覆蓋前 128 個字元，實際匹配始終檢查完整 URI 和 `/` 邊界。
+更長字首仍正確過濾，但不使用該字首範圍最佳化。非 root 分頁使用 `list` 索引，
+通過帳號/使用者雜湊等值條件及 `(created_at, task_id)` 游標範圍掃描，並保留完整帳號/使用者校驗。
+root 的全域分頁使用 `list_all` 索引。公開列表在 SQL 層排除鑑權、Connector 狀態和大型 checkpoint。
+File、MySQL 和 PostgreSQL 使用相同的鑑權、執行結算與 checkpoint 版本規則。
+
+此配置只切換 Watch 後設資料，不切換 Task/Work、Account、PathLock、排程選主、檔案或向量儲存。
+PostgreSQL Watch 儲存不依賴 Redis 或 pgvector；多節點部署仍需配置可共享的 Task/Work 狀態、
+檔案/索引後端和適合該部署的協調機制。切換 provider 不會遷移已有 Watch；
+同一部署不要同時使用不同 provider 作為寫入端。
+
 所有節點都提供 Watch API。`enable_watch_scheduler=true` 的節點可以執行後臺 Watch
 排程器，通過 [AGFS coordination](#coordination-配置) 選主。
-leader 每 15 秒拉取到期 Watch 並結算已結束的執行。File 和 MySQL 共用 Runtime
+leader 每 15 秒拉取到期 Watch 並結算已結束的執行。File、MySQL 和 PostgreSQL 共用 Runtime
 的輪詢與有限併發派發流程。後臺派發在 leader 記憶體中維護
 未結束的 Watch 執行和提交中的協程佔用（預設上限 4）。接管時通過已有執行掃描
-恢復佔用（File 為本程序狀態，MySQL 為持久化行），後續派發不額外查詢佔用。
+恢復佔用（File 為本程序狀態，MySQL/PostgreSQL 為持久化行），後續派發不額外查詢佔用。
 手動觸發和首次匯入獨立受理，掃描發現後計入
-後臺佔用。File 目標移動沒有 1000 條 Watch 上限，MySQL 仍保留該事務限制。
+後臺佔用。File 目標移動沒有 1000 條 Watch 上限，MySQL 和 PostgreSQL 仍保留該事務限制。
 一次執行就是
 對應的 ingestion Task：執行佔用目標期間，Watch 行記錄該 Task ID，且只有在持有
 目標 Tree PathLock 時才能開始執行。提交在建立 Task 前停止（服務停機、身份刪除、
@@ -1583,7 +1679,7 @@ export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=ope
 }
 ```
 
-標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時，會從 `cache.instances` 初始化 CacheRuntime。Cache PathLock 選擇的例項必須使用 `redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`、多寫選擇 `backups.provider=cache`，或 Redis MySQL Account Store 選擇 `server.account_store.params.cache.instance` 時，會從 `cache.instances` 初始化 CacheRuntime。Cache PathLock 和 Redis MySQL Account Store 選擇的例項必須使用 `redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
 Python 的 `cache_runtime()` 僅能取得由這些消費者建立的 Runtime；
 只配置 `cache.instances` 不會建立獨立的 Provider 連線。
 
@@ -1594,11 +1690,13 @@ Python 的 `cache_runtime()` 僅能取得由這些消費者建立的 Runtime；
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `mode` | str | QueueFS 名稱空間模式：`"shared"` 使用 `/queue`；`"worker"` 為每個 worker 隔離到 `/queue/worker-<index\|pid>` | `"shared"` |
-| `backend` | str | QueueFS 後端：`"memory"`、`"sqlite"`、`"sqlite3"` 或 `"cache"` | `"sqlite"` |
+| `backend` | str | QueueFS 後端：`"memory"`、`"sqlite"`、`"sqlite3"`、`"cache"` 或 `"postgres"` | `"sqlite"` |
 | `instance` | str | `backend="cache"` 時選擇的 Runtime | `"default"` |
 | `db_path` | str（可選） | 當 backend 為 `"sqlite"` 或 `"sqlite3"` 時使用的 QueueFS sqlite 資料庫路徑 | `null` |
 | `recover_stale_sec` | int | 啟動時恢復超過該秒數的 `processing` 佇列訊息；`0` 表示恢復全部 stale processing 訊息 | `0` |
 | `busy_timeout_ms` | int | QueueFS sqlite 的 busy timeout，單位毫秒 | `5000` |
+| `postgres_dsn_env` | str / null | `postgres` 必填：儲存 PostgreSQL DSN 的環境變數名 | `null` |
+| `postgres_lease_seconds` | int | PostgreSQL 消費者租約時長，範圍 `10..=86400` 秒 | `60` |
 
 說明：
 
@@ -1607,6 +1705,7 @@ Python 的 `cache_runtime()` 僅能取得由這些消費者建立的 Runtime；
 - `db_path` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
 - `recover_stale_sec` 和 `busy_timeout_ms` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
 - `queuefs.backend=cache` 從 `cache.instances` 選擇 `queuefs.instance`，並使用頂層 `service_name` 作為 key 字首。
+- `queuefs.backend=postgres` 直連 PostgreSQL，使用頂層 `service_name` 作為名稱空間，不需要 Redis。啟動前必須初始化表，見 [PostgreSQL QueueFS](15-postgres-queuefs.md)。
 - Redis Cluster 模式的 endpoints 是初始節點，且必須配置 `db=0`；slot 路由、`MOVED`/`ASK`、拓撲更新和重連由 Fred RedisProvider 處理。
 - Redis Sentinel 模式的 endpoints 是 Sentinel 節點，並且必須配置非空 `master_name`；master 發現和故障切換後的重連由 Fred RedisProvider 處理。
 - `username` 和 `password` 用於 Redis 資料節點；`sentinel_username` 和 `sentinel_password` 僅用於 Sentinel 節點。
@@ -2044,13 +2143,13 @@ openviking-server --config /path/to/ov.conf
 - `enabled=false` 時：既無顯式 policy、也無 `server.user_config_defaults.auto_commit_policy` 的新 Session 保持 auto commit 關閉，並返回 `auto_commit_policy: null`；同時不啟動 `SessionAutoCommitScheduler`。
 - `enabled=true` 時：
   - 既無顯式 policy、也無部署級預設 policy 的新 Session 會帶上下方內建 policy。
-  - `idle_backend="local"` 時，`SessionAutoCommitScheduler` 啟動後立即開始掃描；掃描過程以 `scan_rate_limit_files_per_second` 為上限序列讀取 session `.meta.json`，每輪結束後至少等待 `check_interval_seconds`。
-  - `idle_backend="redis"` 時，服務通過頂層 `expiry` 配置整體啟用 expiry 上報、釋出和 callback 消費。
+  - `idle_backend="local"` 時，`scheduler` 節點啟動 `SessionAutoCommitScheduler` 並立即掃描；掃描過程以 `scan_rate_limit_files_per_second` 為上限序列讀取 session `.meta.json`，每輪結束後至少等待 `check_interval_seconds`。
+  - `idle_backend="redis"` 時，頂層 `expiry` 配置控制共享排程：`scheduler` 節點發布到期事件，`queue_worker` 節點執行 callback。
 - token 和 message-count 自動觸發在訊息寫入後內聯執行，不依賴 scheduler，但同樣以 session 是否帶有 `auto_commit_policy` 為前提。
 
 #### 分散式 Expiry 配置
 
-共享同一份 expiry 狀態的 API、publisher 和 callback 例項必須使用相同且穩定的 `service_name`。它表示部署的文件服務名，不是單個 Pod 名。
+共享 expiry 狀態的各節點必須使用相同且穩定的 `service_name`，它表示部署的文件服務名，不是單個 Pod 名。角色劃分見[服務角色與啟停](../configuration/03-server-roles.md)。
 
 ```json
 {
@@ -2072,16 +2171,16 @@ openviking-server --config /path/to/ov.conf
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `service_name` | string | 使用同一份 expiry 資料的所有例項共享的穩定文件服務名 | `""` |
-| `publisher_separate_process` | bool | 由 `openviking-server` 在獨立子程序中託管 publisher；為 `false` 時 publisher 在各 API 程序內執行 | `true` |
+| `publisher_separate_process` | bool | `scheduler` 節點由父程序託管 publisher 子程序；為 `false` 時在各 `scheduler` 程序內執行 | `true` |
 | `shard_count` | int | expiry 邏輯分片數；所有共享同一 namespace 的例項必須一致，取值範圍為 `1..512` | `128` |
-| `session_consumer_concurrency` | int | 每個 API 程序中 Session expiry callback 的併發數，必須大於 `0` | `8` |
+| `session_consumer_concurrency` | int | 每個 `queue_worker` 程序中 Session expiry callback 的併發數，必須大於 `0` | `8` |
 | `redis.mode` | string | Redis 部署模式：`standalone` 或 `cluster` | `standalone` |
 | `redis.endpoints` | string array | Redis 地址；叢集模式可以只配置一個統一 proxy 地址 | `[]` |
 | `redis.username` | string | Redis ACL 使用者名稱 | `""` |
 | `redis.password_env` | string | 儲存 Redis 密碼的環境變數名；變數不存在時啟動失敗 | `""` |
 | `redis.password` | string | 相容用明文密碼；建議使用 `password_env`，兩者互斥 | `""` |
 
-啟用 Redis idle auto commit 時必須配置 `service_name` 和 Redis 地址。使用者名稱與密碼只能使用上述獨立欄位，不能寫入 endpoint URI。預設 `publisher_separate_process=true` 時，`openviking-server` 會在開始服務前拉起一個內部 publisher 子程序，在服務關閉時停止它，並在子程序異常退出時一併退出。publisher 不再暴露為公共 CLI 命令。
+啟用 Redis idle auto commit 時必須配置 `service_name` 和 Redis 地址。使用者名稱與密碼只能使用上述獨立欄位，不能寫入 endpoint URI。`publisher_separate_process=true` 時，`scheduler` 啟動會拉起一個內部 publisher 子程序，關閉時停止它，子程序異常退出時一併退出。publisher 不提供公共 CLI 入口。
 
 ##### 單 session 自動 commit 策略
 
@@ -2227,8 +2326,9 @@ Account Store 表的 `service_name` 列，並在多個 OpenViking 叢集共用�
 充當隔離邊界。修改 `service_name` 會選擇另一組邏輯 Account Store 分割槽。
 
 Provider 不會建立或遷移資料庫表。啟動服務前，應通過現有 DBA 或部署流程手工建立
-`openviking/server/account_stores/sql/init.sql` 中定義的規範化表。後續經評審的
-schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`。
+`openviking/server/account_stores/sql/init.sql` 中定義的規範化表，再按順序執行
+`openviking/server/account_stores/sql/changes/` 中的遷移。已有資料庫只執行部署流程中
+尚未記錄為已完成的遷移。
 五張 `ov_accounts*` 表的名稱固定；多個 OpenViking 叢集共用資料庫時，通過不同的
 頂層 `service_name` 隔離部署，不使用不同表字首。
 
@@ -2254,7 +2354,9 @@ schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`�
 PostgreSQL Account Store 使用 `postgres` provider，安裝 `pip install 'openviking[postgres]'`。
 它直接通過 psycopg 3 和 SQLAlchemy 連線 PostgreSQL，無需 Redis 或 pgvector。
 先由遷移帳號執行
-`openviking/server/account_stores/sql/postgres/init.sql`，啟動不會建立或遷移表。
+`openviking/server/account_stores/sql/postgres/init.sql`，再執行
+`openviking/server/account_stores/sql/changes/0002_account_frozen_files.sql`。
+已有資料庫只需執行一次該遷移，啟動不會建立或遷移表。
 執行帳號需要目標 schema 的 `USAGE`、五張 `ov_accounts*` 表的
 `SELECT, INSERT, UPDATE, DELETE` 和三個主鍵序列的 `USAGE, SELECT`，
 無需表所有權或 schema `CREATE` 許可權。新部署首次啟動會建立 `default` 帳號。
@@ -2293,26 +2395,44 @@ PG 憑證儲存支援與 MySQL 相同的 `hash` 和 `encrypted` 模式及
 已有 File/MySQL 帳號資料不會自動遷移。此設定僅替換 Account Store；
 Task、Work 和 Watch 的儲存配置分別獨立。
 
-`redis_mysql` 需要安裝 `redis-mysql` extra。`mysql` 部分使用與 MySQL provider
-相同的引數；`cache` 部分沿用頂層快取的 `provider/params` 結構，支援
-`standalone`、`cluster` 和 `sentinel` 三種 Redis 部署模式。
+`redis_mysql` 需要安裝 `mysql` extra。`mysql` 部分使用與 MySQL provider
+相同的引數；`cache` 只能包含 `instance`，用於選擇頂層
+`cache.instances` 中的 Redis 配置。即使沒有其他快取消費者，被選擇的例項也會啟用
+CacheRuntime。
 
 MySQL 是資料來源，Redis 快取鑑權結果、使用者資訊、組和刪除狀態。快取未命中或
-Redis 讀取失敗時會查詢 MySQL。通過 `server.account_store.params.cache.params.ttl_seconds` 配置快取有效期，
-預設 60 秒；命中不會延長有效期。
+Redis 讀取失敗時會查詢 MySQL。通過
+`cache.instances.<instance>.params.default_ttl_seconds` 配置 payload 快取有效期。
+Runtime 預設值為 300 秒；Redis MySQL Account Store 要求該值為正整數。命中不會延長有效期。
 
 憑據、許可權和刪除狀態變更會失效相關快取。如果失效操作失敗，快取可能保持舊值
 直到 TTL 到期。共享同一快取的例項應一起升級，舊、新快取格式無法互相失效。
-快取版本後設資料不會自動過期，需要計入 Redis 容量規劃。舊的 `lock_ttl_seconds`
-和 `lock_wait_seconds` 配置相容接受，但不再使用。
-
-Redis 連線和命令超時分別通過 `server.account_store.params.cache.params.connect_timeout_ms` 和
-`server.account_store.params.cache.params.command_timeout_ms` 配置，預設均為 5000 毫秒；它們不是整個請求的
-總超時。`server.account_store.params.cache.params.pool_size` 應按併發 Redis 請求數配置，預設 32，下面示例
-使用 100；連線池耗盡會觸發連線錯誤並轉為查詢 MySQL。
+快取版本後設資料不會自動過期，需要計入 Redis 容量規劃。帳號快取 key 字首固定為
+`ov:account-cache`。Redis 連線、連線池和超時引數配置在選中的
+`cache.instances` 條目中。
 
 ```json
 {
+  "cache": {
+    "instances": {
+      "default": {
+        "provider": "redis",
+        "params": {
+          "endpoints": ["redis://redis.example.com:6379"]
+        }
+      },
+      "accountstore": {
+        "provider": "redis",
+        "params": {
+          "endpoints": ["rediss://account-cache.example.com:6379"],
+          "username": "openviking",
+          "password_env": "OPENVIKING_ACCOUNT_REDIS_PASSWORD",
+          "pool_size": 100,
+          "default_ttl_seconds": 60
+        }
+      }
+    }
+  },
   "server": {
     "account_store": {
       "provider": "redis_mysql",
@@ -2324,22 +2444,7 @@ Redis 連線和命令超時分別通過 `server.account_store.params.cache.param
           "database": "openviking"
         },
         "cache": {
-          "provider": "redis",
-          "params": {
-            "mode": "sentinel",
-            "endpoints": [
-              "rediss://sentinel-1.example.com:26379",
-              "rediss://sentinel-2.example.com:26379",
-              "rediss://sentinel-3.example.com:26379"
-            ],
-            "master_name": "openviking",
-            "username": "openviking",
-            "password_env": "OPENVIKING_REDIS_PASSWORD",
-            "sentinel_password_env": "OPENVIKING_SENTINEL_PASSWORD",
-            "key_prefix": "ov:account-auth",
-            "pool_size": 100,
-            "ttl_seconds": 60
-          }
+          "instance": "accountstore"
         }
       }
     }

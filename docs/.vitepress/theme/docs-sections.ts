@@ -229,7 +229,8 @@ export const sections: DocSection[] = [
         p('guides/23-shared-deployment'),
         p('getting-started/04-setup-for-agent'),
         p('guides/01-configuration'),
-        p('guides/02-volcengine-purchase-guide')
+        p('guides/02-volcengine-purchase-guide'),
+        p('guides/27-byteplus-setup')
       ]),
       g('Secure access', '訪問與安全', [
         p('guides/04-authentication'),
@@ -246,6 +247,7 @@ export const sections: DocSection[] = [
       g('Storage and performance', '儲存與效能', [
         p('guides/13-multi-write-storage'),
         p('guides/14-ragfs-cache'),
+        p('guides/15-postgres-queuefs'),
         p('guides/16-cuvs'),
         p('guides/25-pgvector'),
         p('guides/26-pgvector-directory-filtering')
@@ -261,6 +263,7 @@ export const sections: DocSection[] = [
         p('reference/01-overview'),
         p('api/01-overview'),
         p('configuration/01-server'),
+        p('configuration/03-server-roles'),
         p('configuration/02-client'),
         p('configuration/03-fork'),
         p('guides/06-mcp-integration')

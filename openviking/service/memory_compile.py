@@ -221,10 +221,15 @@ class MemoryCompileRunner:
                             "No memory changes succeeded; see result.errors for details",
                             result=result,
                         )
-                    logger.warning(
-                        "Memory-mode compile %s partially succeeded: %s",
+                    logger.info(
+                        "memory compile partially succeeded task_id=%s failed=%d",
                         task_id,
-                        result["errors"],
+                        len(result["errors"]),
+                        extra={
+                            "degraded": True,
+                            "task_id": task_id,
+                            "failed": len(result["errors"]),
+                        },
                     )
                 try:
                     # Index and tag the consolidated directory before reporting completion.
@@ -251,9 +256,20 @@ class MemoryCompileRunner:
                 wait_busy=False,
             )
             if oid is None:
-                logger.warning("Memory compile %s %s snapshot is unavailable", task_id, phase)
+                logger.info(
+                    "memory compile snapshot unavailable; continuing task_id=%s phase=%s",
+                    task_id,
+                    phase,
+                    extra={"degraded": True},
+                )
         except Exception as exc:
-            logger.warning("Memory compile %s %s snapshot failed: %s", task_id, phase, exc)
+            logger.info(
+                "memory compile snapshot failed; continuing task_id=%s phase=%s error_type=%s",
+                task_id,
+                phase,
+                type(exc).__name__,
+                extra={"degraded": True, "error_type": type(exc).__name__},
+            )
 
     async def _consolidate(
         self,

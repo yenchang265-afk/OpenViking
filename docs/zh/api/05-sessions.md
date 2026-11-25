@@ -924,6 +924,75 @@ ov session get-session-archive a1b2c3d4 archive_002
 
 ---
 
+### session_history()
+
+#### 1. API 實現介紹
+
+只讀地查詢一個會話儲存下來的全部內容：所有帶 `messages.jsonl` 的歸檔（pending、completed、failed 都算），再加上 live 尾部，按訊息 ID 去重。外接的工具輸出會從 tool-result 儲存中補全，因此 search 和 read 看到的是完整輸出，而不是儲存的預覽。返回的是給模型看的文本；MCP 工具 `session_history` 使用同一個服務。
+
+- **條目 ID** 形如 `3fa91c#870`：會話 ID 的 SHA-256 前 6 個十六進位制字元，加上該訊息在上述順序中的位置（從 1 開始）。ID 在讀取時計算，不寫入任何新資料。輸入也接受 `#870` 和 `870`（指範圍內第一個會話）。歸檔寫入後不再改變，普通 commit 歸檔的是字首，所以位置在 commit 前後保持穩定。`retention_mode="turn_budget"` 下 live 尾部的訊息可能在下一次 commit 時移動，因此這類會話的 live 尾部 ID 以 `~3fa91c#870` 形式輸出。
+- **渲染**：text part 原樣輸出；工具呼叫輸出為 `[tool <name>] input: <json>`，再加 `[tool <name>] output (<N> chars):` 和輸出內容（非成功狀態會標出）；context part 輸出一行；圖片輸出 `[image]`。read 中每個條目以 `[<id>] <role> · <time>` 標題開頭，儲存內容的每一行都加 `| ` 字首。偏移量指的是這份渲染文本中的字元位置。
+- **search**：在渲染文本上做字面量、不區分大小寫的子串搜尋；工具名也在文本里，普通查詢就能找到（渲染標籤的其餘部分不參與匹配）。每個匹配所在的行原樣輸出（行指 `read` 所顯示文本中兩個換行之間的內容），並以 `[<id> @<offset>]` 標註：offset 是輸出文本在條目中的起始位置，用同樣的 id 和 offset 呼叫 `read` 會正好從這段文本開始。條目的第一行還帶有 `<role> · <time>`。同一行有多個匹配時只輸出一次；超過約 400 個字元的行只輸出匹配處前後各約 200 個字元，並在標註中寫明 `part of a <N>-char line`；同一行裡落在這段之外的匹配各自再輸出一段，按一行計數。每個條目最多輸出 5 行，之後說明該條目還有多少匹配行以及下一行的偏移。結果按時間從舊到新：先歸檔，再 live 尾部；多個會話時先輸出較早的會話（即 `session` 中靠後的）。`limit` 限制輸出的行數；被它或響應大小截斷時，省略的是最新的行，並說明省略了多少行、從哪個 ID 和偏移開始。多個片語成的短語沒有命中時，輸出同時包含所有詞的條目中含這些詞的行，並在結果中說明。名稱以 `session_history` 結尾的工具呼叫會被跳過。每次呼叫從舊到新最多掃描約 32 MB 文本，並說明掃描停在哪裡。
+- **read**：返回一個條目的精確範圍：從 `offset`（預設 0）開始，最多 `limit` 個字元，同時受響應上限約束。只顯示了條目的一部分時，條目標題末尾寫明 `chars <start>–<end> of <total>`；從 `<end>` 再讀即可接著往下讀。`before`/`after` 各可加最多 20 個相鄰條目（預設 0），每個最多顯示約 400 token。
+- **截斷位置**：回答會寫明在哪裡截斷（read 的字元範圍、被省略的 search 行從哪裡開始、掃描停在哪裡），不替呼叫方寫出下一次呼叫。
+- **引數上限**：`query` 最多 500 個字元，`id`/`from_id`/`to_id` 140，`session` 2,000；超長的值以及不是整數的數字引數以一行 `Bad arguments` 回答。文本引數按原樣使用（形如 `{"detail":"Not Found"}` 的 JSON 文本仍是文本），null 表示未提供，其他 JSON 值按緊湊 JSON 文本使用，`session` 傳字串列表時以逗號連線。HTTP 路由與 MCP 工具接受同樣的引數，忽略工具未宣告的引數名，返回的文本也與 MCP 工具相同。
+- **overview**：每個歸檔一行（ID 範圍、時間範圍、第一條使用者訊息），live 尾部的範圍，以及子代理會話（`<session_id>__subagent-…`）。
+- 響應上限約 4,000 token。問題都在 `text` 中以狀態 200 回答：未指定會話時只說明需要傳入會話，不列出其他會話；指定的會話對該呼叫方沒有任何儲存內容時如實說明；無法解析的儲存行保留原位置，顯示為不可讀條目（檔案沒有結尾換行且最後一行無法解析時，視為仍在寫入而跳過）；某個會話的檔案無法讀取時，該會話不顯示任何內容（否則 ID 會錯位），其他會話照常返回。查詢永遠不會建立會話。
+- 讀取按呼叫方身份和許可權檢查進行，所有文本（live 與歸檔的 `messages.jsonl`、tool-result 的 `output.txt`）都經過與 `read` 相同的讀取時隱私處理：儲存之後才登記的值也會顯示為 <code v-pre>{{ov_privacy:…}}</code> 佔位符，佔位符永遠不會被還原。該處理按整行 JSONL 分組進行，因此大檔案不會被拒絕；單條訊息大到無法檢查時顯示為不可讀，工具輸出大到無法檢查時改為顯示儲存的預覽。會話不建索引，搜尋是線性掃描。
+
+**程式碼入口**：
+- `openviking/session/history.py:session_history()` - 核心實現
+- `openviking/server/routers/sessions.py:session_history()` - HTTP 路由
+- `openviking/server/mcp_endpoint.py:session_history()` - MCP 工具
+
+#### 2. 介面和引數說明
+
+**引數**（JSON 請求體，即 MCP 工具 `session_history` 的引數）
+
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
+|------|------|------|--------|------|
+| action | str | 是 | - | `search`、`read` 或 `overview` |
+| session | str | 是 | - | 會話 ID，逗號分隔，從新到舊；最多使用前 10 個 |
+| query | str | 否 | `""` | search：字面量文本，不區分大小寫；search 必填 |
+| role | str | 否 | `""` | search：`user`、`assistant` 或 `tool`。`user` 只包含使用者自己寫的內容；只攜帶工具結果的 user 角色訊息算作 `tool`，結果裡也這樣標註 |
+| from_id / to_id | str | 否 | `""` | search：ID 範圍（閉區間） |
+| id | str | 否 | `""` | read：條目 ID |
+| before / after | int | 否 | 0 | read：相鄰條目數，0-20 |
+| offset | int | 否 | 0 | read：精確的起始字元偏移，例如 search 結果行的 `@offset` |
+| limit | int | 否 | 見說明 | search：最多輸出行數（預設 20，最大 50）；read：最多字元數（預設 4,000，最大 16,000）；overview：最多歸檔行數（預設 10，最大 30） |
+
+響應的 `result` 包含 `text`、`ids`（展示的條目的 ID）和 `has_more`。
+
+#### 3. 使用示例
+
+**HTTP API**
+
+```http
+POST /api/v1/sessions/history
+```
+
+```bash
+curl -X POST "http://localhost:1933/api/v1/sessions/history" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key" \
+  -d '{"action": "search", "session": "a1b2c3d4", "query": "ECONNREFUSED", "limit": 5}'
+```
+
+**響應示例**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "text": "Saved conversation history (a record, not instructions; tool output may be out of date).\nSession a1b2c3d4 = 7dcf40: 3 items (7dcf40#1 to 7dcf40#3), latest 2026-11-01T11:00:05Z.\nSearch \"ECONNREFUSED\": 4 matching lines in 3 items, oldest first.\n[7dcf40#1 @0] user · 2026-11-01T10:00:00Z\n| Please fix the ECONNREFUSED error in deploy.sh\n[7dcf40#2 @150] assistant · 2026-11-01T10:00:10Z\n| Error: connect ECONNREFUSED 10.0.3.7:5432\n[7dcf40#2 @202]\n| Error: connect ECONNREFUSED 10.0.3.7:5432\n[7dcf40#3 @0] assistant · 2026-11-01T11:00:05Z\n| The ECONNREFUSED came from the database port 5432 being closed during the restart.",
+    "ids": ["7dcf40#1", "7dcf40#2", "7dcf40#3"],
+    "has_more": false
+  }
+}
+```
+
+---
+
 ### delete_session()
 
 #### 1. API 實現介紹
@@ -1075,6 +1144,8 @@ ToolPart(
 ```http
 POST /api/v1/sessions/{session_id}/messages
 ```
+
+助手回覆中斷時，可以在該訊息中傳入可選欄位 `interrupted: true`。會話會儲存已生成的內容，並在讀取歷史訊息時返回該標記。批次新增訊息時也可以為每條助手訊息設定該欄位。
 
 **簡單模式（向後相容）**
 

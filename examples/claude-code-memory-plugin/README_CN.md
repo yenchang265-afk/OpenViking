@@ -153,7 +153,7 @@ claude
 | `OPENVIKING_LOG_RANKING_DETAILS`       | `false`       | 每候選打分日誌（很囉嗦）                                           |
 | `OPENVIKING_RECALL_MAX_TOKENS`         | `1600`        | 服務端組裝上下文塊的 token 預算（與本地壓縮輸入上限相互獨立）         |
 | `OPENVIKING_RECALL_DEDUP_TURNS`        | `5`           | 跨輪冷卻：最近 N 輪已注入過的 URI 本輪跳過                           |
-| `OPENVIKING_RECALL_EVENTS_DECAY_PROTECTION` | （關） | 事件記憶在此期限內（`7d`、`12h`）保持原分，之後衰減，較早的事件不再壓過新的。以 `events_time_decay_protection` 傳送。 |
+| `OPENVIKING_RECALL_EVENTS_DECAY_PROTECTION` | `30d` | 自動召回時，事件更新後在保護期內保持原分，超過保護期後開始衰減。設為 `off` 關閉衰減，或指定 `7d`、`12h` 等其他保護期。 |
 | `OPENVIKING_RECALL_QUERY_EXPANSION`    | `auto`        | `auto` 讓服務端結合會話上下文擴充短提問；`off` 關閉                   |
 | `OPENVIKING_RECALL_COMPRESS`           | `auto`        | digest 壓縮：`off`、`client`（本地宿主 CLI）、`server`、`auto`（本地優先、失敗回落服務端） |
 | `OPENVIKING_RECALL_COMPRESS_MAX_BULLETS` | `6`         | digest 條數上限                                                     |
@@ -181,8 +181,9 @@ claude
 | `OPENVIKING_SKILL_CATALOG`               | `true`    | 在會話啟動塊里加入 `<available-skills>` skill 清單                 |
 | `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`  | `1200`    | `<available-skills>` 的 token 預算（0–20000），不佔使用者畫像的預算；設為 `0` 即不注入清單 |
 | `OPENVIKING_SESSION_START_MAX_BYTES`    | `9500`    | SessionStart 注入的總位元組上限，保證低於 Claude Code 10,000 字元的內聯限制；resume/compact 時歸檔最多佔一半；`0` 取消上限 |
+| `OPENVIKING_SESSION_HISTORY_POINTER`    | `true`    | resume/compact 時附一段簡短說明，給出本會話的 OV 會話 id 以及如何用服務端的 `session_history` MCP 工具查原始細節；MCP 代理會把該工具的 `session` 自動填成當前會話 |
 
-在 `ovcli.conf` 裡，這幾項對應 `plugin` 或 `plugin.claude_code` 下的 `noAutoInject`、`profileTokenBudget`、`skillCatalog` 和 `skillCatalogTokenBudget`。
+在 `ovcli.conf` 裡，這幾項對應 `plugin` 或 `plugin.claude_code` 下的 `noAutoInject`、`profileTokenBudget`、`skillCatalog`、`skillCatalogTokenBudget` 和 `sessionHistoryPointer`。
 
 每次 `SessionStart`（`startup`、`clear`、`resume`、`compact`）都會注入一個 `<openviking-context>` 塊，依次包含 `<user-profile>`、`<available-memories>` 和 `<available-skills>`；`resume`/`compact` 時後面還會接上最新的 archive overview。skill 清單來自一次 `GET /api/v1/skills?node_limit=200` 呼叫：先列你自己的 skill，再列帳號內共享在 `viking://agent/skills` 下的 skill，與你自己某個 skill 同名的共享 skill 不再列出。每條描述截到約 40 個 token，描述裡出現的 `<openviking-context>` 等注入塊標籤會被轉義。完整清單超出預算時只列名稱，名稱也放不全時以 `... +N more, search OpenViking skills to find the rest` 收尾；連一個名稱都放不下時，整塊縮成一行 `<available-skills>N OpenViking skills; search OpenViking skills to find them.</available-skills>`。沒有任何 skill，或服務端不支援 `GET /api/v1/skills` 時，不注入清單。
 

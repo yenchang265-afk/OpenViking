@@ -158,12 +158,14 @@ class MemoryKernel:
         except Exception as error:
             metrics = {}
             if isinstance(error, asyncio.TimeoutError) and budget.expired:
-                logger.warning(
-                    "Business Context Platform Gateway preparation timed out; forwarding without memory"
-                )
+                logger.info("gateway preparation timed out; forwarding without memory")
                 degrade(metrics, "prepare_timeout")
             else:
-                logger.exception("Business Context Platform Gateway preparation failed")
+                logger.info(
+                    "gateway preparation failed; forwarding without memory error_type=%s",
+                    type(error).__name__,
+                    extra={"degraded": True, "error_type": type(error).__name__},
+                )
                 degrade(metrics, "memory_store_failure")
             return self.degraded_body(body, protocol), None, metrics
 
@@ -919,7 +921,10 @@ class MemoryKernel:
             # Messages after the cut are new client input that hidden history never expands.
             if messages[len(span) :] != kept:
                 raise SummaryError("cut_not_found")
-            instruction = summary_instruction(policy.summary_max_tokens, in_progress)
+            lookup = policy.capture and any(
+                t["function"]["name"] == "openviking_session_history" for t in request.root["tools"]
+            )
+            instruction = summary_instruction(policy.summary_max_tokens, in_progress, lookup)
             limit = policy.summary_max_tokens
             try:
                 response = await summarize(
@@ -940,7 +945,9 @@ class MemoryKernel:
             await self.compaction_failed(request, error.reason)
             return
         except Exception:
-            logger.exception("Business Context Platform Gateway summary failed")
+            logger.info(
+                "gateway summary failed; using compaction fallback", extra={"degraded": True}
+            )
             request.metrics["compaction_ms"] = round((time.monotonic() - started) * 1000, 2)
             await self.compaction_failed(request, "summary_failed")
             return

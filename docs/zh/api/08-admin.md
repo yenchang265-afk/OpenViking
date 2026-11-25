@@ -60,6 +60,35 @@ Admin API 用於多租戶環境下的帳戶、使用者和使用者組管理。�
 - `--sudo` 僅適用於上面的命令，用於普通資料命令會報錯
 - 必須配置 `root_api_key` 才能使用 `--sudo`
 
+## 帳號內凍結列表
+
+管理員可以維護帳號內凍結列表，登記本 account 普通 USER（包括以 USER 身份執行的 agent）的檔案路徑。列表持久儲存，最多包含十條。操作只讀寫帳號授權元資訊，不讀取目標檔案，也不授予管理員讀取該 user 資料的許可權。
+
+```bash
+ov admin freeze-file acme agent-a skills/example/SKILL.md
+ov admin frozen-file-status acme agent-a skills/example/SKILL.md
+ov admin unfreeze-file acme agent-a skills/example/SKILL.md
+```
+
+這三個 CLI 命令也接受 `viking://user/agent-a/skills/example/SKILL.md` 這樣的完整 user URI，自動轉換為相對路徑。URI 中的 user 必須與命令的 `user-id` 一致，否則 CLI 會報錯。轉換保留原始路徑，不解碼轉義或消除 `..`；服務端繼續校驗相對路徑。
+
+ROOT 可以使用 `--sudo` 管理指定 account。普通 USER 和 GLOBAL 無權管理帳號內凍結列表；新增凍結只允許 USER 目標。服務端接收的路徑相對於目標 user 根目錄，採用 GLOBAL 的嚴格字面路徑語法：不支援萬用字元、URI、編碼轉義、`..` 或內部儲存檔名，單段不得超過 255 位元組。匹配、狀態查詢和解凍均區分大小寫：`a.md` 和 `A.md` 是獨立條目。
+
+凍結路徑可以尚不存在。狀態僅表示路徑是否在帳號內凍結列表中，不暴露檔案存在性、內容、大小或摘要。重複凍結、解凍是冪等的；目標 user 已刪除或變更角色後仍可清除舊規則。
+
+寫入、追加、刪除、移動、覆蓋、後臺寫入和版本恢復會檢查帳號內凍結列表。刪除或移動包含凍結路徑的目錄、向與凍結路徑相交的目標子樹複製也會拒絕。讀取許可權保持原樣；解凍不會授予原本沒有的許可權。業務租約、`bypass_acl` 和關閉自動 PathLock 都不能解除這層保護。經授權的身份登出通過專用清理任務刪除該 user 的全部資料，包括凍結檔案。
+
+規則在首次寫入檢查時載入，並在同一個請求或後臺執行中複用；普通讀取和鑑權不載入規則。FileStore 的 watcher 正常執行時直接讀取記憶體列表，不等待變更鎖；否則 FileStore 和直接 SQL provider 將成功讀取的空快照快取 60 秒，Redis/MySQL 則使用配置的快取 TTL，快取經 SQL 確認的本地空快照。空快照命中時不做儲存 IO 或路徑匹配，命中不會延長有效期。每個 provider 最多保留 1,024 個帳號的空快照，當前例項的凍結/解凍操作嘗試會清除目標帳號快照。非空列表沿用既有重新整理/快取機制。執行中已載入的規則快照允許繼續使用。空快照過期後，規則讀取或解析失敗會阻止寫入，不會被解釋為空列表；快取傳播延遲是預期行為。
+
+| 方法 | 路徑 | 引數 |
+|------|------|------|
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/frozen-file?path={path}` | 必填 query: `path` |
+| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/frozen-file` | JSON: `{"path":"skills/example/SKILL.md","frozen":true}` |
+
+響應 `result` 包含 `account_id`、`user_id`、`path`、`frozen`。該狀態與 `stat.isLocked` 的短期併發租約狀態獨立。變更被拒絕時返回 `PERMISSION_DENIED`，`details.reason` 為 `admin_file_frozen`。
+
+MySQL/PostgreSQL 部署需在升級執行時啟動前執行一次 `openviking/server/account_stores/sql/changes/0002_account_frozen_files.sql`。新建 MySQL 庫先執行 `sql/init.sql`，再按順序執行 `sql/changes/` 中的遷移；新建 PostgreSQL 庫先執行 `sql/postgres/init.sql`，再執行 `0002_account_frozen_files.sql`（之前的列表索引已在 PostgreSQL 初始化 SQL 中）。已有庫只執行尚未應用的遷移。開源與商業部署均需在現有 DBA/部署流程中記錄該遷移，執行時不自動加列。外部帳號儲存 provider 需要實現對應元資訊能力後才能使用管理命令。
+
 ## 使用者組
 
 使用者組屬於單個 account，用於通過一個 ACL principal 授權多個使用者。`group_id` 由呼叫者建立時指定，使用與 `user_id` 相同的識別符號規則，是 account 內唯一且穩定的標識；不存在單獨的組名。組內只能加入當前 account 已存在的使用者，不支援巢狀組。
@@ -514,7 +543,7 @@ cuVS 調優和自定義介面卡引數。
 本地模型路徑、融合/影片引數和 `allow_metadata_override` 不在 Account API 範圍內。
 每次更新都在持久化前聯合校驗有效 Embedding 和 VectorDB，失敗保留原配置。
 
-顯式 `embedding: {}` 是合法配置，表示未宣告 Account 模型模式或執行策略。
+顯式 `embedding: {}` 表示未宣告 Account 模型模式或執行策略。
 作為 PATCH 提交時，`{}` 會與現有配置合併，不會清空已有值。未配置 Account
 模型模式時使用 Cluster 模型繫結。顯式 Account VectorDB 配置會替換 Cluster
 的連線與鑑權欄位，即使後端型別相同也不會拼接；僅支援 `http` 遠端後端。
@@ -531,10 +560,11 @@ cuVS 調優和自定義介面卡引數。
 Account 與 Cluster 配置分別儲存。Agent Evolution 僅為相容舊行為保留已廢棄的
 Cluster 整段回退。GitHub 和 ACL 不回退到 Cluster。
 
-VLM 業務解析器在 Account 未配置 VLM 時使用 Cluster VLM。Account 已配置時，
+Account 未配置 VLM 時使用 Cluster VLM。Account 已配置時，
 模型身份、服務端點和憑證僅來自 Account，部分執行引數按業務規則使用 Cluster
 配置。Account 設定 `timeout` 時覆蓋 Cluster 的值，未設定或重置後使用 Cluster
-的值。Query Planner 的選擇順序為 Account `query_planner`、Account `vlm`、
+的值。清除 Account VLM 時，Cluster VLM 必須有效。
+Query Planner 的選擇順序為 Account `query_planner`、Account `vlm`、
 Cluster `query_planner`、Cluster `vlm`；這是 VLM 業務規則，不是配置框架的隱式繼承。
 
 PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執行時配置面之外的欄位會被拒絕。
@@ -1035,7 +1065,7 @@ DELETE /api/v1/user-settings/add-locations
 - 檔案儲存帳戶建立時，超過 255 個 UTF-8 位元組的 `account_id` 會在寫入帳戶登錄檔前返回 `INVALID_ARGUMENT`。新持久化的 user ID 在所有帳戶儲存 Provider 中最多 255 個字元。trusted 模式會在加入自動註冊佇列前拒絕超長的新 user ID 和新建的超長帳戶，避免無效身份阻塞其他身份註冊；已有的超長 File user 和 account 仍可讀取。
 - 在 `trusted` 模式下，只建立身份和角色，不生成個人金鑰、金鑰雜湊或金鑰索引；響應不包含 `user_key`，`seed` 不參與處理。
 - 省略 `seed` 時隨機生成 API Key。執行確定性示例前，將 `OV_KEY_SEED` 設為安全生成的秘密值；Go 示例還需匯入 `os`。不要使用短字串或可預測內容作為 seed。
-- `settings` 在帳號和目錄建立前完成結構與有效 Embedding/VectorDB 聯合校驗。校驗失敗不會留下 Account、使用者或配置檔案。
+- 建立要求 Account 配置或 Cluster 回退後有效的 VLM、Embedding、VectorDB。校驗不傳送模型請求或申請遠端資源，失敗不會留下 Account、使用者或配置檔案。
 - Account `vlm`、`query_planner`、`embedding` 和 `vectordb` 是 ROOT-only 配置；欄位 schema、生命週期和校驗見上文 [Account Configuration 介面參考](#account-configuration-介面參考)。當前 Python SDK、CLI 及其他 SDK 的建立帳號封裝尚未暴露 `settings` 引數，使用此能力請直接呼叫 HTTP API。
 - 不再支援 account 級 namespace 隔離配置。使用者記憶使用 user-scoped namespace，一對多外部參與者通過 `peer_id` 表達。
 - `user_config.add_targets.resource_uri` 必須是資源目錄 URI：`viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://~/peers/{peer_id}/resources` 或 `viking://~/peers/{peer_id}/resources/...`。

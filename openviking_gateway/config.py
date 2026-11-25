@@ -100,6 +100,7 @@ class GatewayConfig(BaseModel):
             "session_ttl_days",
             "capture_concurrency",
             "capture_delivery_records",
+            "request_log_max_bytes",
         }
     )
 
@@ -119,9 +120,10 @@ class GatewayConfig(BaseModel):
     session_ttl_seconds: int = Field(default=86400, ge=3600)
     response_ttl_seconds: int = Field(default=30 * 86400, ge=60)
     request_log_sink: Literal["store", "stdout", "file"] = "store"
-    # The file sink's JSON lines; it rotates at request_log_max_bytes and keeps four old files.
+    # The file sink's JSON lines, rotated in UTC like the server's usage log.
     request_log_path: str = ""
-    request_log_max_bytes: int = Field(default=256 * 1024 * 1024, ge=1024 * 1024)
+    request_log_rotation_interval_hours: int = Field(default=1, gt=0)
+    request_log_backup_count: int = Field(default=168, ge=0)
     # Seconds between status lines with this process's counters; 0 writes none.
     snapshot_interval_seconds: float = Field(default=0, ge=0)
     # Record X-OpenViking-Resource-Id and X-OpenViking-Request-Source from a fronting service.
@@ -164,10 +166,10 @@ class GatewayConfig(BaseModel):
         if not isinstance(value, dict):
             return value
         if found := cls.removed_fields.intersection(value):
-            logger.warning(
-                "Ignoring removed gateway settings %s. "
-                "See docs/en/guides/22-gateway-operations.md#migration",
-                ", ".join(sorted(found)),
+            logger.info(
+                "removed gateway configuration settings ignored skipped=%d",
+                len(found),
+                extra={"degraded": True, "skipped": len(found)},
             )
         value = {key: item for key, item in value.items() if key not in found}
         for field in cls.model_fields:

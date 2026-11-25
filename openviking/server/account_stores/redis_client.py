@@ -116,7 +116,11 @@ def create_redis_client(
 
     if config.mode == "cluster":
         cluster = importlib.import_module(module + ".cluster")
-        ClusterNode, RedisCluster = cluster.ClusterNode, cluster.RedisCluster
+        ClusterNode = cluster.ClusterNode
+        if asynchronous:
+            from openviking.scheduling.redis_cluster import SeededRedisCluster as RedisCluster
+        else:
+            RedisCluster = cluster.RedisCluster
 
         return RedisClientHandle(
             RedisCluster(

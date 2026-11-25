@@ -1,6 +1,6 @@
 # DeepSeek Harness
 
-為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）及 DeepSeek Harness Desktop 桌面應用接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 OpenViking 工具以及 `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` 四個技能，無需額外配置。
+為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）及 DeepSeek Harness Desktop 桌面應用接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 OpenViking 工具以及 `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search`、`ov-memory-doctor` 五個技能，無需額外配置。
 
 Rule skill 需要 `0.5.33` 或更新的外掛包，以及在 `/mcp` 釋出 `rule_search`
 的服務端版本。升級兩端後重連 DSH。
@@ -10,6 +10,13 @@ Rule skill 需要 `0.5.33` 或更新的外掛包，以及在 `/mcp` 釋出 `rule
 ## 安裝
 
 DSH 與其他記憶外掛共用同一個安裝器。它會詢問要安裝的 harness 和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
+
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -115,7 +122,7 @@ Windows 上安裝器不可用，只能用這種方式；macOS 上不想跑安裝
 
 每個 DSH 會話對映為 OpenViking 中的 `dsh-<session-id>`，子 agent 各自擁有獨立會話。
 
-模型看到的工具面就是 OpenViking 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄）。設定 `OPENVIKING_RECALL_PEER_SCOPE=actor` 後，固定的 `OPENVIKING_PEER_ID` 才會把該 profile 的工具呼叫歸屬到同一個 peer；預設 `all` 不傳送 actor-peer 頭。多個工作區需要不同工具身份時，使用獨立 profile/程序。外掛同時附帶四個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 OpenViking 裡的技能，`ov-experience-memory` 讓模型在執行類任務前檢索並應用以往任務的 Experience，`openviking-rule-search` 則呼叫服務端釋出的 `mcp__openviking__rule_search` 工具檢查任務相關 Rule。外掛預設捕獲工具結果（`captureToolResults: true`），服務端據此把該技能的讀取關聯回所用的 Experience；設為 `false` 時，它只檢索和應用 Experience。
+模型看到的工具面就是 OpenViking 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄）。設定 `OPENVIKING_RECALL_PEER_SCOPE=actor` 後，固定的 `OPENVIKING_PEER_ID` 才會把該 profile 的工具呼叫歸屬到同一個 peer；預設 `all` 不傳送 actor-peer 頭。多個工作區需要不同工具身份時，使用獨立 profile/程序。外掛同時附帶五個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 OpenViking 裡的技能，`ov-experience-memory` 讓模型在執行類任務前檢索並應用以往任務的 Experience，`openviking-rule-search` 呼叫服務端釋出的 `mcp__openviking__rule_search` 工具檢查任務相關 Rule，`ov-memory-doctor` 診斷外掛安裝、客戶端配置和服務端連線。外掛預設捕獲工具結果（`captureToolResults: true`），服務端據此把該技能的讀取關聯回所用的 Experience；設為 `false` 時，它只檢索和應用 Experience。
 
 檔案工具誤把 `viking://` URI 當本地路徑時，呼叫會被攔截，並提示改用對應的 OpenViking 工具；寫入或編輯的若是 `viking://~/skills/<name>/` 這類技能目錄，提示的工具是 `mcp__openviking__add_skill`，它用完整的 `SKILL.md` 文本建立或替換整個技能。shell 命令帶 `viking://` URI 時照常執行，模型會收到一條改用 OpenViking 工具的提示，URI 是有意傳入的資料時可以忽略。
 
@@ -173,6 +180,8 @@ adapter 可能繼續請求，但遲到的結果不會注入。輔助訊息不追
     commitTokenThreshold: 20000
 ```
 
+在這個 `config` 塊、或 `ovcli.conf` 的 `plugin` / `plugin.dsh` 中設定 `mcpEnabled: false` 時，既不掛載 OpenViking MCP 工具，也不掛載內建技能；召回和捕獲照常。
+
 同一個 `config` 塊裡的 `syncTurns: false` 關閉自動捕獲、commit 和待寫佇列重放，畫像注入和召回照常。排隊的寫入保留到後續開啟寫入的會話處理；該開關不會撤銷模型的 MCP 寫工具或改變服務端許可權。
 
 同一個 `config` 塊裡的 `peerSource` 決定工作區 peer 的派生方式。預設的 `"git"` 取倉庫歸一化後的 `origin` URL（`git@github.com:volcengine/OpenViking.git` 得到 `github.com-volcengine-openviking`），其次是倉庫根路徑，因此同一個倉庫的每個 clone、worktree 和子目錄共用同一個 peer；不在倉庫中則完全不傳送 peer，在那裡記下的內容進入使用者級空間 `viking://user/<you>/memories`。`"cwd"` 恢復此前的行為——把工作目錄路徑中的非字母數字字元全部替換成 `-`；`"none"` 則完全不傳送 peer。要讓倉庫之外的目錄擁有獨立記憶，請為它設定 `OPENVIKING_PEER_ID`（見[讓一個目錄擁有獨立記憶](../configuration/02-client.md#讓一個目錄擁有獨立記憶)）。
@@ -184,6 +193,8 @@ patch 中寫的憑證優先於環境變數。行為配置按優先順序從高�
 </details>
 
 ## 常見問題
+
+先執行診斷：在會話中讓 agent 執行 `ov-memory-doctor` 技能，或執行 `node ~/.dsh/profiles/web/node_modules/@openviking/dsh-memory-plugin/scripts/ov-memory-doctor.mjs`（把 `web` 換成你的 profile；設定了 `DSH_HOME` 時 `~/.dsh` 換成它）。它檢查 profile 中的安裝、客戶端配置和服務端連線，併為發現的每個問題給出修復方法（支援 `--json`、`--offline`、`--timeout <ms>`、`--no-color`）。
 
 | 現象 | 排查方向 |
 |------|----------|

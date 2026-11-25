@@ -627,6 +627,29 @@ ov privacy scan --uri viking://~/resources/project-a
 ov privacy scan --uri viking://~/resources/project-a --fix --node-limit 500
 ```
 
+### 使用 Privacy 引用執行外部命令
+
+`ov privacy run` 支援呼叫方或 Agent 直接使用 Privacy 引用（<code v-pre>{{ov_privacy:...}}</code>，可通過 `ov privacy reference` 或 `ov privacy tree --references` 獲取）來執行本地外部命令（如 `gh`、`curl`）。在啟動外部命令前，`ov privacy run` 會先解析環境變數或引數中的引用並注入敏感值；外部命令輸出到 `stdout`/`stderr` 的內容中，匹配的敏感值也會被即時替換為對應的 Privacy 引用。
+
+> 輸出替換僅作用於該外部命令的 `stdout` 和 `stderr`，不會處理其寫入檔案或傳送到網路的內容。
+
+```bash
+# 1. 通過環境變數傳入（推薦，避免敏感值出現在程序引數中）
+ov privacy run --env GITHUB_TOKEN='{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}' -- gh api user
+
+# 2. 從檔案批次載入（每行一條 NAME={{ov_privacy:...}}，支援成對引號與 # 註釋）
+ov privacy run --env-file ./privacy.env -- gh api user
+
+# 3. 直接嵌在外部命令的單個引數中
+ov privacy run -- curl -H 'Authorization: Bearer {{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}' https://api.example.com
+
+# 4. 需要管道或重定向時顯式呼叫 sh -c，並通過環境變數傳入引用
+ov privacy run --env GITHUB_TOKEN='{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}' -- \
+  sh -c 'curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" https://api.example.com | jq .login'
+```
+
+> 在上面的示例 3 和 4 中，敏感值最終都會進入 `curl` 的程序引數（示例 3 由 `ov privacy run` 替換引數中的引用，示例 4 由 `sh` 展開 `$GITHUB_TOKEN`），可能會被本機其他程序、其他容器或宿主機看到。因此，建議優先使用 `--env` / `--env-file` 讓目標程式直接讀取環境變數（如示例 1、2），也可以設定 `OPENVIKING_PRIVACY_RUN_STRICT=1` 禁止在 `ov privacy run` 的命令引數中使用引用。
+
 ---
 
 ## 相關文件

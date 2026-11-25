@@ -6,7 +6,14 @@
 
 前置條件：macOS 或 Linux、Node.js 18+，並建議使用最新穩定版 Cursor。安裝過程中會引導配置 OpenViking 連線資訊。
 
-安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）；遠端自建服務請選擇 **自定義 URL / 保持當前** 並填寫其 URL。
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
+服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）。遠端自建服務選擇**自定義 URL**並填寫其地址；已有連線時，此選項顯示為**自定義 URL / 保持當前**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -23,6 +30,8 @@ curl -fsSL https://openviking.ai/install | bash
 - OpenViking MCP Server：提供 `search`、`read`、`remember`、`add_skill` 等工具；`search` 的 `mode="context"` 可返回組裝後的上下文。
 - always-on Rule 和 `openviking-memory` Skill：告訴 Agent 如何使用已注入的上下文和記憶工具；另有 `openviking-skills` Skill，講如何查詢、使用、建立（`add_skill`）、共享和遷移存放在 OpenViking 裡的 skill。
 - `ov-experience-memory` Skill：讓 Agent 在執行類任務前檢索並應用以往任務的 Experience。成功的 OpenViking MCP `read` 會與對話一起上報；包含該讀取記錄的 `session commit` 生成軌跡後，可查詢經驗的應用軌跡。
+- `openviking-rule-search` Skill：檢索適用於當前操作的 OpenViking Rule，並檢查是否合規。
+- `ov-memory-doctor` Skill：執行 `node ~/.openviking/agent-integrations/cursor/scripts/ov-memory-doctor.mjs`，診斷並修復整合安裝、客戶端配置以及與 OpenViking 服務端的連線。
 
 ## 驗證
 
@@ -39,7 +48,8 @@ curl -fsSL https://openviking.ai/install | bash
 - `beforeReadFile`：阻止把 `viking://` 虛擬路徑當作本地檔案讀取，並提示改用 OpenViking MCP 工具；shell 命令不做檢查。
 - `afterMCPExecution`：將 `openviking` MCP 服務的工具完成記錄追加到本地工具日誌，保留真實呼叫 ID、輸入、輸出和成功或失敗狀態；此時不向服務端寫入訊息，也不重寫此前的結果。
 - `stop`：將新增對話與本地工具記錄一起通過 `add message` 上報；成功後才推進捕獲位置，達到原有訊息閾值時執行 `session commit`。工具記錄不額外增加該閾值的訊息計數。
-- `preCompact` / `sessionEnd`：提交尚未處理的訊息，觸發記憶抽取。
+- `preCompact` / `sessionEnd`：提交尚未處理的訊息，觸發記憶抽取。壓縮之後，下一次 `beforeSubmitPrompt` 還會追加一段簡短說明，給出會話的 OpenViking id（`cu-<conversation id>`）以及用來查回之前確切細節的 `session_history` MCP 工具。
+- `preToolUse`：只匹配 `MCP:session_history`，Agent 沒傳 `session` 引數時補上當前會話。
 
 工具採集要求 `afterMCPExecution` 提供 `tool_use_id`、`mcp_server_name`、`tool_name`、`tool_input` 和 `result_json`。缺少身份或結果的事件會跳過，不會推斷為成功。上傳失敗時保留本地記錄，等待同一會話的後續採集重試；訊息未傳完整時不提交。
 

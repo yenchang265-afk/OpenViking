@@ -177,10 +177,9 @@ def test_shared_app_allows_running_watch_runtime(monkeypatch, external_bot):
     config.watch_leader_provider = "auto"
     config.service_name = "test-shared"
     monkeypatch.setattr("openviking.server.app.get_openviking_config", lambda: config)
-    resources = NS(set_watch_requests_enabled=Mock())
-    service = NS(resources=resources, watch_runtime=NS(is_running=True))
+    # Watch options are enabled by OpenVikingService.configure_runtime at startup.
+    service = NS(watch_runtime=NS(is_running=True))
     create_app(config=server, service=service)
-    resources.set_watch_requests_enabled.assert_called_once_with(True)
     assert server.with_bot is False
     if external_bot:
         bot_url.assert_called_once_with(server.external_bot_api_url)

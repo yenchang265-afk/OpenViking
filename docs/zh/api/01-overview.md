@@ -450,6 +450,7 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/sessions/{session_id}/tool-results/{tool_result_id}/search` | 在工具結果內搜尋 |
 | GET | `/api/v1/sessions/{session_id}/context` | 獲取組裝後的上下文 |
 | GET | `/api/v1/sessions/{session_id}/archives/{archive_id}` | 獲取會話歸檔 |
+| POST | `/api/v1/sessions/history` | 搜尋、讀取或概覽已儲存的歷史（面向模型的文本） |
 | DELETE | `/api/v1/sessions/{session_id}` | 刪除會話 |
 | POST | `/api/v1/sessions/{session_id}/commit` | 歸檔會話並提取記憶 |
 | POST | `/api/v1/sessions/{session_id}/archives/{archive_id}/retry` | 重試失敗或無主的會話歸檔 |
@@ -560,6 +561,8 @@ JSON 輸出 - 錯誤：
 | PATCH | `/api/v1/user-settings/add-locations` | 更新當前使用者的新增位置（deprecated） |
 | DELETE | `/api/v1/user-settings/add-locations` | 清除當前使用者的新增位置設定（deprecated） |
 | DELETE | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 移除使用者 |
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/frozen-file` | 查詢路徑是否在帳號內凍結列表中；必填 query `path` |
+| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/frozen-file` | 凍結或解凍 USER 檔案 |
 | PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/role` | 在 USER 與 ADMIN 之間變更使用者角色 |
 | POST | `/api/v1/admin/accounts/{account_id}/users/{user_id}/key` | 重新生成使用者 Key |
 | POST | `/api/v1/admin/accounts/{account_id}/groups` | 建立使用者組 |

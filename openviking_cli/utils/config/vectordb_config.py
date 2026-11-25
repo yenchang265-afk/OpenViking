@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, StrictInt, model_validator
 
+from openviking.observability.log_safety import short_hash
 from openviking_cli.utils.logger import get_logger
 
 COLLECTION_NAME = "context"
@@ -564,7 +565,9 @@ class VectorDBBackendConfig(BaseModel):
 
         # Allow custom backend classes (containing dot) without standard validation
         if "." in self.backend:
-            logger.info("Using custom VectorDB backend: %s", self.backend)
+            logger.debug(
+                "custom vector backend selected backend_hash=%s", short_hash(str(self.backend))
+            )
             return self
 
         if self.backend not in standard_backends:

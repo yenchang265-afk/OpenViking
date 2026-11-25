@@ -36,7 +36,7 @@
 | [Kimi Code](#kimi-code) | Kimi Code 外掛：hook + MCP 代理 | 服務端 MCP 工具 |
 | [CodeBuddy Code](#codebuddy-code) | 外掛：hook + MCP 代理，由統一安裝器安裝 | 服務端 MCP 工具 |
 | [Qoder CLI](#qoder-cli) | 外掛：hook + MCP 代理，由統一安裝器安裝 | 服務端 MCP 工具 |
-| [Antigravity](#antigravity) | 外掛：僅 hook，由統一安裝器安裝 | 無；安裝器不新增 MCP 服務 |
+| [Antigravity](#antigravity) | 外掛：hook + MCP 代理，由統一安裝器安裝 | 服務端 MCP 工具 |
 | [OpenCode](#opencode) | npm 外掛，自動新增 MCP 條目 | 服務端 MCP 工具，名為 `openviking_<tool>` |
 | [DSH](#dsh) | 同進程 Cordis 外掛 + MCP 代理 | 服務端 MCP 工具，名為 `mcp__openviking__<tool>` |
 | [pi](#pi) | 原生擴充，內建 MCP 客戶端 | 服務端 MCP 工具；MCP 握手成功後註冊為 `openviking_<tool>` |
@@ -121,7 +121,7 @@ Rule Search 是執行受約束的操作或回覆前，由模型按需呼叫的�
 
 | 整合 | 註冊的工具名 |
 |---|---|
-| Claude Code、Codex、TraeCode CLI、Cursor、TRAE/CN、ZCode、Kimi Code、CodeBuddy、Qoder CLI、Agent Plugins、其他 MCP 客戶端 | 服務端 `rule_search`，帶宿主的 MCP 名稱空間 |
+| Claude Code、Codex、TraeCode CLI、Cursor、TRAE/CN、ZCode、Kimi Code、CodeBuddy、Qoder CLI、Antigravity、Agent Plugins、其他 MCP 客戶端 | 服務端 `rule_search`，帶宿主的 MCP 名稱空間 |
 | DSH / Desktop | `mcp__openviking__rule_search` |
 | OpenCode、pi、VikingBot | `openviking_rule_search` |
 | VikingBot 通過 MCP | `mcp_<server_name>_rule_search` |
@@ -132,8 +132,8 @@ Rule Search 是執行受約束的操作或回覆前，由模型按需呼叫的�
 
 先升級到會發布 `rule_search` 的服務端版本，再重連 MCP 客戶端。
 使用獨立 REST 工具的接入端需要升級外掛。共享 `openviking-rule-search` skill 隨
-Claude Code、Codex/TraeCode CLI、Cursor、CodeBuddy、Qoder CLI、OpenCode、DSH、pi、
-OpenClaw 和 Agent Plugins 分發；沒有附帶 skill 的宿主仍可發現工具。
+Claude Code、Codex/TraeCode CLI、Cursor、TRAE/TRAE CN、ZCode、Kimi Code、CodeBuddy、Qoder CLI、
+Antigravity、OpenCode、DSH、pi、OpenClaw 和 Agent Plugins 分發；沒有附帶 skill 的宿主仍可發現工具。
 沿用現有 MCP 開關與工具白名單。新增的是按需查詢入口，沒有增加每輪自動檢查或強制攔截 hook。
 
 Hermes 的 catalog 安裝固定在指定 commit，需要更新 catalog pin 才能收到新外掛；
@@ -191,7 +191,7 @@ skill 走單獨的路徑。建立、安裝或替換 skill 用 MCP `add_skill` �
 除 OpenClaw 和 Hermes 外，所有整合都使用共享外掛程式碼，最多依次嘗試三種請求：
 
 1. **context 檢索**。`POST /api/v1/search/search`，帶 `mode: "context"`、`purpose: "coding"` 和會話 ID。預算、配額、查詢擴寫和摘要選項只在你配置後才傳送；否則使用服務端預設值，包括 1,600 token 的注入預算（`max_tokens`）。
-2. **舊版 recall**。服務端版本較舊、拒絕 context 模式時，外掛在 `~/.openviking/state/context-face.json` 中記錄這一結果，有效 6 小時，並改調 `/api/v1/search/recall`。這個檔案由本機所有整合共享，一個整合的判斷對所有整合生效。
+2. **舊版 recall**。Context 檢索不可用時，外掛可回退到 `/api/v1/search/recall`。Context 請求返回 HTTP `400` 或 `422` 時，本輪召回結束。Codex 和 Claude Code 會在 hook 提示中顯示服務端錯誤，共享召回管線的其他呼叫方會將錯誤寫入 stderr。
 3. **普通 find**。最後一步，外掛對 `viking://~/memories` 和 `viking://~/skills` 執行 `find`，在本地排序，並按自己的 token 預算裝填。`recallTokenBudget`、`recallMaxContentChars` 和 `recallPreferAbstract` 只在這一步生效。
 
 共享外掛的召回不包含資源；資源文件由模型自己呼叫 `search` 檢索。Hermes 開啟資源召回選項後可以包含資源。
@@ -409,7 +409,7 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 
 | 整合 | 寫入失敗時 |
 |---|---|
-| Claude Code、CodeBuddy Code、Qoder CLI、Antigravity、TRAE、TRAE CN、ZCode、Kimi Code、OpenCode、DSH、pi | 可重試的失敗進入 `~/.openviking/pending` 下的磁碟佇列，在會話開始時重放：每次最多 50 條，每條最多 3 次，保留 7 天。網路錯誤、408、429 和 5xx 可重試；其他 4xx（含 401 和 403）不入隊。某條訊息重放失敗時停止，以保證順序 |
+| Claude Code、CodeBuddy Code、Qoder CLI、Antigravity、TRAE、TRAE CN、ZCode、Kimi Code、OpenCode、DSH、pi | 可重試的失敗進入 `~/.openviking/pending` 下的磁碟佇列，在會話開始時重放：每次最多 50 條（Kimi Code 為 2 條），每條最多 3 次，保留 7 天。網路錯誤、408、429 和 5xx 可重試；其他 4xx（含 401 和 403）不入隊。某條訊息重放失敗時停止，以保證順序 |
 | Cursor | 新捕獲不入離線佇列。文本 transcript 與本地工具記錄保留未上報內容，服務端確認後才推進進度；同一會話後續採集重試。訊息未傳完整時不提交。`SessionStart` 仍重放舊佇列中的寫入 |
 | Codex、TraeCode CLI 2.0 | 新捕獲的內容不入隊。transcript 游標只越過服務端已接受的訊息，下次捕獲或啟動掃描會重發剩餘部分。`SessionStart` 仍會重放已排隊的條目 |
 | OpenClaw | 沒有佇列，失敗的輪次不會重發 |
@@ -597,19 +597,20 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 |---|---|---|---|---|
 | Claude Code | 有 | `/openviking-memory:ov` 顯示服務端狀態、身份和注入內容的來源 | `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search`、`ov-memory-doctor` | 有 |
 | Codex、TraeCode CLI 2.0 | 無 | 無 | 與 Claude Code 相同的五個 | 有 |
-| Cursor | 無 | 無 | 一條常駐 rule，加上 `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` | 安裝器選單 |
-| TRAE、TRAE CN、ZCode | 無 | 無 | 無 | 安裝器選單 |
-| OpenCode | 無 | 無 | 與 Cursor 相同的四個，僅在外掛註冊自己的 MCP 服務時提供 | 有 |
-| DSH | 無 | 無 | 與 Cursor 相同的四個 | 無 |
-| CodeBuddy Code | 無 | 無 | 與 Cursor 相同的四個 | 無 |
-| Qoder CLI | 無 | 無 | 與 Cursor 相同的四個 | 無 |
-| Antigravity | 無 | 無 | 無 | 安裝器選單 |
-| pi | 有 | `/viking`、`/viking commit` | 與 Cursor 相同的四個，`mcpEnabled` 為 `false` 時不提供 | 有 |
+| Cursor | 無 | 無 | 一條常駐 rule，加上與 Claude Code 相同的五個 | 安裝器選單 |
+| TRAE、TRAE CN、ZCode | 無 | 無 | 與 Claude Code 相同的五個 | 安裝器選單 |
+| Kimi Code | 無 | 無 | 與 Claude Code 相同的五個 | 無 |
+| OpenCode | 無 | 無 | `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search`、`ov-memory-doctor`，僅在外掛註冊自己的 MCP 服務時提供 | 有 |
+| DSH | 無 | 無 | 與 OpenCode 相同的五個，`mcpEnabled` 為 `false` 時不提供 | 無 |
+| CodeBuddy Code | 無 | 無 | 與 Claude Code 相同的五個 | 無 |
+| Qoder CLI | 無 | 無 | 與 Claude Code 相同的五個 | 無 |
+| Antigravity | 無 | 無 | 與 Claude Code 相同的五個，每個也可以用 `/<name>` 呼叫 | 安裝器選單 |
+| pi | 有 | `/viking`、`/viking commit` | 與 OpenCode 相同的五個，`mcpEnabled` 為 `false` 時不提供 | 有 |
 | OpenClaw | 無 | `/add-resource`、`/add-skill`、`/ov-search`、`/ov-query-config`、`/ov-recall-trace` | 四個外掛 skill，含 `openviking-rule-search` | 有；檢查 key 的角色和版本相容性 |
 | Hermes（內建） | 無 | 無 | 無 | 有；`hermes memory status` 列出環境變數覆蓋項 |
 | ov CLI | 無 | CLI 本身 | 無 | `ov config` |
 
-Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、DSH 和 pi 還會安裝 **URI guard**：檔案工具的路徑是 `viking://` URI 時，呼叫會被拒絕，並提示改用 OpenViking 工具；在檢查 shell 工具的宿主上，shell 命令中包含這種 URI 時照常執行，但附帶一條提示。各宿主檢查哪些工具不同，見[各整合說明](#各整合說明)。
+Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、Antigravity、OpenCode、DSH 和 pi 還會安裝 **URI guard**：檔案工具的路徑是 `viking://` URI 時，呼叫會被拒絕，並提示改用 OpenViking 工具；在檢查 shell 工具的宿主上，shell 命令中包含這種 URI 時照常執行，但附帶一條提示。各宿主檢查哪些工具不同，見[各整合說明](#各整合說明)。
 
 <a id="_4-harness-檔案卡"></a>
 
@@ -619,7 +620,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### Claude Code
 
-[Claude Code](./02-claude-code.md)。外掛市場外掛，包含 9 個 hook、一個 MCP 代理、一個斜槓命令、狀態列和 4 個 skill。
+[Claude Code](./02-claude-code.md)。外掛市場外掛，包含 9 個 hook、一個 MCP 代理、一個斜槓命令、狀態列和 5 個 skill。
 
 - 註冊的 hook 比其他整合都多：`SessionStart`、`UserPromptSubmit`、`PostToolUse:Read`（skill 經驗 hook，預設關閉）、作用於 Read、Glob、Grep、Edit、Write 和 Bash 的 `PreToolUse`（URI guard）、`Stop`、`PreCompact`、`SessionEnd`、`SubagentStart` 和 `SubagentStop`。
 - 召回摘要預設通過本地 `claude -p` 生成，服務端摘要作為回退。
@@ -631,7 +632,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### Codex 與 TraeCode CLI 2.0
 
-[Codex](./04-codex.md)、[TRAE](./13-trae.md)。外掛市場外掛，包含 6 個 hook（`SessionStart`、`UserPromptSubmit`、`Stop`、`SessionEnd`、`PreCompact`、`PostToolUse`）、一個 MCP 代理，以及與 Claude Code 相同的 4 個 skill。
+[Codex](./04-codex.md)、[TRAE](./13-trae.md)。外掛市場外掛，包含 6 個 hook（`SessionStart`、`UserPromptSubmit`、`Stop`、`SessionEnd`、`PreCompact`、`PostToolUse`）、一個 MCP 代理，以及與 Claude Code 相同的 5 個 skill。
 
 - `SessionEnd` 只在乾淨退出且 Codex 0.145 及以上時觸發。訊號、崩潰、舊版本和 `codex app-server` 延後的情況都交給啟動時的掃描，掃描使用 30 分鐘空閒超時。
 - `Stop` 和 `SessionEnd` 在分離的 worker 中寫入。每個會話一把鎖，按順序處理 `Stop` worker、`PreCompact`、`SessionEnd` worker 和掃描。
@@ -641,7 +642,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### Cursor
 
-[Cursor](./12-cursor.md)。hook 與 MCP 配置，包含 7 個 hook（`sessionStart`、`beforeSubmitPrompt`、`beforeReadFile`、`afterMCPExecution`、`stop`、`preCompact`、`sessionEnd`）、一條常駐 rule 和 3 個 skill。
+[Cursor](./12-cursor.md)。hook 與 MCP 配置，包含 7 個 hook（`sessionStart`、`beforeSubmitPrompt`、`beforeReadFile`、`afterMCPExecution`、`stop`、`preCompact`、`sessionEnd`）、一條常駐 rule 和 5 個 skill。
 
 - URI guard 只在 `beforeReadFile` 執行，不受外掛開關影響。shell 命令不檢查，升級會移除舊版本註冊的 `beforeShellExecution` 條目。
 - `afterMCPExecution` 保留 OpenViking 工具完成記錄，Stop 與對話一起上報。成功讀取的 Experience 可關聯到同次提交生成的軌跡；失敗、未完成呼叫和自動注入不計為成功讀取。
@@ -652,17 +653,19 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### TRAE 與 TRAE CN
 
-[TRAE](./13-trae.md)。hook 與 MCP 配置，包含 4 個 hook：`SessionStart`、`UserPromptSubmit`、`PreToolUse` 和 `Stop`。MCP 服務名為 `openviking`。
+[TRAE](./13-trae.md)。hook 與 MCP 配置，包含 4 個 hook：`SessionStart`、`UserPromptSubmit`、`PreToolUse` 和 `Stop`，以及 5 個 skill。MCP 服務名為 `openviking`。
 
 - `PreToolUse` 拒絕對 `viking://` 路徑執行 Read、Glob 和 Grep；Bash 和 RunCommand 命令中包含這種路徑時附加提示。
 - 每個有內容的 `Stop` 都會提交，退出時最多丟失正在進行的那一輪。
 - TRAE 和 TRAE CN 只有會話字首和安裝路徑不同。同樣的工作在兩個客戶端中會產生不同的會話，要等抽取完成後才共享記憶。
-- 不處理壓縮，沒有狀態列和 skill，也不單獨處理子代理。
+- skill 安裝到 `~/.trae/skills/<name>` 或 `~/.trae-cn/skills/<name>`。使用者修改過的 skill 或同名的非託管目錄在升級和解除安裝時保留。TraeCode CLI 也讀取 `~/.trae/skills`，同時安裝 TRAE 整合和 TraeCode CLI 外掛時，CLI 會把這幾個 skill 各列兩次：一次不帶字首，一次在外掛名稱空間下。
+- 不處理壓縮，沒有狀態列，也不單獨處理子代理。
 
 ### ZCode
 
-[社群外掛：ZCode](./08-community-plugins.md#zcode-記憶整合)。hook 與 MCP 配置，包含 4 個 hook：`SessionStart`、`UserPromptSubmit`、作用於 Read、Glob 和 Grep 的 `PreToolUse`，以及 `Stop`。
+[社群外掛：ZCode](./08-community-plugins.md#zcode-記憶整合)。hook 與 MCP 配置，包含 4 個 hook：`SessionStart`、`UserPromptSubmit`、作用於 Read、Glob 和 Grep 的 `PreToolUse`，以及 `Stop`，另有 5 個 skill。
 
+- skill 安裝到 `~/.zcode/skills/<name>`。使用者修改過的 skill 或同名的非託管目錄在升級和解除安裝時保留。
 - 捕獲的輪次來自 rollout 檔案 `~/.zcode/cli/rollout/model-io-<sid>.jsonl`；漏掉的 `Stop` 對應的輪次在下一個 `Stop` 補齊。
 - 第一次捕獲讀取整個 rollout，所以在長時間執行的會話中安裝會產生一次大上傳。
 - 捕獲只去掉注入塊，不做其他文本清理。
@@ -672,7 +675,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### Kimi Code
 
-[社群外掛：Kimi Code](./08-community-plugins.md#kimi-code-記憶整合)。Kimi Code 託管外掛，包含 7 個 hook（`SessionStart`、`UserPromptSubmit`、作用於 Read、Glob 和 Grep 的 `PreToolUse`、`Stop`、`PreCompact`、`SessionEnd`、`Interrupt`）和一個 MCP 代理。安裝器在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory` 下構建一份自包含的副本。
+[社群外掛：Kimi Code](./08-community-plugins.md#kimi-code-記憶整合)。Kimi Code 託管外掛，包含 7 個 hook（`SessionStart`、`UserPromptSubmit`、作用於 Read、Glob 和 Grep 的 `PreToolUse`、`Stop`、`PreCompact`、`SessionEnd`、`Interrupt`）、一個 MCP 代理和 5 個 skill。安裝器在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory` 下構建一份自包含的副本。
 
 - 捕獲的輪次來自 `wire.jsonl`。一輪對話只有在傳送成功或存入離線佇列後才會推進游標。
 - 會話開場上下文在首次提問時注入，失敗後在後續提問中重試，直到成功。
@@ -682,7 +685,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### CodeBuddy Code
 
-[CodeBuddy Code](./20-codebuddy.md)。帶 6 個 hook、一個 MCP 代理和 4 個 skill 的外掛，由統一安裝器以本地 marketplace 的形式安裝；與 ZCode、Kimi Code 一樣是 `agent-hook-plugin` 的宿主介面卡。
+[CodeBuddy Code](./20-codebuddy.md)。帶 6 個 hook、一個 MCP 代理和 5 個 skill 的外掛，由統一安裝器以本地 marketplace 的形式安裝；與 ZCode、Kimi Code 一樣是 `agent-hook-plugin` 的宿主介面卡。
 
 - `UserPromptSubmit` 與 `SessionEnd` **只在互動式 TUI 觸發**。headless 執行（`-p`、`--input-format stream-json`）只在 `Stop` 捕獲，永遠不發收尾提交。
 - URI guard 會拒絕路徑為 `viking://` URI 的檔案類工具。拒絕以「工具呼叫失敗」的形式到達模型；`allow` 攜帶的文字到不了模型，因此本宿主沒有勸告通道。Shell 命令不做檢查，`ov` 呼叫與字面量 `viking://` 引數照常可用。
@@ -692,23 +695,25 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 ### Qoder CLI
 
-[Qoder CLI](./21-qoder.md)。帶 6 個 hook、一個 MCP 代理和 4 個 skill 的外掛，由統一安裝器以本地 marketplace 的形式安裝；與 CodeBuddy Code 一樣是 `agent-hook-plugin` 的宿主介面卡。
+[Qoder CLI](./21-qoder.md)。帶 6 個 hook、一個 MCP 代理和 5 個 skill 的外掛，由統一安裝器以本地 marketplace 的形式安裝；與 CodeBuddy Code 一樣是 `agent-hook-plugin` 的宿主介面卡。
 
 - `UserPromptSubmit` 與 `SessionEnd` 在 TUI 和 headless `-p` 執行中都會觸發。每次 `-p` 執行結束時還會結束一個沒有 transcript 的輔助會話，它的 `SessionEnd` 會被忽略。
 - 注入的上下文會作為 attachment 記錄寫進 transcript。捕獲只讀取對話記錄，召回的記憶不會被再次捕獲。
-- URI guard 拒絕路徑為 `viking://` URI 的檔案工具，拒絕原因以失敗的工具結果送達模型，並附上呼叫對應 OpenViking 工具的 `mcp_call` 示例。Shell 命令不做檢查，`ov` 呼叫與字面量 `viking://` 引數照常可用。
+- URI guard 拒絕路徑為 `viking://` URI 的檔案工具，拒絕原因以失敗的工具結果送達模型，並附上呼叫對應 OpenViking 工具的 `mcp_call` 示例。Bash 命令中包含這種 URI 時照常執行，並附加一條指向同一組工具的提示，`ov` 呼叫與字面量 `viking://` 引數照常可用。
 - hook 超時被殺時會連同其程序組一起結束；捕獲 worker 是分離的，因此 hook 程序返回後提交仍能完成。
 - MCP 工具通過 `mcp_call` 懶載入。在預設許可權模式的 headless 執行中，需要許可權規則或更寬鬆的許可權模式。
 - v1 不支援子代理採集：宿主會觸發相應事件，但共享 dispatcher 目前還沒有子代理階段。
 
 ### Antigravity
 
-[社群外掛：Antigravity](./08-community-plugins.md#antigravity-記憶整合)。帶 3 個 hook（`SessionStart`、`PreInvocation`、`Stop`）的外掛，沒有 MCP 服務、skill 和 URI guard，由統一安裝器安裝；與 ZCode 一樣是 `agent-hook-plugin` 的宿主介面卡。Antigravity 桌面應用和 `agy` CLI 從 `~/.gemini/config/plugins/openviking-memory` 載入同一個外掛。
+[社群外掛：Antigravity](./08-community-plugins.md#antigravity-記憶整合)。帶 4 個 hook（`SessionStart`、`PreInvocation`、`PreToolUse`、`Stop`）、一個 MCP 代理和 5 個 skill 的外掛，由統一安裝器安裝；與 ZCode 一樣是 `agent-hook-plugin` 的宿主介面卡。Antigravity 桌面應用和 `agy` CLI 從 `~/.gemini/config/plugins/openviking-memory` 載入同一個外掛。
 
 - `PreInvocation` 在每次模型呼叫前執行，包括工具迴圈中的每次呼叫（`invocationNum` 大於 0），以及後臺任務、子代理訊息或 `Stop` 續跑引起的每次被動喚醒。只有 `invocationNum` 為 0、且 `transcriptPath` 中最近一個 `USER_INPUT` step 之後還沒有 `MODEL` step 執行時才召回，所以每輪只注入一次。`lastUserInput` 與該 step 的請求不同時，說明是 transcript 尚未記下的新一輪，同樣召回。
 - Antigravity 的 hook 使用自己的 `hooks.json` 格式，每個頂層 key 是一個 hook 的名字。上下文以 `injectSteps` 中的 `systemMessage` step 返回，會留在對話中。
 - `Stop` 不攜帶訊息文本。捕獲在分離的 worker 中讀取 `transcriptPath` 裡上次捕獲之後已完成的 step，旁邊有未截斷的 `transcript_full.jsonl` 時優先讀它，然後提交。仍在進行中的 step 由下一個 `Stop` 重新讀取；寫入丟失時游標不動，下一個 `Stop` 會重發。
-- 想讓 Agent 自己呼叫 OpenViking 工具，需要自行把 OpenViking MCP 服務加到 `~/.gemini/config/mcp_config.json`。
+- 外掛目錄中的 `mcp_config.json` 註冊 OpenViking MCP 服務，即共享的 stdio 代理。`~/.gemini/config/mcp_config.json` 已定義名為 `openviking` 的服務時，安裝器保留使用者的服務，不寫外掛的 `mcp_config.json`，避免每個工具出現兩次。
+- skill 位於外掛目錄的 `skills/<name>/SKILL.md`，每個 skill 也可以用 `/<name>` 呼叫。
+- `PreToolUse`（matcher `*`）執行 URI guard：檔案工具的位置引數（名稱以 `Path`、`File` 或 `Directory` 結尾的引數）是 `viking://` URI 時，呼叫被拒絕，拒絕原因以失敗的工具呼叫送達模型，並指向 OpenViking MCP 工具。Shell 命令（`run_command`）不做檢查，也不附加提示。
 - 如果 `~/.gemini/config/plugins/openviking-memory` 已存在且不是 OpenViking 寫入的，安裝器會停止，`--uninstall` 也會保留它。
 
 ### OpenCode
@@ -717,7 +722,8 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 
 - v2 每次提問只召回一次，把結果存進使用者訊息的 metadata；後續模型 step 直接複用，不發新請求，prompt 快取因此保持穩定。每次執行結束時，v2 讀取完整的使用者、助手和工具訊息用於捕獲。
 - v2 在每次執行結束後檢查提交閾值，包括失敗和被中斷的執行，這些執行會保留狀態。v2 只處理本 location 的會話，游標存在外掛 storage 中。v2 沒有 toast API，改為寫日誌。
-- MCP 工具保留 `openviking_` 字首；v2 設定 `codemode: false`。3 個 skill 只在外掛註冊自己的 MCP 服務時加入，hook-only 模式或關閉 `mcp.openviking` 時不加入。
+- MCP 工具保留 `openviking_` 字首；v2 設定 `codemode: false`。5 個 skill 只在外掛註冊自己的 MCP 服務時加入，hook-only 模式或關閉 `mcp.openviking` 時不加入。
+- URI guard 在工具執行前拒絕路徑為 `viking://` URI 的 `read`、`glob` 和 `grep` 呼叫，並給出對應的 `openviking_*` 工具呼叫示例；`bash` 命令中包含這種 URI 時照常執行，執行後在工具輸出末尾追加一條提示。
 - 提交超時 30 秒。
 
 <a id="dsh-deepseek-harness"></a>
@@ -732,6 +738,7 @@ Claude Code、Cursor、TRAE、ZCode、Kimi Code、CodeBuddy Code、Qoder CLI、D
 - 預設捕獲工具結果（`captureToolResults: true`），所以 `ov-experience-memory` 能完整執行；關閉捕獲後，只能檢索和應用 Experience。
 - URI guard 先把工具名轉成小寫，在 `tools/pre-execute` 拒絕對 `viking://` 路徑的檔案工具呼叫，在 `tools/post-execute` 為包含這種路徑的 `bash` 命令（Windows 上是 `pwsh` 命令）附加提示。
 - Cordis patch 中寫明的憑據優先於其他所有來源；對行為配置來說，patch 是優先順序最低的一層。
+- `mcpEnabled: false`（寫在 `ovcli.conf` 的 `plugin` 或 `plugin.dsh` 中，或寫在 Cordis patch 中）時，既不掛載 MCP 工具，也不掛載內建 skill。
 
 <a id="pi-pi-coding-agent-extension"></a>
 

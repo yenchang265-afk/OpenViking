@@ -10,6 +10,7 @@ from openviking.core.namespace import classify_uri
 from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
 from openviking.models.embedder.base import embed_compat
+from openviking.observability.reporting.token_sources import bind_dashboard_token_source_type
 from openviking.server.identity import RequestContext
 from openviking_cli.exceptions import (
     EmbeddingFailedError,
@@ -48,9 +49,10 @@ async def compile_embeddings(
     vectors = []
     for start in range(0, len(texts), 4):
         try:
-            batch = await asyncio.gather(
-                *(embed_compat(embedder, text) for text in texts[start : start + 4])
-            )
+            with bind_dashboard_token_source_type("compile"):
+                batch = await asyncio.gather(
+                    *(embed_compat(embedder, text) for text in texts[start : start + 4])
+                )
         except OpenVikingError:
             raise
         except Exception as exc:

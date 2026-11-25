@@ -24,6 +24,7 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 | [OpenCode](#opencode) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1` | OpenCode 的會話請求頭 |
 | [pi](#pi) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 使用 Responses 時用 pi 的會話請求頭，否則根據對話歷史匹配 |
 | [DSH](#dsh) | Chat Completions、Anthropic Messages 或 Responses | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 使用 Responses 時用 DSH 的會話請求頭，否則根據對話歷史匹配 |
+| [OpenClaw 和 Hermes](#openclaw-and-hermes) | Chat Completions 或 Anthropic Messages | `https://ov.example.com/gateway/v1`（Anthropic Messages 用 `https://ov.example.com/gateway`） | 預設根據對話歷史匹配；Hermes 設定 `session_affinity_header` 後會在 `X-OpenViking-Session` 裡帶上本段對話的 ID |
 | [火山方舟與 BytePlus 方舟 SDK](#volcano-engine-ark-and-byteplus-modelark-sdks) | 三種均可 | `https://ov.example.com/gateway/api/v3` 或 `https://ov.example.com/gateway/api/compatible` | 取決於客戶端傳送的請求頭 |
 
 最後一列的含義見[閘道器如何識別對話](#how-conversations-are-recognized)。
@@ -290,6 +291,44 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 - 同一個 profile 裡裝了 [OpenViking 的 DSH 外掛](../agent-integrations/17-dsh.md)時，閘道器會讓出這些對話，兩者選一個即可。
 
 配好後，[檢查接入是否生效](#check-the-connection)。
+
+## OpenClaw 和 Hermes {#openclaw-and-hermes}
+
+OpenClaw 和 Hermes 各自有 OpenViking 外掛（見 [OpenClaw](../agent-integrations/03-openclaw.md) 和 [Hermes](../agent-integrations/05-hermes.md)）。要用閘道器接管記憶，先關掉外掛，再在 Agent 自己的模型設定裡把閘道器加為模型服務：Chat Completions 用 `https://ov.example.com/gateway/v1`，Anthropic Messages 用 `https://ov.example.com/gateway`，API Key 填閘道器金鑰。[上游](07-upstreams.md#upstreams)要自帶服務商 API Key，訂閱登入不能用。
+
+OpenClaw 在 `models.providers` 下加一項，並把它設為 Agent 使用的模型（完整欄位見 [OpenClaw 自定義服務商](https://docs.openclaw.ai/concepts/model-providers/custom-providers)）：
+
+```json5
+{
+  models: {
+    providers: {
+      openviking: {
+        baseUrl: "https://ov.example.com/gateway/v1",
+        api: "openai-completions",
+        apiKey: "<gateway-key>",
+        models: [{ id: "<model>" }],
+      },
+    },
+  },
+  agents: { defaults: { model: { primary: "openviking/<model>" } } },
+}
+```
+
+Hermes 在 profile 的 `config.yaml` 里加一項，再選 `openviking` 作為模型服務（完整欄位見 [Hermes 模型配置](https://hermes-agent.nousresearch.com/docs/user-guide/configuring-models)）：
+
+```yaml
+providers:
+  openviking:
+    api: "https://ov.example.com/gateway/v1"
+    api_key: "<gateway-key>"
+    session_affinity_header: X-OpenViking-Session
+```
+
+外掛還裝著的話，閘道器會為這些對話[讓路](../guides/15-gateway.md#when-both-are-in-use)，兩者選一個用。
+
+閘道器沒有針對這兩個 Agent 的會話請求頭，預設按請求歷史識別對話，規則見[閘道器如何識別對話](#how-conversations-are-recognized)。Hermes 在服務商配置里加 `session_affinity_header: X-OpenViking-Session`，每個請求就會帶上本段對話自己的會話 ID；`extra_headers` 會給所有請求發同一個固定值，不能用來傳會話 ID，只適合靜態頭，例如一把金鑰服務多個人時的 `X-OpenViking-Actor-Peer`（見[按 Peer 區分記憶](#peer)）。它們的心跳、記憶刷寫、技能復盤、定時任務、子 Agent 喚醒等後臺請求會被閘道器跳過，不會當成對話輪次儲存。
+
+然後[檢查接入是否生效](#check-the-connection)。
 
 ## 火山方舟與 BytePlus 方舟 SDK {#volcano-engine-ark-and-byteplus-modelark-sdks}
 

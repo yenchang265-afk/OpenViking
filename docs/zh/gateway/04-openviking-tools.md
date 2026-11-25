@@ -31,6 +31,7 @@ description: 讓模型通過 OpenViking 閘道器代為執行的工具檢索、�
 | 用途 | 工具 | 模型拿來做什麼 |
 | --- | --- | --- |
 | 檢索 | `find`、`search`、`grep`、`glob` | 語義檢索記憶和資料；按正則或檔名精確查詢。 |
+| 對話歷史 | `session_history` | 查詢這段對話裡被摘要替換掉的確切細節，見[查詢被壓縮的內容](05-long-conversations.md#finding-what-was-cut)。 |
 | 瀏覽和讀取 | `list`、`tree`、`read` | 按 URI 展開召回條目的原文，瀏覽記憶和技能目錄。 |
 | 寫入 | `remember`、`write`、`edit` | 存一條長期記憶，寫入或區域性修改記憶檔案。 |
 | 匯入 | `add_resource`、`add_skill` | 按 URL 匯入網頁或程式碼倉庫，匯入對話附件，用一段文本新建技能，都不需要客戶端有 shell。 |

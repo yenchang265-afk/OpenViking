@@ -11,7 +11,12 @@ curl -fsSL https://openviking.ai/install | bash
 
 1. Harness 選擇 **DeepSeek Harness**。外掛會裝到 `web` profile；要裝到其他 profile，把命令末尾的 `bash` 換成 `bash -s -- --dsh-profile <name>`。
    在裝有 DeepSeek Harness Desktop 桌面應用的 macOS 上，同時選擇 **DeepSeek Harness Desktop**（檢測到 Desktop 時預設選中）。執行安裝器前先開啟一次 Desktop 再用 ⌘Q 退出，裝完後重新開啟。Windows 上手動安裝：先把服務地址和 API Key 寫進 `%USERPROFILE%\.openviking\ovcli.conf`，再在 Desktop 的 **外掛** 頁點選 **新增外掛**，輸入 `@openviking/dsh-memory-plugin` 並 **安裝**（見完整文件的[手動安裝](https://docs.openviking.net/zh/agent-integrations/17-dsh#desktop-plugins-page)）。
-2. 連線方式選擇 **火山引擎 OpenViking 雲服務**，並填入 API Key：
+2. 連線配置中，選擇 **OpenViking 託管服務**，再選擇 **Volcengine** 或 **BytePlus**。
+
+   - **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+   - **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](https://docs.openviking.ai/zh/guides/27-byteplus-setup)。
+
+   舊版安裝器連線 BytePlus 時使用**自定義 URL**。請使用所選例項的 API Key：
 
 {{OPENVIKING_API_KEY_BLOCK}}
 

@@ -80,7 +80,7 @@ async def health_loop(app, interval, sleep=asyncio.sleep):
                 retry, reached = 1, True
             await sleep(delay)
         except Exception:
-            logger.exception("OpenViking Gateway health check failed")
+            logger.info("gateway health probe failed; retrying", extra={"degraded": True})
             await sleep(1)
 
 
@@ -89,7 +89,9 @@ async def commit_loop(app):
         try:
             await app.state.kernel.capture.sweep()
         except Exception:
-            logger.exception("OpenViking Gateway could not look for overdue commits")
+            logger.info(
+                "gateway overdue commit scan failed; retrying next sweep", extra={"degraded": True}
+            )
         await asyncio.sleep(SWEEP_SECONDS)
 
 
@@ -122,7 +124,12 @@ def open_stores(config: GatewayConfig, encryptor, stats=None):
         close.push_async_callback(asyncio.to_thread, management.close)
     log, sink = stdout_log if config.request_log_sink == "stdout" else None, None
     if config.request_log_sink == "file":
-        sink = FileSink(config.request_log_path, config.request_log_max_bytes, stats)
+        sink = FileSink(
+            config.request_log_path,
+            config.request_log_rotation_interval_hours,
+            config.request_log_backup_count,
+            stats,
+        )
         close.callback(sink.close)
         log = sink.log
     return store, CachedManagement(management, log=log), close.aclose, sink
@@ -135,9 +142,10 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
     """
     if unknown := configure_rules(config.client_rules):
         # An upgrade may rename a packaged rule; a stale removal must not stop the host.
-        logger.warning(
-            "gateway.client_rules removes entries the packaged rules do not have: %s",
-            "; ".join(unknown),
+        logger.info(
+            "unknown gateway client rules ignored skipped=%d",
+            len(unknown),
+            extra={"skipped": len(unknown)},
         )
     stats = Stats()
     store, management, close, file_sink = open_stores(config, encryptor, stats)
@@ -212,7 +220,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
                 await management.expire_logs(time.time() - config.log_retention_days * 86400)
                 await asyncio.sleep(3600)
             except Exception:
-                logger.exception("Business Context Platform Gateway cleanup failed")
+                logger.info("gateway cleanup failed; retrying", extra={"degraded": True})
                 await asyncio.sleep(1)
 
     @app.exception_handler(RequestValidationError)
@@ -308,7 +316,9 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
                 await management.delete(credential["account"], "keys", credential["id"])
             except Exception:
                 # The refusal stands; the stale key is deleted on its next use.
-                logger.exception("OpenViking Gateway could not delete a revoked key")
+                logger.info(
+                    "revoked gateway key cleanup failed; rejecting access", extra={"degraded": True}
+                )
             raise invalid
         return credential, None
 

@@ -13,6 +13,17 @@ from openviking.compile.pipeline_io import TaskFiles
 from openviking.compile.renderer import RenderedBundle
 from openviking.service.external_task_service import TaskCompletedDuringCancel
 
+
+def _png() -> bytes:
+    """A decodable PNG: Compile normalizes image sources before they reach the model."""
+    import io
+
+    from PIL import Image
+
+    with io.BytesIO() as output:
+        Image.new("RGB", (2, 2), "white").save(output, format="PNG")
+        return output.getvalue()
+
 PAGE = "viking://resources/wiki/topic.md"
 
 
@@ -325,7 +336,7 @@ class _ImageClient(_Client):
 
     FILES = {
         "viking://resources/raw/a.md": None,
-        "viking://resources/raw/diagram.png": b"\x89PNG\r\n\x1a\npixels",
+        "viking://resources/raw/diagram.png": _png(),
         "viking://resources/raw/broken.png": b"not an image",
     }
 

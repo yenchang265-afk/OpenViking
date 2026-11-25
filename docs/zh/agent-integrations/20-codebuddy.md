@@ -6,7 +6,14 @@
 
 前置條件：macOS 或 Linux、Node.js 18+，以及 `codebuddy` CLI 在 `PATH` 中的 CodeBuddy Code。安裝過程中會引導配置 OpenViking 連線資訊；詢問要接入哪些 Agent 時選擇 **CodeBuddy Code**。
 
-安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）；遠端自建服務請選擇 **自定義 URL / 保持當前** 並填寫其 URL。
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
+服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）。遠端自建服務選擇**自定義 URL**並填寫其地址；已有連線時，此選項顯示為**自定義 URL / 保持當前**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -23,7 +30,7 @@ curl -fsSL https://openviking.ai/install | bash
 
 - 生命週期 Hook：載入畫像、提問時召回、捕獲對話、提交 session，以及 `viking://` URI 保護。
 - 以 stdio 代理形式提供的 OpenViking MCP 服務，含 `search`、`read`、`remember`、`add_skill` 等工具。
-- `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` 四個 skill。
+- `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search`、`ov-memory-doctor` 五個 skill。
 
 ## 驗證
 
@@ -37,12 +44,13 @@ curl -fsSL https://openviking.ai/install | bash
 - **UserPromptSubmit** 召回相關記憶，以 `additionalContext` 中的 `<openviking-context>` 塊注入。宿主自動生成的續寫輪次會被跳過，因此宿主自己產生的輪次不會觸發檢索。
 - **PreToolUse** 拒絕把 `viking://` URI 當本地路徑讀寫，並引導 Agent 改用 OpenViking MCP 工具。Shell 命令不做檢查，`ov` 呼叫與字面量 `viking://` 引數照常可用。
 - **Stop**、**PreCompact** 和 **SessionEnd** 在分離的 worker 中增量捕獲 transcript 中的新輪次。`Stop` 每捕獲 8 條訊息（`commitTurnThreshold`）提交一次 OpenViking session；`PreCompact` 和 `SessionEnd` 提交所有尚未提交的訊息，包括 `Stop` 已經發送的。
+- 壓縮或恢復之後，下一次 **UserPromptSubmit** 還會追加一段簡短說明，給出會話的 OpenViking id 以及用來查回之前確切細節的 `session_history` MCP 工具。Agent 沒傳該工具的 `session` 引數時，MCP 代理從呼叫中補上。
 
 hook 與 MCP 從 `~/.openviking/ovcli.conf` 讀取同一份憑據，不會在服務端、帳號或使用者上各說各話。`OPENVIKING_URL` 與 `OPENVIKING_API_KEY` 可覆蓋該檔案，按外掛的配置位於 `plugin.codebuddy` 下（見[外掛配置](../configuration/02-client.md#外掛配置)）。會話在 OpenViking 中記為 `cb-<session id>`。
 
 ### 宿主決定的行為
 
-`UserPromptSubmit` 與 `SessionEnd` **只在互動式 TUI 觸發**。headless 執行（`-p`、`--input-format stream-json`）不會觸發它們，因此 headless 會話只在 `Stop` 捕獲，不發收尾提交。`SessionStart` 不帶 `cwd`，且同一會話內可能投遞兩次，因此該 hook 是冪等的，並以程序工作目錄兜底。hook 超時會被殺，但其子程序不會，這正是提交能在 hook 程序返回後由分離的 worker 完成的原因。
+`SessionEnd` **只在互動式 TUI 觸發**，因此 headless 會話（`-p`、`--input-format stream-json`）只在 `Stop` 捕獲，不發收尾提交。CodeBuddy Code 2.185.0 之前 `UserPromptSubmit` 也只在 TUI 觸發；從 2.185.0 起 headless `-p` 運行同樣會觸發。`SessionStart` 不帶 `cwd`，且同一會話內可能投遞兩次，因此該 hook 是冪等的，並以程序工作目錄兜底。hook 超時會被殺，但其子程序不會，這正是提交能在 hook 程序返回後由分離的 worker 完成的原因。
 
 暫不支援子代理採集：宿主會觸發 `SubagentStart`/`SubagentStop`，但共享 dispatcher 還沒有子代理階段。經過實測的宿主契約與 transcript 格式記錄在 [`hosts/codebuddy/DESIGN.md`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/codebuddy/DESIGN.md)。
 
@@ -60,7 +68,7 @@ curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harnes
 
 | 現象 | 原因與處理 |
 |------|------------|
-| headless 執行沒有召回 | `UserPromptSubmit` 只在互動式 TUI 觸發，請使用互動式會話。 |
+| headless 執行沒有召回 | CodeBuddy Code 2.185.0 之前 `UserPromptSubmit` 只在互動式 TUI 觸發，請升級或使用互動式會話。 |
 | 外掛列表中沒有它 | 重新執行安裝器並確認 `codebuddy` 在 `PATH` 中，然後新建會話。 |
 | MCP 連不上 | 檢查 `~/.openviking/ovcli.conf` 中的 URL/API Key，然後新建會話。 |
 | 需要詳細診斷 | 以 `OPENVIKING_DEBUG=1` 啟動 CodeBuddy，檢視 `~/.openviking/logs/codebuddy-hooks.log`。 |

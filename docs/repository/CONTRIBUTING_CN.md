@@ -195,15 +195,9 @@ uv run mypy <changed-paths>
 Rust、Go、TypeScript、文件和 Plugin 改動，請使用對應元件定義的格式化、Lint、型別檢查
 和測試命令。
 
-對於 OpenViking 自有程式碼，級別表達記錄用途：`CRITICAL` 表示程序無法繼續，`ERROR`
-記錄需要人介入的最終失敗，`WARNING` 僅用於審計事件，`INFO` 記錄兜底、重試、
-生命週期變化和 4xx 拒絕，其餘業務過程使用 `DEBUG`。第三方依賴保留自身級別語義；
-審計通過 `openviking.audit` 和明確的事件欄位識別，不能只按 `WARNING` 路由。
-
-新增或修改日誌前閱讀[開發者日誌規範](LOGGING_CN.md)。Python 執行日誌通過
-`get_logger(__name__)` 使用 stdlib logging，最終失敗由決定處理結果的邊界記錄一次。
-server 初始化統一管理輸出格式。互動式 CLI 展示和協議輸出另有邊界，不要機械替換
-全部 `print()`。規範已區分目標要求和當前已實現的能力。
+新增或修改日誌前閱讀[開發者日誌規範](LOGGING_CN.md)，遵守其中的級別、內容安全、
+輸出歸屬和驗證要求。Python 執行日誌使用 `get_logger(__name__)`；bootstrap、
+互動式展示和協議輸出遵守規範中的獨立邊界。
 
 ### 測試
 

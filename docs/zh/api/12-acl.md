@@ -24,6 +24,8 @@ POST /api/v1/acl/revoke
 
 以上操作均要求 `manage`，無許可權時返回 403。帳號 ADMIN 隱式擁有 manage。
 
+ACL principal 的作用範圍是資源所屬帳號，ACL 不支援跨帳號共享資源。在 `api_key` 模式下，指定的使用者和組必須已在該帳號註冊。grant、revoke、替換授權列表和匯入時的 ACL 條目包含未知或其他帳號的 principal 時返回 400。`user:*` 僅表示同一帳號的使用者。已刪除 principal 的舊授權可通過清空或替換條目移除。
+
 查詢響應中的 `result`：
 
 ```json

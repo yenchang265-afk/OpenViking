@@ -19,6 +19,8 @@ openviking-server --config /path/to/ov.conf
 
 服務端啟動時讀取配置。修改模型、檢索、儲存或 `server` 配置後，需要重啟服務；重啟後建議執行 `openviking-server doctor`。
 
+`server.roles` 控制業務介面和後臺執行職責，配置、路由邊界和停止順序見[服務角色與啟停](03-server-roles.md)。
+
 通過單 worker 的 `openviking-server` 啟動時，Studio 的「服務端配置」頁面提供「儲存並重啟」。重啟能力和例項標識複用現有 ROOT 配置讀取介面（`GET /api/v1/admin/configuration?source=file`）返回；只有 ROOT 可以請求重啟（`POST /api/v1/admin/restart`，請求體為 `{"revision":"<已儲存檔案的版本>"}`）。服務校驗當前檔案和版本後返回 HTTP 202，等待現有請求結束，停止其管理的 Bot，再使用原直譯器、啟動引數、環境變數和工作目錄替換當前程序。頁面確認新的服務例項恢復後才顯示成功。單獨點選「儲存配置」仍只儲存檔案。
 
 多 worker 或嵌入式 ASGI 啟動不支援頁面重啟，需要通過部署平臺重啟。配置通過校驗後，外部依賴仍可能導致啟動失敗。如果修改了地址、埠或 ROOT 憑證，請更新 Studio 連線設定。帳號和叢集覆蓋配置仍優先於檔案預設配置。
@@ -55,6 +57,7 @@ openviking-server --config /path/to/ov.conf
 |---|---|---|---|
 | `default_account` | string | `"default"` | Service context 使用的預設帳號 |
 | `default_user` | string | `"default"` | Service context 使用的預設使用者 |
+| `enable_default_resources` | boolean | `true` | 補齊預設本地 Embedding/VectorDB 並預置預設 Account 目錄，見[資源配置](../guides/01-configuration.md) |
 | `embedding` | object | 內建本地 Dense 模型 | 此分支的 Dense 向量化模型；預設使用 `local` / `bge-small-zh-v1.5-f16` |
 | `vlm` | object | 空配置 | 內容理解、摘要和記憶抽取使用的模型；使用相關能力前需要配置可用模型 |
 | `query_planner` | object / `null` | `null` | 檢索意圖分析和召回改寫使用的模型。未配置或為空時回退到 `vlm`；`auto` 模式的召回改寫要求配置叢集級 `query_planner`，或帳戶級 `query_planner` / `vlm` 覆蓋項 |
@@ -301,6 +304,14 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 | `parse_output.local_root` | 路徑或 `null` | 系統臨時目錄 | local parser artifact 的根目錄 |
 | `skip_process_lock` | boolean | `false` | 是否跳過 workspace 程序鎖；僅在明確接受併發寫風險時啟用 |
 | `staged_source_ttl_seconds` | integer，0–15552000（180 天） | `604800`（7 天） | 留在 `viking://temp` 的 add-resource 暫存來源超過此秒數即被清除（使用者暫存新來源時順帶檢查，每位使用者最多每小時一次；該使用者仍在執行的任務所用的暫存不會被清除）；`0` 表示停用 |
+| `watch_store.provider` | `file`、`mysql`、`postgres` | `file` | Watch 後設資料和執行佔用；關係型 provider 共享持久化記錄 |
+
+PostgreSQL Watch 儲存需要安裝 `openviking[postgres]`，並執行
+`openviking/service/sql/001_watch_tasks_postgres.sql` 建表。在
+`storage.watch_store.params` 中配置連線欄位和所有節點共用的
+`credential_encryption_key`（base64 編碼的 32 位元組金鑰）。
+它獨立於 Task/Work、Account、PathLock 和向量儲存。
+完整示例、TLS 引數與部署要求見[Watch 儲存配置](../guides/01-configuration.md#watch-store)。
 
 同機本地磁碟上的路徑鎖可通過 SQLite 避免遞迴掃描業務目錄。將 `storage.agfs.pathlock` 設定為
 `{"provider":"sqlite"}`。資料庫預設位於
@@ -470,10 +481,8 @@ namespace 中混跑新舊版本；保留已有持久化佇列 handoff。
 | 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
 | `max_concurrent` | integer | `4` | 同時消費的完整 AddResource 作業數，必須大於 `0`；修改後需重啟服務 |
-| `file_operation_concurrency` | integer | `16` | 單個 AddResource 作業內檔案級提交和 fallback 比較操作的最大併發數，必須大於 `0`；修改後需重啟服務 |
-| `file_vectorization_concurrency` | integer | `8` | 當目錄 AddResource 使用 `processing_mode="vectors_only"` 時，單個作業內併發讀取、準備併入隊的檔案數，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
 
-`max_concurrent` 控制相互獨立的 AddResource 作業併發，`file_operation_concurrency` 控制單個 AddResource 作業內檔案提交和 fallback 比較操作的併發，`file_vectorization_concurrency` 控制單個 vectors-only 目錄作業內的檔案併發。
+`max_concurrent` 控制相互獨立的 AddResource 作業併發。每個作業內的檔案級工作使用內部固定的有界併發。
 
 ### `queue_workers.reindex`
 
@@ -528,6 +537,57 @@ Rust 沒有 `CRITICAL`，該閾值仍對映到 `ERROR`，輸出仍標為 `ERROR`
 安全操作審計落庫記為獨立功能待辦。
 SDK 匯入不會接管宿主 root logger。日誌內容邊界見[日誌規範](https://github.com/volcengine/OpenViking/blob/main/docs/repository/LOGGING_CN.md)。
 
+## Usage/Audit PostgreSQL 配置
+
+`server.observability.usage_audit.backend` 支援 `sqlite`（預設）和 `postgres`。
+共享 PostgreSQL 用於多例項的 Token、檢索、上下文寫入及 HTTP 請求審計投影，
+Console API 和讀端時區口徑保持一致。
+
+```json
+{
+  "server": {
+    "observability": {
+      "usage_audit": {
+        "backend": "postgres",
+        "postgres": {
+          "host": "localhost",
+          "port": 5432,
+          "user": "openviking_runtime",
+          "password": "<password>",
+          "database": "openviking",
+          "schema": "openviking_usage_audit",
+          "maxsize": 10,
+          "connect_timeout": 10,
+          "lock_timeout_ms": 1000,
+          "sslmode": "prefer"
+        }
+      }
+    }
+  }
+}
+```
+
+安裝 `openviking[postgres]`，由管理員一次性執行
+`openviking/observability/usage_audit/sql/001_usage_audit_postgres.sql`；
+runtime 只驗證 schema，不建立或遷移表。自定義 schema 時替換指令碼中的 schema 名，
+只接受 1–63 字元的小寫 SQL 識別符號。runtime role 需要 schema `USAGE`、
+表 `SELECT/INSERT/UPDATE/DELETE`、sequence `USAGE/SELECT`。
+連線引數支援 `sslrootcert`、`sslcert`、`sslkey`，不接受 DSN；
+生產環境應按資料庫要求設定 `verify-ca` 或 `verify-full`。
+
+schema 當前為 v2。已有預覽版 v1 時，先停止全部 writer，由管理員執行
+`openviking/observability/usage_audit/sql/002_usage_audit_deletion_fence.sql`，
+再重啟全部例項；不混跑舊 writer。`lock_timeout_ms` 預設 `1000`，範圍 `1..60000`，
+限制寫入和刪除事務的單次資料庫鎖等待；超時回滾，worker 按 best-effort 語義丟棄該批。
+刪除會持久化帳號/使用者刪除版本，拒絕其他例項佇列中的舊版本事件。
+遠端 writer 重新整理版本前接收的同範圍新事件也會保守丟棄；每次寫入重新整理版本後，
+新接收事件（包括重新建立的同名身份）正常寫入。版本判斷不依賴機器時鐘。
+
+保留配置與 SQLite 相同，`0` 關閉對應裁剪。切換後端不會遷移歷史資料；
+事件仍經程序內佇列非同步寫入，不保證重啟恢復或 exactly-once。
+這隻共享 Usage/Audit 資料，其他業務儲存和分散式鎖需單獨配置。
+完整口徑見[模組說明](https://github.com/volcengine/OpenViking/blob/main/openviking/observability/usage_audit/README.md)。
+
 ## Compile API 配置
 
 | 欄位 | 型別 | 預設值 | 說明 |
@@ -538,14 +598,6 @@ SDK 匯入不會接管宿主 root logger。日誌內容邊界見[日誌規範](h
 | `poll_interval_ms` | integer | `30000` | 外部任務狀態輪詢間隔 |
 
 配置 `base_url` 後，OV 通過 `X-API-Key` 傳遞當前使用者的 OV API Key；僅在配置 `gateway_token` 時傳送 `X-Gateway-Token`。
-
-## Reindex 配置
-
-### `reindex`
-
-| 欄位 | 型別 | 預設值 | 說明 |
-|---|---|---:|---|
-| `file_vectorization_concurrency` | integer | `8` | 單個 resource/skill reindex 任務內併發讀取、計算指紋和準備檔案的數量，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
 
 ## HTTP 服務配置
 

@@ -18,6 +18,7 @@ from openviking.core.identifiers import validate_user_id
 from openviking.core.namespace import classify_uri, uri_parts
 from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
+from openviking.observability.log_safety import short_hash
 from openviking.pyagfs.exceptions import AGFSInternalError
 from openviking.server.identity import RequestContext, Role
 from openviking.service.compile_targets import (
@@ -504,11 +505,12 @@ class CompileService:
             except (AGFSInternalError, ValueError) as exc:
                 if task is None or task.error == ENQUEUE_FAILURE or not _lost_state_lease(exc):
                     raise
-                logger.warning(
-                    "Queued Compile task %s lost the state.json lease for %s",
+                logger.info(
+                    "queued compile task state lease lost; retaining accepted task task_id=%s name_hash=%s error_type=%s",
                     task.task_id,
-                    compile_name,
-                    exc_info=True,
+                    short_hash(str(compile_name)),
+                    type(exc).__name__,
+                    extra={"error_type": type(exc).__name__},
                 )
             return task
         if compile_name:
@@ -959,6 +961,11 @@ class CompileService:
         if parts[:1] == ["user"] and parts[2:4] == ["memories", "experiences"]:
             raise InvalidArgumentError(
                 "Compile target must not be inside the user memories/experiences subtree"
+            )
+        if {"viking://resources", "viking://user"}.intersection(request.from_):
+            raise InvalidArgumentError(
+                "Compile --from rejects viking://resources and viking://user. Use a "
+                "subdirectory such as viking://resources/test or viking://user/default/resources."
             )
         for uri in request.from_:
             try:

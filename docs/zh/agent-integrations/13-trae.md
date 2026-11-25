@@ -4,9 +4,16 @@
 
 ## 安裝
 
-前置條件：macOS 或 Linux、Node.js 18+，以及支援 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Stop` Hook 的 TRAE/TRAE CN 版本。TraeCode CLI 2.0 直接使用相容 Codex 的外掛格式。安裝過程中會引導配置 OpenViking 連線資訊。
+前置條件：macOS 或 Linux、Node.js 18+，以及支援 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Stop`、`PostCompact` Hook 的 TRAE/TRAE CN 版本。TraeCode CLI 2.0 直接使用相容 Codex 的外掛格式。安裝過程中會引導配置 OpenViking 連線資訊。
 
-安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）；遠端自建服務請選擇 **自定義 URL / 保持當前** 並填寫其 URL。
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
+服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）。遠端自建服務選擇**自定義 URL**並填寫其地址；已有連線時，此選項顯示為**自定義 URL / 保持當前**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -41,7 +48,9 @@ TRAE 和 TRAE CN 使用安裝後的 `hooks.json`，不需要審閱 hook，安裝
 - `UserPromptSubmit`：根據當前問題召回並注入相關內容，召回範圍包括你自己的 skill 和帳號內共享在 `viking://agent/skills` 下的 skill。
 - `PreToolUse`：在 TRAE 和 TRAE CN 上，`Read`、`Glob`、`Grep` 的路徑是 `viking://` URI 時拒絕呼叫，並提示改用 OpenViking MCP 工具；`Bash` 或 `RunCommand` 命令帶 `viking://` URI 時照常執行，同時附加改用建議。TraeCode CLI 2.0 使用 Codex 外掛，它不安裝 URI guard。
 - TRAE/TRAE CN 的 `Stop` 捕獲並提交本輪訊息；TraeCode CLI 2.0 遵循 Codex 外掛的捕獲與生命週期提交策略。
+- TRAE/TRAE CN 的 `PostCompact` 在壓縮後追加一段簡短說明，給出會話的 OpenViking id 以及用來查回之前確切細節的 `session_history` MCP 工具；Agent 呼叫時把這個 id 作為 `session` 傳入。
 - OpenViking MCP Server：透傳服務端完整 MCP 工具集（21 個工具）：`find`、`search`、`read`、`download`、`list`、`tree`、`remember`、`write`、`edit`、`add_resource`、`add_skill`、`list_watches`、`cancel_watch`、`grep`、`glob`、`forget`、`health`、`list_users`、`list_groups`、`get_acl`、`set_acl`。其中 `search` 的 `mode="context"` 可返回組裝後的上下文。
+- TRAE/TRAE CN 的 skill：`openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` 和 `ov-memory-doctor` 安裝到 `~/.trae/skills/<name>`（TRAE CN 為 `~/.trae-cn/skills/<name>`）。你修改過的 skill，或已有的同名非託管目錄，升級時保留。TraeCode CLI 也讀取 `~/.trae/skills`，同時安裝 TRAE 整合和 TraeCode CLI 2.0 外掛時，CLI 會把這幾個 skill 各列兩次：一次不帶字首，一次在外掛名稱空間下。
 skill 清單先列你自己的 skill，再列帳號內共享的 skill，每條描述截到約 40 token。清單的預算 `skillCatalogTokenBudget`（預設 `1200` token）獨立於畫像預算；描述放不下時只列名稱。把 `skillCatalog` 設為 `false` 或把預算設為 `0` 即可關閉，既可以寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段（見[外掛配置](../configuration/02-client.md#外掛配置)），也可以用環境變數 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。
 
 ## 驗證
@@ -66,7 +75,7 @@ skill 清單先列你自己的 skill，再列帳號內共享的 skill，每條�
 curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness trae-cn
 ```
 
-將 `trae-cn` 替換為 `trae` 可管理 TRAE 整合。TraeCode CLI 2.0 請執行 `trae-cli plugin uninstall openviking-memory@openviking`。安裝器的 `--harness trae-cli --uninstall` 只用於移除舊安裝中已棄用的獨立 Hooks 整合。
+將 `trae-cn` 替換為 `trae` 可管理 TRAE 整合。解除安裝移除 OpenViking 管理的 Hook、MCP 配置和 skill；你修改過的 skill 和同名的非託管目錄會保留。TraeCode CLI 2.0 請執行 `trae-cli plugin uninstall openviking-memory@openviking`。安裝器的 `--harness trae-cli --uninstall` 只用於移除舊安裝中已棄用的獨立 Hooks 整合。
 
 ## 故障排查
 

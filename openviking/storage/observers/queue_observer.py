@@ -29,15 +29,44 @@ class QueueObserver(BaseObserver):
     MAX_REPORTED_ERRORS = 5
     MAX_ERROR_MESSAGE_CHARS = 300
 
-    def __init__(self, queue_manager: QueueManager, ctx: Optional[RequestContext] = None):
+    def __init__(
+        self,
+        queue_manager: QueueManager,
+        account_id: str | None = None,
+        *,
+        ctx: Optional[RequestContext] = None,
+    ):
         # Queues are shared by all accounts, so error reasons are reported only
         # for a request context: root sees all, other roles their own account.
+        # account_id additionally scopes counts to one account.
         self._queue_manager = queue_manager
         self._ctx = ctx
+        self._account_id = account_id
+
+    async def _check_status(self):
+        if self._account_id is None:
+            return await self._queue_manager.check_status()
+        return await self._queue_manager.check_status(account_id=self._account_id)
+
+    async def observe_async(self, *, format: str = "table") -> tuple[str | dict, bool]:
+        """Return formatted status and active errors from one queue snapshot."""
+        statuses = await self._check_status()
+        tree_stats = self._get_semantic_tree_stats()
+        status = (
+            self._format_status_as_json(statuses, tree_stats)
+            if format == "json"
+            else self._format_table_with_errors(statuses, tree_stats)
+        )
+        return status, self._has_active_errors(statuses)
 
     async def get_status_table_async(self) -> str:
-        statuses = await self._queue_manager.check_status()
+        statuses = await self._check_status()
         tree_stats = self._get_semantic_tree_stats()
+        return self._format_table_with_errors(statuses, tree_stats)
+
+    def _format_table_with_errors(
+        self, statuses: Dict[str, QueueStatus], tree_stats: Optional[object]
+    ) -> str:
         table = self._format_status_as_table(statuses, tree_stats)
         active_errors = self._active_errors(statuses)
         if not active_errors:
@@ -49,8 +78,14 @@ class QueueObserver(BaseObserver):
         return "\n\n".join([table, "\n".join(["Active errors:", *lines])])
 
     async def get_status_json_async(self) -> dict:
-        statuses = await self._queue_manager.check_status()
+        statuses = await self._check_status()
         tree_stats = self._get_semantic_tree_stats()
+        return self._format_status_as_json(statuses, tree_stats)
+
+    def _format_status_as_json(
+        self,
+        statuses: Dict[str, QueueStatus], tree_stats: Optional[object]
+    ) -> dict:
         queues = []
         total_pending = 0
         total_in_progress = 0
@@ -215,6 +250,8 @@ class QueueObserver(BaseObserver):
             return None
         handler = getattr(semantic_queue, "_dequeue_handler", None)
         if handler and hasattr(handler, "get_tree_stats"):
+            if self._account_id is not None:
+                return handler.get_tree_stats(account_id=self._account_id)
             return handler.get_tree_stats()
         return None
 
@@ -225,7 +262,7 @@ class QueueObserver(BaseObserver):
         return run_async(self.has_active_errors_async())
 
     async def has_active_errors_async(self) -> bool:
-        statuses = await self._queue_manager.check_status()
+        statuses = await self._check_status()
         return self._has_active_errors(statuses)
 
     @staticmethod
