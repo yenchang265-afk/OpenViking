@@ -1611,7 +1611,9 @@ def _wizard_two_step() -> tuple[dict[str, Any] | None | object, bool | None]:
         if vlm_ollama is not None:
             ollama_running = vlm_ollama
 
-        print(f"\n  {_green('✓')} VLM: {_summarize_model(vlm_config)}")
+        # Summarize only non-secret fields; the VLM block carries its API key.
+        vlm_label = {k: vlm_config.get(k) for k in ("provider", "model", "api_base")}
+        print(f"\n  {_green('✓')} VLM: {_summarize_model(vlm_label)}")
 
         config: dict[str, Any] = {
             "storage": {"workspace": _workspace_path()},

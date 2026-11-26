@@ -8,8 +8,9 @@ https://github.com/volcengine/OpenViking/blob/main/docs/repository/LOGGING.md
 
 import hashlib
 import math
+import os
 import re
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Mapping
 
 DEFAULT_LOG_FORMAT = (
@@ -50,10 +51,11 @@ def safe_uri_for_log(uri: str) -> str:
 def safe_path_for_log(path: str, workspace: str | Path | None = None) -> str:
     """Return an opaque locator; arbitrary file names and tenant layouts stay private."""
     if workspace is not None:
+        # Lexical only: a log helper must not touch the filesystem for caller input.
         try:
-            relative = Path(path).resolve().relative_to(Path(workspace).resolve())
+            relative = PurePath(os.path.abspath(path)).relative_to(os.path.abspath(workspace))
             return f"workspace:{short_hash(str(relative))}"
-        except (ValueError, OSError):
+        except (ValueError, TypeError):
             pass
     return f"path:{short_hash(path)}"
 

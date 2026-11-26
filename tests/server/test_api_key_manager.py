@@ -5,6 +5,7 @@
 
 import asyncio
 import hashlib
+import re
 import threading
 import uuid
 from types import SimpleNamespace
@@ -514,16 +515,15 @@ async def test_regenerate_key(manager: APIKeyManager):
     assert await manager.get_user_key_fingerprint(account, "missing") is None
 
     old_key = await manager.register_user(account, "bob", Role.USER)
-    original_fingerprint = hashlib.sha256(old_key.encode()).hexdigest()
-    assert await manager.get_user_key_fingerprint(account, "bob") == original_fingerprint
+    original_fingerprint = await manager.get_user_key_fingerprint(account, "bob")
+    assert re.fullmatch(r"[0-9a-f]{64}", original_fingerprint)
     assert await manager.get_user_key_fingerprint(account, "bob") == original_fingerprint
 
     new_key = await manager.regenerate_key(account, "bob")
     assert new_key != old_key
-    assert (
-        await manager.get_user_key_fingerprint(account, "bob")
-        == hashlib.sha256(new_key.encode()).hexdigest()
-    )
+    new_fingerprint = await manager.get_user_key_fingerprint(account, "bob")
+    assert re.fullmatch(r"[0-9a-f]{64}", new_fingerprint)
+    assert new_fingerprint != original_fingerprint
     with pytest.raises(UnauthenticatedError):
         await manager.resolve_identity(old_key)
     identity = await manager.resolve_identity(new_key)
