@@ -66,7 +66,9 @@ class SQLiteTaskWorkStore(SQLTaskWorkStore):
                     raise RuntimeError(f"Unsupported SQLite task schema version: {version}")
                 await connection.run_sync(self._models.Base.metadata.create_all)
                 if version == 0:
-                    await connection.execute(text(f"PRAGMA user_version={self.SCHEMA_VERSION}"))
+                    # PRAGMA takes no bound parameters; SCHEMA_VERSION is an int constant.
+                    # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text -- constant schema version
+                    await connection.execute(text(f"PRAGMA user_version={int(self.SCHEMA_VERSION)}"))
 
     @asynccontextmanager
     async def _transaction(self) -> AsyncGenerator[AsyncSession, None]:

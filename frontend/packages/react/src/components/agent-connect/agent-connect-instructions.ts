@@ -62,8 +62,9 @@ export function getAgentConnectInstructions(
       /^[\s\S]*?(?=^## )/m,
       () => text.hermesCustomIntro,
     );
+    // 文档的 zh 指南可能是繁体（選擇），两种写法都要匹配。
     template = template.replace(
-      /^3\. (?:选择|Choose) \*\*(?:OpenViking Service \(VolcEngine Cloud\)|OpenViking Managed Service)\*\*(?:[。.]|[，,][^\r\n]*)[ \t]*$/m,
+      /^3\. (?:选择|選擇|Choose) \*\*(?:OpenViking Service \(VolcEngine Cloud\)|OpenViking Managed Service)\*\*(?:[。.]|[，,][^\r\n]*)[ \t]*$/m,
       () => text.hermesCustomStep,
     );
   }
