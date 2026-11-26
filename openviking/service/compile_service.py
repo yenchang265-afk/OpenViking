@@ -382,6 +382,8 @@ class CompileService:
         """Save the caller's executor identity independently of scheduling."""
         if request.is_memory_mode:
             raise InvalidArgumentError("Persistent Compile does not support skill=memory")
+        # Reject malformed controls before resolving the Skill, which reads storage.
+        split_control_args(request.args)
         normalized = await self._normalize_request(request, ctx)
         CompileLifecycle.validate_layout(normalized.to, normalized.from_)
         public, private = self._split_payload(normalized)
