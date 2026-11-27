@@ -1933,6 +1933,27 @@ impl HttpClient {
         self.put(&path, &body).await
     }
 
+    pub async fn admin_get_mcp_tools(&self, account_id: &str, user_id: &str) -> Result<Value> {
+        let path = format!(
+            "/api/v1/admin/accounts/{}/users/{}/mcp-tools",
+            account_id, user_id
+        );
+        self.get(&path, &[]).await
+    }
+
+    pub async fn admin_set_mcp_tools(
+        &self,
+        account_id: &str,
+        user_id: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!(
+            "/api/v1/admin/accounts/{}/users/{}/mcp-tools",
+            account_id, user_id
+        );
+        self.put(&path, body).await
+    }
+
     pub async fn admin_frozen_file(
         &self,
         account_id: &str,

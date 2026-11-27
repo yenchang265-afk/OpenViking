@@ -841,3 +841,56 @@ fn compile_creation_requires_a_name() {
         assert!(error.to_string().contains("--compile-name"));
     }
 }
+
+#[test]
+fn cli_parses_admin_mcp_tools_commands() {
+    use crate::cli::AdminCommands;
+
+    let get = Cli::try_parse_from(["ov", "admin", "get-mcp-tools", "acme", "bob"])
+        .expect("get-mcp-tools should parse");
+    match get.command {
+        Commands::Admin {
+            action:
+                AdminCommands::GetMcpTools {
+                    account_id,
+                    user_id,
+                },
+        } => assert_eq!((account_id.as_str(), user_id.as_str()), ("acme", "bob")),
+        _ => panic!("expected admin get-mcp-tools"),
+    }
+
+    let set = Cli::try_parse_from([
+        "ov",
+        "admin",
+        "set-mcp-tools",
+        "acme",
+        "bob",
+        "--tools",
+        "find,read",
+    ])
+    .expect("set-mcp-tools --tools should parse");
+    match set.command {
+        Commands::Admin {
+            action: AdminCommands::SetMcpTools {
+                tools, all, none, ..
+            },
+        } => {
+            assert_eq!(tools, Some(vec!["find".to_string(), "read".to_string()]));
+            assert!(!all && !none);
+        }
+        _ => panic!("expected admin set-mcp-tools"),
+    }
+
+    for flag in ["--all", "--none"] {
+        Cli::try_parse_from(["ov", "admin", "set-mcp-tools", "acme", "bob", flag])
+            .unwrap_or_else(|error| panic!("{flag} should parse: {error}"));
+    }
+    let base = ["ov", "admin", "set-mcp-tools", "acme", "bob"];
+    for extra in [&[][..], &["--all", "--none"], &["--all", "--tools", "find"]] {
+        let args: Vec<&str> = base.iter().chain(extra).copied().collect();
+        assert!(
+            Cli::try_parse_from(&args).is_err(),
+            "expected exactly one of --tools/--all/--none: {args:?}"
+        );
+    }
+}

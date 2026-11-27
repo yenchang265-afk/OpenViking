@@ -113,6 +113,8 @@ fn pre_parse_config_gate_covers_known_group_server_commands() {
         &["ov", "admin", "delete-group"],
         &["ov", "admin", "remove-user"],
         &["ov", "admin", "set-role"],
+        &["ov", "admin", "get-mcp-tools"],
+        &["ov", "admin", "set-mcp-tools"],
         &["ov", "admin", "regenerate-key"],
         &["ov", "admin", "set-account-settings"],
         &["ov", "system", "wait"],

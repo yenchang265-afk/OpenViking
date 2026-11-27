@@ -1,0 +1,20 @@
+export default {
+  title: 'MCP tools',
+  all: 'All tools',
+  none: 'No tools',
+  some: '{{count}} of {{total}} tools',
+  edit: 'Edit MCP tools',
+  editUser: 'Edit MCP tools for {{user}}',
+  description:
+    'Choose which tools this user can list and call on the MCP endpoint. Changes apply to the next MCP request.',
+  allowAll: 'Allow every tool, including tools added later',
+  readOnly: 'Read-only',
+  selectReadOnly: 'Read-only only',
+  selectAll: 'Select all',
+  clear: 'Clear',
+  cancel: 'Cancel',
+  save: 'Save',
+  saved: 'MCP tools saved',
+  saveFailed: 'Could not save MCP tools',
+  retry: 'Retry',
+} as const

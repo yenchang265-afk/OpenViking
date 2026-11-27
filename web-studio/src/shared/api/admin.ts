@@ -600,6 +600,52 @@ export async function updateUserMemorySettings(
   )
 }
 
+export type McpToolInfo = {
+  name: string
+  description: string
+  read_only: boolean
+}
+
+/** `allowed_tools: null` means the user may use every MCP tool. */
+export type UserMcpTools = {
+  account_id: string
+  user_id: string
+  allowed_tools: string[] | null
+  available_tools: McpToolInfo[]
+}
+
+const userMcpToolsUrl =
+  '/api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools'
+
+export async function fetchUserMcpTools(
+  connection: AdminConnection,
+  accountId: string,
+  userId: string,
+): Promise<UserMcpTools> {
+  return getOvResult<UserMcpTools>(
+    createAdminClient(connection).get({
+      url: userMcpToolsUrl,
+      path: { account_id: accountId, user_id: userId },
+    }),
+  )
+}
+
+export async function updateUserMcpTools(
+  connection: AdminConnection,
+  accountId: string,
+  userId: string,
+  allowedTools: string[] | null,
+): Promise<UserMcpTools> {
+  return getOvResult<UserMcpTools>(
+    createAdminClient(connection).put({
+      url: userMcpToolsUrl,
+      path: { account_id: accountId, user_id: userId },
+      headers: { 'Content-Type': 'application/json' },
+      body: { allowed_tools: allowedTools },
+    }),
+  )
+}
+
 export type AdminGroup = { group_id: string; member_count: number }
 
 const groupsUrl = '/api/v1/admin/accounts/{account_id}/groups'

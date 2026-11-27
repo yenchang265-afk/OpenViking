@@ -405,6 +405,8 @@ fn is_admin_subcommand(token: &str) -> bool {
             | "delete-group"
             | "remove-user"
             | "set-role"
+            | "get-mcp-tools"
+            | "set-mcp-tools"
             | "regenerate-key"
             | "set-account-settings"
     )

@@ -1223,6 +1223,85 @@ async def patch_user_settings(
     )
 
 
+class UserMcpToolsRequest(BaseModel):
+    """Replace one User's ``/mcp`` tool allowlist; ``null`` allows every tool."""
+
+    model_config = {"extra": "forbid"}
+
+    allowed_tools: Optional[list[str]] = Field(..., max_length=512)
+
+
+async def _user_mcp_tools_target(
+    request: Request, ctx: RequestContext, account_id: str, user_id: str
+):
+    _check_account_access(ctx, account_id)
+    await _reject_non_root_global_target(request, ctx, account_id, user_id)
+    manager = await _check_account_exists(request, account_id)
+    await _check_user_exists(request, account_id, user_id, manager)
+    return _get_runtime_config_manager()
+
+
+def _user_mcp_tools_result(account_id: str, user_id: str, allowed: Optional[list[str]]):
+    from openviking.server.mcp_tool_access import mcp_tool_catalog
+
+    return Response(
+        status="ok",
+        result={
+            "account_id": account_id,
+            "user_id": user_id,
+            "allowed_tools": allowed,
+            "available_tools": mcp_tool_catalog(),
+        },
+    )
+
+
+@router.get("/accounts/{account_id}/users/{user_id}/mcp-tools")
+@require_auth_role(Role.ROOT, Role.ADMIN, Role.USER)
+async def get_user_mcp_tools(
+    request: Request,
+    account_id: str = Path(..., description="Account ID"),
+    user_id: str = Path(..., description="User ID"),
+    ctx: RequestContext = Depends(get_request_context),
+):
+    """Return the MCP tools a User may use; USER may read only their own."""
+    from openviking.server.mcp_tool_access import read_user_mcp_tools
+
+    if ctx.role == Role.USER and user_id != ctx.user.user_id:
+        raise PermissionDeniedError("USER can only read their own MCP tools")
+    config = await _user_mcp_tools_target(request, ctx, account_id, user_id)
+    allowed = await read_user_mcp_tools(config, account_id, user_id)
+    return _user_mcp_tools_result(account_id, user_id, allowed)
+
+
+@router.put("/accounts/{account_id}/users/{user_id}/mcp-tools")
+@require_auth_root_or_admin
+async def put_user_mcp_tools(
+    body: UserMcpToolsRequest,
+    request: Request,
+    account_id: str = Path(..., description="Account ID"),
+    user_id: str = Path(..., description="User ID"),
+    ctx: RequestContext = Depends(get_request_context),
+):
+    """Set which MCP tools a User may list and call on ``/mcp``."""
+    from openviking.server.mcp_tool_access import write_user_mcp_tools
+
+    config = await _user_mcp_tools_target(request, ctx, account_id, user_id)
+    try:
+        allowed = await write_user_mcp_tools(config, account_id, user_id, body.allowed_tools)
+    except (ConfigPatchError, ValueError) as exc:
+        raise InvalidArgumentError(str(exc)) from exc
+    logger.info(
+        "User MCP tools updated",
+        extra={
+            "account_id": account_id,
+            "user_id": user_id,
+            "actor_role": str(ctx.role),
+            "restricted": allowed is not None,
+        },
+    )
+    return _user_mcp_tools_result(account_id, user_id, allowed)
+
+
 @router.delete("/accounts/{account_id}/users/{user_id}", status_code=202)
 @require_auth_root_or_admin
 async def remove_user(

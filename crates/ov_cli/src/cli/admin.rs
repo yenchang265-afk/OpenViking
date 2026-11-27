@@ -171,6 +171,38 @@ pub(crate) enum AdminCommands {
         #[arg(value_name = "role")]
         role: String,
     },
+    /// Show which /mcp tools a user may use (ROOT, own-account ADMIN, or the user)
+    GetMcpTools {
+        /// Account ID
+        #[arg(value_name = "account-id")]
+        account_id: String,
+        /// User ID
+        #[arg(value_name = "user-id")]
+        user_id: String,
+    },
+    /// Set which /mcp tools a user may list and call (ROOT or own-account ADMIN)
+    #[command(group(
+        clap::ArgGroup::new("mcp_tools_choice")
+            .required(true)
+            .args(["tools", "all", "none"])
+    ))]
+    SetMcpTools {
+        /// Account ID
+        #[arg(value_name = "account-id")]
+        account_id: String,
+        /// User ID
+        #[arg(value_name = "user-id")]
+        user_id: String,
+        /// Comma-separated tool names the user may use, e.g. find,read,list
+        #[arg(long, value_name = "names", value_delimiter = ',', num_args = 1..)]
+        tools: Option<Vec<String>>,
+        /// Remove the restriction: allow every tool, including tools added later
+        #[arg(long)]
+        all: bool,
+        /// Block every tool
+        #[arg(long)]
+        none: bool,
+    },
     /// Regenerate a user's API key; self-rotation updates the active ovcli.conf
     RegenerateKey {
         /// Account ID

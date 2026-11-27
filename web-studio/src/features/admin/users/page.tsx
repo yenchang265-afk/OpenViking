@@ -71,6 +71,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '#/shared/ui/tooltip'
 import { AddUserDialog } from '#/features/admin/users/components/add-user-dialog'
 import { RootSetupGuide } from '#/features/admin/users/components/root-setup-guide'
 import { DeleteAccountButton } from '#/features/admin/users/components/delete-account-button'
+import { UserMcpToolsCell } from '#/features/admin/users/components/user-mcp-tools-cell'
 import { UserMemoryPolicyCell } from '#/features/admin/users/components/user-memory-policy-cell'
 import { UserRoleCell } from '#/features/admin/users/components/user-role-cell'
 import { getErrorMessage } from '#/shared/lib/error'
@@ -478,6 +479,7 @@ export function UserManagementPanel() {
                     <TableHead>{t('table.role')}</TableHead>
                     <TableHead>{t('table.groups')}</TableHead>
                     <TableHead>{t('memoryPolicy.title')}</TableHead>
+                    <TableHead>{t('mcpTools.title')}</TableHead>
                     <TableHead>{t('table.apiKey')}</TableHead>
                     <TableHead className="text-right">
                       {t('table.actions')}
@@ -613,6 +615,12 @@ export function UserManagementPanel() {
                         </TableCell>
                         <TableCell>
                           <UserMemoryPolicyCell
+                            connection={adminConnection}
+                            user={user}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <UserMcpToolsCell
                             connection={adminConnection}
                             user={user}
                           />

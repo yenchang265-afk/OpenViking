@@ -557,6 +557,8 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 獲取單個使用者的無憑據成員資訊（user_id、role） |
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 獲取使用者新增位置、記憶策略和 TTL |
 | PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 更新使用者新增位置、記憶策略和 TTL |
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools` | 獲取使用者允許的 MCP 工具 |
+| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools` | 設定使用者允許的 MCP 工具 |
 | GET | `/api/v1/user-settings/add-locations` | 讀取當前使用者的新增位置（deprecated） |
 | PATCH | `/api/v1/user-settings/add-locations` | 更新當前使用者的新增位置（deprecated） |
 | DELETE | `/api/v1/user-settings/add-locations` | 清除當前使用者的新增位置設定（deprecated） |

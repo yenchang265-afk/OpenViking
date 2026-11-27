@@ -562,6 +562,8 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | Get one user's credential-free membership info (user_id, role) |
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | Get User add locations, memory policy, and TTL |
 | PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | Update User add locations, memory policy, and TTL |
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools` | Get a User's allowed MCP tools |
+| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools` | Set a User's allowed MCP tools |
 | GET | `/api/v1/user-settings/add-locations` | Get current-user add locations (deprecated) |
 | PATCH | `/api/v1/user-settings/add-locations` | Update current-user add locations (deprecated) |
 | DELETE | `/api/v1/user-settings/add-locations` | Clear current-user add-location overrides (deprecated) |

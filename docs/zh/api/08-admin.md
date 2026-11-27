@@ -1030,6 +1030,43 @@ DELETE /api/v1/user-settings/add-locations
 
 ---
 
+### user_mcp_tools
+
+ROOT 與 ADMIN 可以選擇使用者可用的 `/mcp` 工具。ADMIN 可管理所屬帳號內的非 GLOBAL
+使用者。USER 只能讀取自己的設定，不能修改。
+
+```http
+GET /api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools
+PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools
+Content-Type: application/json
+
+{"allowed_tools": ["find", "read", "list", "tree"]}
+```
+
+CLI：
+
+```bash
+ov admin get-mcp-tools acme bob
+ov admin set-mcp-tools acme bob --tools find,read,list,tree
+ov admin set-mcp-tools acme bob --all    # 移除限制
+ov admin set-mcp-tools acme bob --none   # 封鎖所有工具
+```
+
+`allowed_tools: null` 表示可使用所有工具，包含日後版本新增的工具。清單表示只允許其中的工具；
+`[]` 表示不允許任何工具。未知工具名稱會回傳 `400`。回應包含已儲存的 `allowed_tools`
+以及 `available_tools` 目錄（`name`、`description`、`read_only`）。
+
+受限使用者的 MCP `tools/list` 只會回傳允許的工具，呼叫其他工具的 `tools/call` 會回傳 MCP
+工具錯誤。未驗證的探索請求與 ROOT 一律看到完整清單。掛載到 OpenViking 的外部 MCP 伺服器
+透過 `find_mcp_tools` 與 `invoke_mcp_tool` 存取，因此允許或拒絕這兩個工具即可控制它們。
+此允許清單只作用於 `/mcp` 端點，不會改變 REST API 權限。
+
+允許清單儲存在帳號設定區段 `mcp_tools.users`，只有 ROOT 與 ADMIN 可以寫入。刪除使用者時會一併移除其設定，
+之後以相同 ID 建立的使用者不受限制。Studio 在
+使用者頁面的 **MCP 工具** 欄位中編輯。
+
+---
+
 ### create_account
 
 #### 1. API 實現介紹

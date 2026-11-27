@@ -251,6 +251,8 @@ Use `--sudo` for commands that require the configured `root_api_key`.
 - `admin list-users` - List users in an account.
 - `admin remove-user` - Remove a user.
 - `admin set-role` - Change a user's role. ROOT only.
+- `admin get-mcp-tools` - Show which MCP tools a user may use.
+- `admin set-mcp-tools` - Limit a user's MCP tools (`--tools find,read`, `--all`, or `--none`).
 - `admin regenerate-key` - Rotate a user's API key.
 - `admin set-account-settings` - Update allowlisted account settings.
 - `system` - Administrative system utility commands.
