@@ -761,6 +761,37 @@ pub async fn handle_admin(cmd: AdminCommands, ctx: CliContext) -> Result<()> {
             )
             .await
         }
+        AdminCommands::GetMcpTools {
+            account_id,
+            user_id,
+        } => {
+            commands::admin::get_mcp_tools(
+                &client,
+                &account_id,
+                &user_id,
+                ctx.output_format,
+                ctx.compact,
+            )
+            .await
+        }
+        AdminCommands::SetMcpTools {
+            account_id,
+            user_id,
+            tools,
+            all,
+            none: _,
+        } => {
+            commands::admin::set_mcp_tools(
+                &client,
+                &account_id,
+                &user_id,
+                tools.as_deref(),
+                all,
+                ctx.output_format,
+                ctx.compact,
+            )
+            .await
+        }
         AdminCommands::RegenerateKey {
             account_id,
             user_id,

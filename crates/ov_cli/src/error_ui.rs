@@ -444,6 +444,8 @@ fn contextual_help_command(command: &str) -> Option<String> {
                 "delete-group",
                 "remove-user",
                 "set-role",
+                "get-mcp-tools",
+                "set-mcp-tools",
                 "regenerate-key",
                 "set-account-settings",
             ],

@@ -281,6 +281,47 @@ pub async fn set_role(
     Ok(())
 }
 
+pub async fn get_mcp_tools(
+    client: &HttpClient,
+    account_id: &str,
+    user_id: &str,
+    output_format: OutputFormat,
+    compact: bool,
+) -> Result<()> {
+    show_admin(
+        client.admin_get_mcp_tools(account_id, user_id).await?,
+        output_format,
+        compact,
+    )
+}
+
+pub async fn set_mcp_tools(
+    client: &HttpClient,
+    account_id: &str,
+    user_id: &str,
+    tools: Option<&[String]>,
+    all: bool,
+    output_format: OutputFormat,
+    compact: bool,
+) -> Result<()> {
+    let body = mcp_tools_body(tools, all);
+    show_admin(
+        client
+            .admin_set_mcp_tools(account_id, user_id, &body)
+            .await?,
+        output_format,
+        compact,
+    )
+}
+
+/// `--all` lifts the restriction (`null`); `--none` is an empty allowlist.
+fn mcp_tools_body(tools: Option<&[String]>, all: bool) -> Value {
+    if all {
+        return json!({ "allowed_tools": Value::Null });
+    }
+    json!({ "allowed_tools": tools.unwrap_or_default() })
+}
+
 pub async fn regenerate_key(
     client: &HttpClient,
     account_id: &str,
@@ -529,6 +570,16 @@ fn mask_api_key(api_key: &str) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn mcp_tools_body_maps_choice_to_allowlist() {
+        assert_eq!(
+            mcp_tools_body(Some(&["find".to_string(), "read".to_string()]), false),
+            json!({"allowed_tools": ["find", "read"]})
+        );
+        assert_eq!(mcp_tools_body(None, true), json!({"allowed_tools": null}));
+        assert_eq!(mcp_tools_body(None, false), json!({"allowed_tools": []}));
+    }
 
     #[test]
     fn frozen_file_uri_preserves_literal_user_relative_path() {
