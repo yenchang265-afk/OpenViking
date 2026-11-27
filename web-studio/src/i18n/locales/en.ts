@@ -7,6 +7,7 @@ import memoryTemplates from './en/memory-templates'
 import onboarding from './en/onboarding'
 import resources from './en/resources'
 import studio from './en/studio'
+import mcpTools from './en/user-mcp-tools'
 import memoryPolicy from './en/user-memory-policy'
 import vikingbot from './en/vikingbot'
 import workspace from './en/workspace'
@@ -22,7 +23,7 @@ const en = {
   ...workspace,
   ...resources,
   ...activity,
-  settings: { ...workspace.settings, memoryPolicy, memoryTemplates },
+  settings: { ...workspace.settings, mcpTools, memoryPolicy, memoryTemplates },
 } as const
 
 export default en

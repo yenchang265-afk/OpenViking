@@ -1,0 +1,20 @@
+export default {
+  title: 'MCP 工具',
+  all: '全部工具',
+  none: '無工具',
+  some: '{{count}} / {{total}} 個工具',
+  edit: '編輯 MCP 工具',
+  editUser: '編輯 {{user}} 的 MCP 工具',
+  description:
+    '選擇此使用者可在 MCP 端點列出與呼叫的工具。變更會在下一次 MCP 請求時生效。',
+  allowAll: '允許所有工具，包含日後新增的工具',
+  readOnly: '唯讀',
+  selectReadOnly: '僅唯讀',
+  selectAll: '全選',
+  clear: '清除',
+  cancel: '取消',
+  save: '儲存',
+  saved: 'MCP 工具已儲存',
+  saveFailed: '無法儲存 MCP 工具',
+  retry: '重試',
+} as const

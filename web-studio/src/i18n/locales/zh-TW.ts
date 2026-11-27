@@ -7,6 +7,7 @@ import memoryTemplates from './zh-TW/memory-templates'
 import onboarding from './zh-TW/onboarding'
 import resources from './zh-TW/resources'
 import studio from './zh-TW/studio'
+import mcpTools from './zh-TW/user-mcp-tools'
 import memoryPolicy from './zh-TW/user-memory-policy'
 import vikingbot from './zh-TW/vikingbot'
 import workspace from './zh-TW/workspace'
@@ -22,7 +23,7 @@ const zhTW = {
   ...workspace,
   ...resources,
   ...activity,
-  settings: { ...workspace.settings, memoryPolicy, memoryTemplates },
+  settings: { ...workspace.settings, mcpTools, memoryPolicy, memoryTemplates },
 } as const
 
 export default zhTW
