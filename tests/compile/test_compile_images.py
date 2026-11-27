@@ -17,8 +17,22 @@ from openviking.compile.scratch import ScratchDir
 from openviking.compile.skill_resources import EvidenceReader
 from openviking.compile.sources import CompileSourceRange, pack_source_batches, read_source
 from openviking.models.vlm.base import VLMResponse
+from openviking.utils.image_input import MAX_COMPILE_IMAGE_DOWNLOAD_BYTES
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"pixels"
+
+
+def _png() -> bytes:
+    """A decodable PNG: Compile normalizes image sources before they reach the model."""
+    import io
+
+    from PIL import Image
+
+    with io.BytesIO() as output:
+        Image.new("RGB", (2, 2), "white").save(output, format="PNG")
+        return output.getvalue()
+
+
+PNG = _png()
 URI = "viking://resources/raw/diagram.png"
 
 
@@ -49,7 +63,11 @@ async def test_image_source_becomes_one_evidence_range_with_its_bytes():
     [
         ("viking://resources/raw/scan.bmp", image_client(b"BM..."), "INVALID_ARGUMENT"),
         (URI, image_client(b"not an image"), "SOURCE_READ_FAILED"),
-        (URI, image_client(PNG, size=media.MAX_INLINE_MEDIA_BYTES + 1), "SOURCE_READ_FAILED"),
+        (
+            URI,
+            image_client(PNG, size=MAX_COMPILE_IMAGE_DOWNLOAD_BYTES + 1),
+            "SOURCE_READ_FAILED",
+        ),
     ],
     ids=["unsupported-format", "wrong-bytes", "oversized"],
 )

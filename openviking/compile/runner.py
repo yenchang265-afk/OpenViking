@@ -33,7 +33,12 @@ from openviking.compile.models import (
 from openviking.compile.pipeline import Pipeline
 from openviking.compile.renderer import RenderedBundle
 from openviking.compile.scratch import ScratchDir
-from openviking.compile.sources import pack_source_batches, read_source
+from openviking.compile.hashing import content_hash
+from openviking.compile.sources import (
+    pack_source_batches,
+    read_source,
+    verify_recovery_sources,
+)
 from openviking.compile.target_tools import target_tools
 from openviking.core.namespace import classify_uri, relative_uri_path
 from openviking.core.skill_loader import validate_skill_format
@@ -338,6 +343,9 @@ class CompileRunner:
             else await list_pipeline_source_files(client, request)
         )
         await pipeline.files.put("inputs", dict.fromkeys(ordered, "pending"))
+        # Incremental recovery proves the processed sources match the frozen plan.
+        recovery = (request.changes or {}).get("recovery_sources")
+        source_hashes: dict[str, str] = {}
         # Smaller chunks let extraction retry ranges independently.
         source_limits = self.limits.model_copy(
             update={"source_batch_chars": min(self.limits.source_batch_chars, 10_000)}
@@ -361,6 +369,8 @@ class CompileRunner:
                     elif isinstance(content, BaseException):
                         raise content
                     else:
+                        if recovery and isinstance(content, str):
+                            source_hashes[uri] = content_hash(content)
                         readable.append((uri, content))
                 for batch in pack_source_batches(readable, source_limits):
                     yield batch
@@ -381,7 +391,12 @@ class CompileRunner:
                 # with an HTTP batch write, not to this Compile task's lifecycle.
                 with detach_task_context():
                     published["result"] = await self._publish(
-                        request, pipeline, rendered, client=client
+                        request,
+                        pipeline,
+                        rendered,
+                        client=client,
+                        ordered=ordered,
+                        source_hashes=source_hashes,
                     )
                     return published["result"]
 
@@ -409,6 +424,8 @@ class CompileRunner:
         rendered: RenderedBundle,
         *,
         client: Any,
+        ordered: list[str] | None = None,
+        source_hashes: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         skill_target = classify_uri(request.to).context_type == "skill"
         result: dict[str, Any] = {"created": [], "updated": [], "unchanged": []}
@@ -444,6 +461,23 @@ class CompileRunner:
         summary["warnings"] = pipeline.warnings
         summary["conflicts"] = conflicts
         await pipeline.files.put("summary", summary)
+        counts = (await pipeline.files.get("coverage") or {}).get("counts", {})
+        partial = bool(pipeline.failures or conflicts) or any(
+            counts.get(state, 0) for state in ("failed", "pending", "unreferenced")
+        )
+        recovery_proof = None
+        if (
+            (request.changes or {}).get("recovery_sources")
+            and not partial
+            and not pipeline.warnings
+            and not rendered.operations
+            and ordered is not None
+            and counts.get("prepared") == len(ordered)
+            and pipeline.evidence.keys() <= pipeline.recovery_evidence
+        ):
+            recovery_proof = await verify_recovery_sources(
+                client, request.changes, source_hashes or {}
+            )
         compiled = CompileResult(
             from_=request.from_,
             to=request.to,
@@ -459,7 +493,12 @@ class CompileRunner:
             page_count=len(set(published)),
             link_count=rendered.link_count,
             warnings=pipeline.warnings,
+            completion_status="partial" if partial else None,
+            recovery_proof=recovery_proof,
         ).model_dump(by_alias=True)
+        for key in ("completion_status", "recovery_proof"):
+            if compiled[key] is None:
+                del compiled[key]
         error = pipeline_incomplete_error(
             published=bool(published) or pipeline.noop,
             conflicts=conflicts,

@@ -15,6 +15,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from openviking_cli.exceptions import InvalidArgumentError
 from PIL import Image
 
 from openviking.parse.output import LocalParseOutputStore, read_artifact_manifest
@@ -297,7 +299,8 @@ async def test_media_with_wrong_signature_is_rejected_without_writing(tmp_path, 
     artifact_root = tmp_path / "artifacts"
     store = _RecordingStore(str(artifact_root))
 
-    with pytest.raises(ValueError, match="signature"):
+    # The fork reports bad media as an InvalidArgumentError (HTTP 400).
+    with pytest.raises((ValueError, InvalidArgumentError), match="signature"):
         await parser.parse(source, parse_output_store=store)
 
     assert store.path_writes == []

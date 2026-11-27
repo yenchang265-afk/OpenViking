@@ -18,13 +18,38 @@ API 不允許寫入、追加、刪除、移動或覆蓋複製，也不能通過�
 
 ### ls()
 
-列出目錄內容。
+列出目錄的子節點；URI 指向檔案時，將檔案自身作為一條記錄返回。目錄列表不包含請求的目錄自身。
+
+| 目標 | `ls` | `ls` 設定 `recursive=true` / `tree` |
+|------|------|-------------------------------------|
+| 目錄 URI | 直接子節點 | 後代節點，`rel_path` 相對於目標目錄 |
+| 檔案 URI | 一條檔案記錄，不帶 `rel_path` | 一條檔案記錄，`rel_path` 為檔名 |
+
+檔案結果沿用目錄列表的 `original`、`agent` 和 `simple` 純 URI 輸出格式。
+請求檔案摘要或概覽時，對應欄位為空字串，不讀取父目錄摘要。
+檔案結果的 `has_more=false`；`offset>=1` 或 tags 不匹配時返回空陣列。
+通過 `extra_fields=id,locked` 按需返回 `id` 和 `isLocked`，檔案不返回 `count`。
+顯式指定隱藏檔案時無需設定 `show_all_hidden=true`，儲存內部名稱仍不暴露。
+目錄讀取已明確丟擲的 `NOT_FOUND`、`PERMISSION_DENIED` 等錯誤繼續傳播。
+
+檔案目標相容由檔案系統服務提供，作用於 HTTP、SDK、CLI 和 MCP 入口。
+內部 `VikingFS.ls/tree` 保留原有目錄介面行為，同步和 OVPack 等操作不增加檔案型別探測。
+
+首先嚐試目錄讀取，收到 Not-a-directory 錯誤後改為讀取檔案後設資料。
+由於部分物件儲存後端對檔案目標返回空列表，目錄讀取為空時也會檢查目標型別。
+目錄讀取成功為空、隨後後設資料確認不存在時，保留原來的空列表結果。
+例如 S3 的非遞迴 `ls` 對不存在的字首仍返回 HTTP 200 和空陣列。
+後設資料查詢的許可權錯誤及其他後端錯誤繼續傳播；Not-a-directory 後確認目標不存在時，仍返回 `NOT_FOUND`。
+
+對外介面的非空目錄列表不增加型別檢查請求。普通請求讀取到空頁且 `offset>0` 時，
+直接返回空列表，不再探測後設資料。GLOBAL 和有資料訪問範圍約束的請求仍保留型別校驗，
+因為被授權遍歷的容器必須是目錄。
 
 **引數**
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| uri | str | 是 | - | Viking URI |
+| uri | str | 是 | - | 檔案或目錄的 Viking URI |
 | simple | bool | 否 | False | 僅返回相對路徑 |
 | recursive | bool | 否 | False | 遞迴列出所有子目錄 |
 | output | str | 否 | HTTP：`agent`；SDK：`original` | 輸出格式：`agent` 或 `original` |
@@ -149,6 +174,12 @@ curl -X GET "http://localhost:1933/api/v1/fs/ls?uri=viking://resources/" \
 curl -X GET "http://localhost:1933/api/v1/fs/ls?uri=viking://resources/&simple=true" \
   -H "X-API-Key: your-key"
 
+# 單個檔案，仍使用列表響應結構
+curl -G "http://localhost:1933/api/v1/fs/ls" \
+  --data-urlencode "uri=viking://resources/project/readme.md" \
+  --data-urlencode "output=original" \
+  -H "X-API-Key: your-key"
+
 # 遞迴列表
 curl -X GET "http://localhost:1933/api/v1/fs/ls?uri=viking://resources/&recursive=true" \
   -H "X-API-Key: your-key"
@@ -226,13 +257,16 @@ HTTP 響應中的 `result` 保持為條目陣列。`has_more=true` 表示在應�
 
 ### tree()
 
-獲取目錄樹結構。
+獲取目錄的後代節點；URI 指向檔案時，將該檔案作為單節點樹返回。
+響應仍是扁平節點陣列。檔案的 `rel_path` 為檔名（如 `readme.md`），
+`level_limit` 不產生額外後代節點。設定 `directories_only=true` 時排除檔案，返回空陣列。
+檔案分頁、tags、後設資料和錯誤行為與上面的 `ls` 一致。
 
 **引數**
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| uri | str | 是 | - | Viking URI |
+| uri | str | 是 | - | 檔案或目錄的 Viking URI |
 | output | str | 否 | HTTP：`agent`；SDK：`original` | 輸出格式：`agent` 或 `original` |
 | abs_limit | int | 否 | HTTP：256；SDK：128 | 返回的摘要最大長度 |
 | include_abstract | bool | 否 | 未設定 | 是否返回目錄 L0 摘要。未設定時沿用舊 `output` 語義（`agent` 返回，`original` 不返回） |
@@ -659,7 +693,7 @@ ov mkdir viking://resources/new-project/ --description "介面文件目錄"
 
 ### rm()
 
-刪除檔案或目錄。遞迴刪除目錄時會返回刪除的專案估計數量。
+刪除檔案或目錄。遞迴刪除按 URI 範圍清理向量記錄，並向儲存後端發起一次遞迴刪除請求，無需在 Python 層遍歷檔案子樹。
 
 `rm` 是冪等操作：刪除一個合法但不存在的 URI 仍會成功。
 URI 格式非法、scheme 不支援，或使用 `temp`、`queue` 等內部作用域時返回 `INVALID_URI`。
@@ -747,9 +781,9 @@ ov rm viking://resources/old.md [--recursive]
 }
 ```
 
-`estimated_deleted_count` 欄位（遞迴刪除時）包含刪除的專案（檔案和目錄）估計數量（來自向量索引）。CLI 會在輸出中顯示此資訊。
+`estimated_deleted_count` 表示已提交刪除的向量記錄數量。一個檔案或目錄可以對應多條記錄，未索引內容不計入數量；該數量不保證向量索引立即可見。CLI 會在輸出中顯示此數量。
 
-刪除 `viking://resources/...` 時，響應可能包含 `memory_cleanup`，表示刪除前已清理引用該資源 URI 的使用者記憶。
+刪除資源後，已有記憶會保留原有內容和 `resource_refs`，HTTP 響應不再包含 `memory_cleanup`。
 
 在大小寫不敏感的 `localfs` 上，大小寫別名可能影響刪除目標。例如真實檔案是 `viking://resources/bob-private/private.md`，執行 `ov rm viking://resources/BOB-PRIVATE/private.md` 可能刪除同一個檔案；大小寫敏感系統上，別名目標不存在時該冪等刪除仍會成功，但不會刪除真實檔案。
 

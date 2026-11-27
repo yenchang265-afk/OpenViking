@@ -6,7 +6,14 @@
 
 前置條件：macOS 或 Linux、Node.js 18+，以及 `qodercli`（或國內版 `qoderclicn`）在 `PATH` 中的 Qoder CLI。安裝過程中會引導配置 OpenViking 連線資訊；詢問要接入哪些 Agent 時選擇 **Qoder CLI**。
 
-安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）；遠端自建服務請選擇 **自定義 URL / 保持當前** 並填寫其 URL。
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
+服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）。遠端自建服務選擇**自定義 URL**並填寫其地址；已有連線時，此選項顯示為**自定義 URL / 保持當前**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -25,7 +32,7 @@ curl -fsSL https://openviking.ai/install | bash
 
 - 生命週期 Hook：載入畫像、提問時召回、捕獲對話、提交 session，以及 `viking://` URI 保護。
 - 以 stdio 代理形式提供的 OpenViking MCP 服務，含 `search`、`read`、`remember`、`add_skill` 等工具。
-- `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` 四個 skill，以外掛名為字首列出，例如 `openviking-memory:openviking-skills`。
+- `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search`、`ov-memory-doctor` 五個 skill，以外掛名為字首列出，例如 `openviking-memory:openviking-skills`。
 
 `PATH` 中的每個 Qoder CLI 版本都會裝上外掛：`qodercli` 裝在 `~/.qoder`（`QODER_CONFIG_DIR`），國內版 `qoderclicn` 裝在 `~/.qoder-cn`（`QODERCN_CONFIG_DIR`）。解除安裝時兩處都會移除。
 
@@ -39,7 +46,8 @@ curl -fsSL https://openviking.ai/install | bash
 
 - **SessionStart** 注入使用者畫像，並重放離線佇列中暫存的寫入。
 - **UserPromptSubmit** 召回相關記憶，以 `additionalContext` 中的 `<openviking-context>` 塊注入。
-- **PreToolUse** 拒絕把 `viking://` URI 當本地路徑讀寫，並引導 Agent 改用 OpenViking MCP 工具。Shell 命令不做檢查，`ov` 呼叫與字面量 `viking://` 引數照常可用。
+- **PreToolUse** 拒絕把 `viking://` URI 當本地路徑讀寫，並引導 Agent 改用 OpenViking MCP 工具。Bash 命令中包含這種 URI 時照常執行，並附加一條指向同一組工具的提示，`ov` 呼叫與字面量 `viking://` 引數照常可用。`mcp_call` 上的第二個 `PreToolUse` 條目在 `session_history` 呼叫沒傳 `session` 引數時補上當前會話。
+- 壓縮或恢復之後，**SessionStart** 還會追加一段簡短說明，給出會話的 OpenViking id 以及用來查回之前確切細節的 `session_history` MCP 工具。
 - **Stop**、**PreCompact** 和 **SessionEnd** 在分離的 worker 中增量捕獲 transcript 中的新輪次。`Stop` 每捕獲 8 條訊息（`commitTurnThreshold`）提交一次 OpenViking session；`PreCompact` 和 `SessionEnd` 提交所有尚未提交的訊息，包括 `Stop` 已經發送的。
 
 hook 與 MCP 從 `~/.openviking/ovcli.conf` 讀取同一份憑據，不會在服務端、帳號或使用者上各說各話。`OPENVIKING_URL` 與 `OPENVIKING_API_KEY` 可覆蓋該檔案，按外掛的配置位於 `plugin.qoder` 下（見[外掛配置](../configuration/02-client.md#外掛配置)）。會話在 OpenViking 中記為 `qd-<session id>`。

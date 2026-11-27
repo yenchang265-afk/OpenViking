@@ -8,6 +8,13 @@
 
 Claude Code 和 Codex 共用同一個安裝指令碼。它會詢問要安裝的 harness 和 OpenViking 憑據；所有步驟冪等，重複執行安全。
 
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
 ```bash
 curl -fsSL https://openviking.ai/install | bash
 # AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。

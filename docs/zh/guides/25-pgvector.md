@@ -92,6 +92,13 @@ HNSW 開啟 strict iterative scanning 來改善帶過濾的召回，但不保證
 召回率或過濾後 TopK 數量；需用真實過濾條件驗證召回率和 p99。
 pgvector HNSW 的 cosine 索引不包含零向量。
 
+Cosine 檢索同樣從 flat 結果以及 hybrid/時間衰減的 dense 候選中排除零向量。
+原生 dense 查詢在距離排序和分頁之後排除 NaN：PostgreSQL 將 NaN 排在所有
+有限距離之後，因此零向量不會擠掉有效結果或改變有效分頁。hybrid 的 sparse
+分支在候選預算擷取之前排除零向量，並通過 CASE 保證標量過濾通過後才計算範數。
+僅 sparse 查詢仍允許這些記錄參與檢索。普通 dense 查詢只將查詢向量轉為字串
+一次，供兩個 SQL 引數複用。
+
 即使表中額外存在 ANN 索引，flat 檢索仍保持精確。重新連線時會校驗配置與
 持久化後設資料中的維度、距離和索引型別，ANN 索引缺失或無效會明確報錯。
 修改 `ef_search` 在重新連線後生效，不需要重建索引；修改索引型別或構建引數

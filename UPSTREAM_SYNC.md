@@ -42,8 +42,8 @@ Git may reuse conflict resolutions, but they still need review and staging.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: branch `sync/upstream-20261118-155451`, through
-upstream `989e6c7` (previous: branch `claude/dazzling-thompson-ijelq8`, through `90f4edc`).
+Last documented upstream sync: branch `sync/upstream-20261125-133836`, through
+upstream `a4b083e` (previous: branch `sync/upstream-20261118-155451`, through `989e6c7`).
 Confirm ancestry with Git; update this note after each accepted sync.
 
 - The single-provider `cache` shape (`{"backend"|"provider": ..., "params": ...}`) keeps
@@ -61,6 +61,25 @@ Confirm ancestry with Git; update this note after each accepted sync.
   persists pages by running `scripts/write_wiki.py`, which in-server Compile cannot exec.
 - Studio keeps the fork's context-menu delete/move UI; upstream's header copy/move/delete
   dialogs were not adopted (their API helpers remain in `resources/lib/api.ts`).
+- Server hosting follows upstream's `ServerRuntime` (`openviking/server/runtime.py`) and
+  phased service lifecycle (`initialize` → `wire_runtime` → `recover` → `start_background`).
+  Fork hooks live there: durable ExternalTask owners are re-checked through
+  `key_store_identity_resolver` in `ServerRuntime.wire`; watch options are enabled in
+  `OpenVikingService.configure_runtime`; `create_app` still runs `validate_shared_deployment`,
+  the `external_bot_api_url` proxy and the local temp-upload sweep loop. No Compile Runtime
+  backend is configured (`configure_local_backend` is not called).
+- `redis_mysql` account storage uses upstream's named CacheRuntime instance
+  (`account_store.params.cache = {"instance": "<name>"}`); the old inline Redis `cache`
+  shape and the `redis-mysql` extra are gone (the `mysql` extra covers it).
+- Keyword search `args` (`bm25_k1`, `bm25_b`, `post_process_input_limit`) are validated
+  upstream-style; the Elasticsearch adapter rejects BM25 tuning (similarity is per index)
+  and ignores `advance`.
+- In-server Compile ports upstream's recovery proof (`completion_status`,
+  `recovery_proof`, `verify_recovery_sources`; `OVClient.git_show_bytes` reads snapshot
+  blobs) and Compile image normalization (`media.read_image(for_compile=True)`).
+- Usage/audit storage supports the fork's `mysql` backend next to upstream's `postgres`;
+  the queue observer keeps the fork's per-context `active_errors` alongside upstream's
+  per-account scoping.
 
 ## Chinese text conventions
 

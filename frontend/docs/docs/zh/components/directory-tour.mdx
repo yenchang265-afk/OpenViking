@@ -14,7 +14,7 @@
 import {
   DirectoryTour,
   DirectoryTourIntro,
-  openVikingDirectoryTourSteps,
+  getOpenVikingDirectoryTourSteps,
 } from '@openviking/react/components/directory-tour';
 import '@openviking/react/components/directory-tour/style.css';
 ```
@@ -23,7 +23,7 @@ import '@openviking/react/components/directory-tour/style.css';
 
 ### 基礎用法
 
-點選「瞭解 OV 目錄樹」開始六步引導。先勾選「模擬 experiences 不存在」，到第 5 步時可檢視缺失提示，再點「下一步」繼續。
+點選「瞭解 OV 目錄樹」開始六步引導。先勾選「模擬 experiences 不存在」，到第 5 步時會改為高亮當前使用者根目錄，再點「下一步」繼續。
 
 ```tsx file="../../_demos/directory-tour-basic.tsx" preview
 
@@ -51,6 +51,8 @@ import '@openviking/react/components/directory-tour/style.css';
 
 `className` 和 `style` 裡的尺寸約束保持 CSS 原有語義，卡片始終限制在可視視口內，長內容在卡片內滾動，百分比高度相對於佈局視口計算。
 
+定位 `userExperiences` 時，先等待父目錄列表載入完成。確認經驗目錄缺失且能確認使用者根目錄歸屬時，返回當前使用者根目錄行。目標存在但不可用時，返回 `null`。
+
 ## API
 
 ### DirectoryTour
@@ -65,7 +67,8 @@ import '@openviking/react/components/directory-tour/style.css';
 | locateTimeout    | 定位的等待時間（毫秒），超時後顯示缺失提示卡片                                                                                                                 | `number`                                                                        | `10000`                  |
 | locateTarget     | 返回步驟對應的目錄行元素：宿主載入並展開目錄，等目錄行渲染後再返回，`null` 表示找不到。`signal` 在切換步驟、解除安裝或超時時中止；不傳時每步都顯示缺失提示卡片 | `(target: string, signal: AbortSignal) => Promise<DirectoryTourAnchor \| null>` | -                        |
 | onStepChange     | 使用者繼續到下一步時觸發，引數為新的下標                                                                                                                       | `(index: number) => void`                                                       | -                        |
-| onClose          | 點選關閉按鈕或按 Escape 時觸發；不傳時不顯示關閉按鈕，也不處理 Escape                                                                                          | `() => void`                                                                    | -                        |
+| showCloseButton  | 是否顯示預設卡片的關閉按鈕，同時需要傳入 `onClose`；不影響 Escape 或 `context.close()`                                                                         | `boolean`                                                                       | `false`                  |
+| onClose          | 按 Escape、點選已顯示的關閉按鈕或呼叫 `context.close()` 時觸發；不傳時不處理關閉                                                                               | `() => void`                                                                    | -                        |
 | onComplete       | 最後一步結束時觸發（點選確認或呼叫 `context.complete()`），引數包含被跳過的步驟 id；之後不再渲染，宿主負責關閉與持久化                                         | `(result: DirectoryTourResult) => void`                                         | -                        |
 | renderContent    | 替換定位成功後的卡片內容；此時 `title` 只作為對話方塊的無障礙名稱，`description` 不顯示                                                                        | `(context: DirectoryTourContentContext) => ReactNode`                           | -                        |
 | labels           | 覆蓋介面文案                                                                                                                                                   | `DirectoryTourLabels`                                                           | -                        |
@@ -98,7 +101,7 @@ import '@openviking/react/components/directory-tour/style.css';
 | index    | 當前步驟的下標，從 0 開始                             | `number`            | -      |
 | total    | 步驟總數                                              | `number`            | -      |
 | complete | 確認當前步驟：進入下一步，最後一步時觸發 `onComplete` | `() => void`        | -      |
-| close    | 關閉引導，等同於點選關閉按鈕，呼叫 `onClose`          | `() => void`        | -      |
+| close    | 呼叫 `onClose`，不受 `showCloseButton` 影響           | `() => void`        | -      |
 
 ### DirectoryTourResult
 
@@ -135,18 +138,20 @@ import '@openviking/react/components/directory-tour/style.css';
 | labels      | 覆蓋確認按鈕的文案，只有 `done`                                                                                                                  | `Pick<DirectoryTourLabels, 'done'>` | -                        |
 | locale      | 介面語言，規則見[國際化](../guide/i18n)；在 `renderContent` 裡不繼承 `DirectoryTour` 的 `locale`，需要在這裡傳入，或由 `OpenVikingProvider` 提供 | `'zh-CN' \| 'en-US'`                | 繼承上級，預設 `'en-US'` |
 
-### openVikingDirectoryTourSteps
+### getOpenVikingDirectoryTourSteps
 
-六步預設，文案為英文，每步的 `target` 取下表的值。元件不內建任何帳號的路徑，由宿主在 `locateTarget` 裡把 `target` 對映到目錄行：`userResources` 是使用者私有的 resources 目錄，`sharedResources` 是團隊共享的根級 resources 目錄。
+`getOpenVikingDirectoryTourSteps(locale = 'en-US')` 返回對應語言的六步預設，支援 `'zh-CN'` 和 `'en-US'`。把宿主已解析的語言同時傳給該函式和 `DirectoryTour.locale`，分別設定步驟文案和控制元件文案；該函式不會讀取 Provider。每步的 `target` 取下表的值。元件不內建任何帳號的路徑，由宿主在 `locateTarget` 裡把 `target` 對映到目錄行：`userResources` 是使用者私有的 resources 目錄，`sharedResources` 是團隊共享的根級 resources 目錄。
 
 | 步驟 id              | `target`          | 介紹的目錄                |
 | -------------------- | ----------------- | ------------------------- |
 | `memories`           | `userMemories`    | 使用者記憶（memories）    |
-| `sessions`           | `userSessions`    | 對話記錄（sessions）      |
+| `sessions`           | `userSessions`    | 軌跡記錄（sessions）      |
 | `personal-resources` | `userResources`   | 個人資料（resources）     |
 | `shared-resources`   | `sharedResources` | 團隊公共資料（resources） |
 | `experiences`        | `userExperiences` | Agent 經驗（experiences） |
 | `peers`              | `userPeers`       | 物件記憶（peers）         |
+
+`openVikingDirectoryTourSteps` 保留為英文預設，等同於 `getOpenVikingDirectoryTourSteps('en-US')`。遷移到本地化預設時，移除舊的 `title`、`description` 和 `illustration` 覆蓋，才能使用內建文案和插畫；仍可按需顯式覆蓋。
 
 ## 注意
 
@@ -159,8 +164,8 @@ import '@openviking/react/components/directory-tour/style.css';
 - 位置隨滾動、視窗縮放和目錄行尺寸變化更新，卡片限制在可視視口內，包括縮放和軟鍵盤的影響；目錄行滾出可見區域時，卡片和高亮一起隱藏。
 - 卡片是非模態 `dialog`：顯示後獲得焦點，按 Escape 觸發 `onClose`，關閉時焦點回到原來的元素（該元素仍在文件裡時）。宿主控制元件已用 `preventDefault()` 處理的 Escape，卡片不再響應。
 - 卡片通過瀏覽器的 Popover API 渲染在頂層，不需要設定 `z-index`，也不會建立全屏遮罩或 SVG，需要瀏覽器支援該 API。
-- 預設步驟的文案是英文，其他語言需要自己提供 `title` 和 `description`。六個預設 `target` 的插畫隨 JS 打包，不需要託管圖片。
-- 包根入口只匯出 `DirectoryTour` 和 `DirectoryTourProps`；`DirectoryTourIntro`、`openVikingDirectoryTourSteps` 和其餘型別從 `@openviking/react/components/directory-tour` 匯入。
+- 使用 `getOpenVikingDirectoryTourSteps(locale)` 獲取本地化步驟；自定義步驟的 `title` 和 `description` 按原文顯示。六個預設 `target` 的插畫隨 JS 打包，不需要託管圖片，並隨宿主的 `html.dark` 主題切換淺色和暗色版本。
+- 包根入口只匯出 `DirectoryTour` 和 `DirectoryTourProps`；`DirectoryTourIntro`、`getOpenVikingDirectoryTourSteps`、`openVikingDirectoryTourSteps` 和其餘型別從 `@openviking/react/components/directory-tour` 匯入。
 
 ## 主題變數
 

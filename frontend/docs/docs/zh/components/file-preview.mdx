@@ -45,6 +45,10 @@ import '@openviking/react/components/file-preview/style.css';
 
 示例使用固定的模擬資料；「空檔案」和「圖片失敗」演示對應的狀態。
 
+### 會話記錄
+
+完整內容可讀、`source.fileName` 為 `messages.jsonl`，且 `source.path` 指向 `viking://user/<user>/sessions/<session>/` 或 `viking://~/sessions/<session>/` 下的原生會話檔案（含歸檔）時，預覽模式按角色展示訊息氣泡、時間和 ID。支援原生 `parts` 中的文本、工具結果、圖片和上下文引用，以及舊格式字串 `content`，保留原文和換行。圖片和上下文引用以可讀文本展示原始欄位，包括 URL、detail、URI、引用型別和摘要，不自動載入圖片或開啟資源。原始碼模式仍展示原始 JSONL。大檔案或已截斷檔案保留原有準入行為，其他 JSONL 檔案、不支援或內容衝突的記錄繼續使用普通 JSON 預覽，不丟棄其中的 part。
+
 ### 注入操作
 
 通過 `actions` 注入宿主操作：一個操作顯示為按鈕，多個操作收進「…」選單。切換操作佈局，勾選「模擬失敗」檢視失敗提示，其餘核取方塊控制內建入口的顯隱。
@@ -104,16 +108,17 @@ import '@openviking/react/components/file-preview/style.css';
 
 三種頁籤共有的欄位。內容頁籤沒有標題行，`toolbar`、`onOpenParent`、`onCopyPath` 和 `labels` 對它無效。
 
-| 引數         | 說明                                                                                        | 型別                         | 預設值                                         |
-| ------------ | ------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------- |
-| key          | 頁籤的唯一標識                                                                              | `string`                     | 必填                                           |
-| title        | 頁籤行顯示的內容，可以是文本或帶樣式的節點                                                  | `ReactNode`                  | 檔案頁簽為 `source.fileName`，目錄頁簽為 `key` |
-| icon         | 頁籤圖示，省略時不佔圖示位，按檔名取圖示可用 `@openviking/react/icons` 的 `getFileTypeIcon` | `ReactNode`                  | -                                              |
-| disabled     | 停用該頁籤，停用後不能選中                                                                  | `boolean`                    | `false`                                        |
-| toolbar      | 隱藏該頁籤的內建入口，不能重新開啟頂層已關閉的入口                                          | `FilePreviewToolbarOptions`  | -                                              |
-| onOpenParent | 檔案頁籤的 `operations.openParent` 完成後觸發，引數為被點選層級的完整 URI，目錄頁籤不觸發   | `(uri: string) => void`      | -                                              |
-| onCopyPath   | 路徑複製成功後觸發，引數為已複製的路徑                                                      | `(path: string) => void`     | -                                              |
-| labels       | 覆蓋該頁籤的文案，優先於頂層 `labels`                                                       | `Partial<FilePreviewLabels>` | -                                              |
+| 引數         | 說明                                                                                        | 型別                               | 預設值                                         |
+| ------------ | ------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
+| key          | 頁籤的唯一標識                                                                              | `string`                           | 必填                                           |
+| title        | 頁籤行顯示的內容，可以是文本或帶樣式的節點                                                  | `ReactNode`                        | 檔案頁簽為 `source.fileName`，目錄頁簽為 `key` |
+| badge        | 標題旁的正數角標，超過 99 顯示 `99+`；`label` 提供懸浮提示和無障礙說明                      | `{ count: number; label: string }` | -                                              |
+| icon         | 頁籤圖示，省略時不佔圖示位，按檔名取圖示可用 `@openviking/react/icons` 的 `getFileTypeIcon` | `ReactNode`                        | -                                              |
+| disabled     | 停用該頁籤，停用後不能選中                                                                  | `boolean`                          | `false`                                        |
+| toolbar      | 隱藏該頁籤的內建入口，不能重新開啟頂層已關閉的入口                                          | `FilePreviewToolbarOptions`        | -                                              |
+| onOpenParent | 檔案頁籤的 `operations.openParent` 完成後觸發，引數為被點選層級的完整 URI，目錄頁籤不觸發   | `(uri: string) => void`            | -                                              |
+| onCopyPath   | 路徑複製成功後觸發，引數與寫入剪貼簿的格式化路徑一致                                        | `(path: string) => void`           | -                                              |
+| labels       | 覆蓋該頁籤的文案，優先於頂層 `labels`                                                       | `Partial<FilePreviewLabels>`       | -                                              |
 
 ### FilePreviewFileTab
 
@@ -182,7 +187,7 @@ import '@openviking/react/components/file-preview/style.css';
 | defaultLevelKey     | 非受控時的初始層級                                             | `string`                                                               | 第一級  |
 | resources           | 各層級共用的伴隨資源，層級自己的 `resources` 優先              | `readonly FileViewerResource[]`                                        | -       |
 | resolveImage        | 解析當前層級 Markdown 裡的圖片地址，規則同文件頁籤             | `(src: string, source: FilePreviewSource) => Promise<string>`          | -       |
-| operations          | 非同步執行能力，目錄頁籤只使用 `openParent`                    | `FilePreviewOperations`                                                | -       |
+| operations          | 非同步執行能力，目錄頁籤支援 `openParent` 和 `openUri`         | `FilePreviewOperations`                                                | -       |
 | actions             | 標題行裡的宿主操作，上下文裡的 `source` 和 `path` 指向當前層級 | `FilePreviewActionSource`                                              | -       |
 | onActiveLevelChange | 層級變化時觸發，引數為新層級的 `key`                           | `(key: string) => void`                                                | -       |
 | slots               | 標題行、頁尾與狀態插槽，與檔案頁籤相同                         | `FilePreviewFileTabSlots`                                              | -       |
@@ -208,7 +213,7 @@ import '@openviking/react/components/file-preview/style.css';
 | content   | 文本內容，適用於 Markdown、JSON、程式碼等，只有空字串顯示「檔案為空」                 | `string`       | -       |
 | file      | 二進位制檔案，適用於 PDF、Office 文件、表格和圖片等                                   | `File \| Blob` | -       |
 | url       | 可訪問的檔案地址，元件不做鑑權                                                        | `string`       | -       |
-| path      | 完整路徑，顯示為麵包屑並作為複製路徑的內容，省略時麵包屑只顯示檔名                    | `string`       | -       |
+| path      | 用於麵包屑的完整路徑。複製時會格式化 Viking URI。省略時麵包屑只顯示檔名。             | `string`       | -       |
 | fileType  | 顯式的格式提示，優先於副檔名與 MIME                                                   | `string`       | -       |
 | truncated | 正文只讀取了一部分，為 `true` 時在檔案頁籤的正文下方提示                              | `boolean`      | `false` |
 
@@ -241,10 +246,10 @@ import '@openviking/react/components/file-preview/style.css';
 
 元件呼叫這些方法執行操作，Promise 完成後才觸發對應的 `onOpenParent`、`onOpenUri`，拒絕時靜默，不觸發通知。
 
-| 引數       | 說明                                                                                             | 型別                             | 預設值 |
-| ---------- | ------------------------------------------------------------------------------------------------ | -------------------------------- | ------ |
-| openParent | 開啟被點選的祖先層級，引數是該層級的完整 URI，省略時麵包屑的層級不可點選                         | `(uri: string) => Promise<void>` | -      |
-| openUri    | 開啟 Markdown 裡被點選的連結，引數是 Markdown 裡寫的原始地址，傳入後由宿主接管導航並解析相對路徑 | `(uri: string) => Promise<void>` | -      |
+| 引數       | 說明                                                                                                               | 型別                             | 預設值 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ------ |
+| openParent | 開啟被點選的祖先層級，引數是該層級的完整 URI，省略時麵包屑的層級不可點選                                           | `(uri: string) => Promise<void>` | -      |
+| openUri    | 開啟 Markdown 連結，引數為原始地址；檔案頁籤交給宿主處理所有連結，目錄摘要只交給宿主處理 Viking URI 和相對資源連結 | `(uri: string) => Promise<void>` | -      |
 
 ### FilePreviewEditing
 
@@ -334,7 +339,7 @@ import '@openviking/react/components/file-preview/style.css';
 | closePreview           | 放大圖片彈窗裡關閉按鈕的文字                                           | `string` | `'關閉預覽'`                   |
 | showHiddenPath         | 麵包屑裡摺疊層級的「…」按鈕的無障礙名稱                                | `string` | `'顯示隱藏的路徑層級'`         |
 | copyPath               | 複製路徑按鈕的提示與無障礙名稱                                         | `string` | `'複製路徑'`                   |
-| copied                 | 路徑複製成功的反饋                                                     | `string` | `'已複製'`                     |
+| copied                 | 路徑複製成功的反饋                                                     | `string` | `'節點路徑已複製'`             |
 | copyFailed             | 路徑複製失敗的反饋                                                     | `string` | `'複製失敗'`                   |
 | moreActions            | 多個操作收起後的「…」按鈕的提示與無障礙名稱                            | `string` | `'更多操作'`                   |
 | actionFailed           | 注入的操作失敗時的提示，後接錯誤資訊                                   | `string` | `'操作失敗'`                   |
@@ -415,7 +420,16 @@ import '@openviking/react/components/file-preview/style.css';
 - Markdown 後設資料：開頭的 YAML 後設資料在預覽裡顯示為程式碼塊，原始碼、編輯、儲存和複製仍使用原文。
 - 點陣背景：Markdown 正文及 PDF、Word、PPT 的頁面外圍顯示點陣背景，隨宿主主題切換，底色和點色見下方「主題變數」。
 - Markdown 圖片：先匹配 `resources`，未命中再呼叫 `resolveImage`，`resolveImage` 拒絕時使用圖片的原始地址；元件不會把 `viking://` 轉成 HTTP 地址。
-- Markdown 連結：只有 Markdown 觸發 `operations.openUri`，元件傳出 Markdown 裡寫的原始地址，不補全相對路徑。
+- 檔案正文連結：傳入 `operations.openUri` 後，所有 Markdown 連結（包括外鏈）均由宿主接管，元件阻止預設跳轉，並傳出原始地址供宿主解析；省略回撥時沿用渲染器的預設行為。
+- 目錄摘要連結：`operations.openUri` 接收 Viking URI 和相對資源連結的原始地址。HTTP、HTTPS、郵件、電話和協議相對外鏈保留瀏覽器原生互動。
+- 目錄錨點：同文檔連結可定位帶顯式 `id` 的 HTML 標題（`h1`–`h6`），無需提供 `operations.openUri`。普通 Markdown 標題不會自動生成 ID，需要連結目標時使用 HTML 標題：
+
+  ```md
+  [詳情](#details)
+
+  <h2 id="details">詳情</h2>
+  ```
+
 - JSON 日誌：`.json` 和 `.jsonl` 渲染為 JSON 樹，會話日誌等需要自己呈現的結構化檔案，用內容頁籤渲染。
 - 大檔案：元件不判斷檔案大小，FileViewer 需要確認時顯示確認態，可用 `slots.confirmFallback` 替換；編輯文本的長度上限由宿主在 `editing` 裡處理。
 - 增強功能：上一張與下一張和相鄰圖片預載入不在元件內，在預覽區外組合，或通過 `slots.actions`、`slots.footer` 注入。
@@ -423,12 +437,13 @@ import '@openviking/react/components/file-preview/style.css';
 
 ### 路徑與麵包屑
 
-- 層級：`source.path` 按 `/` 拆成層級，協議字首（如 `viking://`）顯示在首層，最後一級是當前檔名。
+- 層級：`source.path` 按 `/` 拆成層級，協議字首（如 `viking://`）顯示在首層，最後一級是當前檔名。一級目錄沒有祖先層級，字首顯示在末段，例如 `viking://user` 顯示為 `viking://user`。
+- URI 名稱：URI 路徑的每一段僅解碼一次用於顯示，編碼的斜槓不會拆出新層級，無效編碼保持原樣。導航使用原始路徑，普通檔案路徑及顯式傳入的標題、檔名按原文顯示。
 - 沒有路徑：省略 `source.path` 時麵包屑只顯示檔名，也沒有複製路徑按鈕。
 - 導航：每個祖先層級都是按鈕，點選時把該層級的完整 URI（如 `viking://a/b`）傳給 `operations.openParent`，不限於直接父級；沒有 `operations.openParent` 時按鈕停用。
 - 絕對路徑：`/a/b/c.md` 的祖先保留開頭的 `/`，相對路徑保持原樣。
 - 摺疊：放不下時，先把首層之後的中間層級收進「…」選單，仍放不下才連首層一起收起，選單裡的層級同樣呼叫 `operations.openParent`。
-- 複製路徑：使用 `navigator.clipboard`，需要安全上下文（HTTPS 或 localhost）；失敗時顯示 `labels.copyFailed`，不觸發 `onCopyPath`。
+- 複製路徑：Viking URI 會解碼可讀文字並保留影響路徑含義的轉義。成功後按鈕變為勾號，並在按鈕上方顯示帶綠色勾號的 `labels.copied` 氣泡，1.5 秒後恢復，不在路徑行追加文字。使用 `navigator.clipboard`，需要安全上下文（HTTPS 或 localhost）；失敗時顯示 `labels.copyFailed`，不觸發 `onCopyPath`。
 
 ### 操作與編輯
 

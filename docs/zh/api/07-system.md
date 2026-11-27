@@ -335,6 +335,8 @@ ov system consistency viking://resources/my-project
 
 無必填引數。可選 JSON 請求體仍接受舊版 `timeout` 欄位，但該欄位已廢棄，傳入值會被忽略。不傳請求體仍可呼叫。HTTP 請求超時使用客戶端配置。
 
+可選 `scope`：`"account"` 等待當前鑑權帳號的未完成非 `Inline` Work；省略或傳 `"runtime"` 沿用佇列排空行為。
+
 #### 3. 使用示例
 
 **HTTP API**

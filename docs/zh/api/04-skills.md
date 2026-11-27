@@ -935,7 +935,7 @@ ov skills remove old-skill -p viking://~/skills --yes
 }
 ```
 
-`estimated_deleted_count` 僅在底層檔案系統提供刪除數量估算時出現。`privacy_kept_for` 僅在因另一個根中仍有同名 Skill 而保留 privacy 配置時出現。
+響應包含 `estimated_deleted_count` 時，它表示已提交刪除的向量記錄數量，而非實際檔案或目錄數量；該數量不保證向量索引立即可見。`privacy_kept_for` 僅在因另一個根中仍有同名 Skill 而保留 privacy 配置時出現。
 
 ## 最佳實踐
 

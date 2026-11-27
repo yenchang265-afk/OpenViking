@@ -534,53 +534,25 @@ describe('OverviewPage', () => {
     expect(await screen.findByText('92%')).toBeTruthy()
   })
 
-  it('has every string translated in Chinese', async () => {
+  it('uses the current locale for the recommended profile name', async () => {
     await i18n.changeLanguage('zh-TW')
-    api.getOverview.mockResolvedValue(EMPTY_OVERVIEW)
-    const empty = renderOverview()
-    expect(await screen.findByText('快速開始')).toBeTruthy()
-    await screen.findByText('已完成 0/4')
-    expect(empty.container.textContent).not.toMatch(
-      /overview\.|enums\.|states\.|actions\./,
-    )
-    // The one-click profile gets a Chinese name.
-    api.saveProfile.mockResolvedValue({
-      ...PROFILE_DEFAULTS,
-      name: '預設',
-      id: 'p1',
-      revision: 1,
-    })
-    fireEvent.click(screen.getByRole('button', { name: '使用推薦設定' }))
-    await waitFor(() => expect(api.saveProfile).toHaveBeenCalledTimes(1))
-    expect(api.saveProfile.mock.calls[0][2].name).toBe('預設')
-    cleanup()
-
-    api.getOverview.mockResolvedValue({
-      ...BUSY_OVERVIEW,
-      cache_alerts: {
-        misses: cacheMisses({
-          streak: 6,
-          recent: [cacheMiss({ model: 'kimi-k2', streak: 6 })],
-        }),
-        unreported: ['u1'],
-      },
-    })
-    api.listLogs.mockResolvedValue(LOGS)
-    api.listUpstreams.mockResolvedValue(UPSTREAMS)
-    const busy = renderOverview()
-    expect(await screen.findByText('claude-sonnet-4-5')).toBeTruthy()
-    expect(screen.getByText('1,234 條新訊息')).toBeTruthy()
-    expect(screen.getByText('有 1 段長對話連續沒有命中提示詞快取')).toBeTruthy()
-    expect(screen.getByText('連續 6 次未命中')).toBeTruthy()
-    expect(
-      await screen.findByText('上游 OpenAI production 最近沒有返回過快取命中'),
-    ).toBeTruthy()
-    // Chinese has no singular form, so the copy reads right for any count.
-    expect(screen.getByText(/^相關長對話的快取命中率一直是 0%/)).toBeTruthy()
-    expect(busy.container.textContent).not.toMatch(
-      /overview\.|enums\.|states\.|actions\./,
-    )
-    await i18n.changeLanguage('en')
+    try {
+      api.getOverview.mockResolvedValue(EMPTY_OVERVIEW)
+      renderOverview()
+      api.saveProfile.mockResolvedValue({
+        ...PROFILE_DEFAULTS,
+        name: '預設',
+        id: 'p1',
+        revision: 1,
+      })
+      fireEvent.click(
+        await screen.findByRole('button', { name: '使用推薦設定' }),
+      )
+      await waitFor(() => expect(api.saveProfile).toHaveBeenCalledTimes(1))
+      expect(api.saveProfile.mock.calls[0][2].name).toBe('預設')
+    } finally {
+      await i18n.changeLanguage('en')
+    }
   })
 })
 

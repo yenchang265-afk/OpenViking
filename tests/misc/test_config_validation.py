@@ -22,7 +22,10 @@ from openviking_cli.utils.config.agfs_config import AGFSConfig, S3Config
 from openviking_cli.utils.config.cache_config import CacheConfig
 from openviking_cli.utils.config.consts import OPENVIKING_CONFIG_ENV
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig, EmbeddingModelConfig
-from openviking_cli.utils.config.open_viking_config import OpenVikingConfig
+from openviking_cli.utils.config.open_viking_config import (
+    OpenVikingConfig,
+    is_valid_openviking_config,
+)
 from openviking_cli.utils.config.storage_config import StorageConfig
 from openviking_cli.utils.config.vectordb_config import VectorDBBackendConfig
 from openviking_cli.utils.config.vlm_config import VLMConfig
@@ -38,6 +41,43 @@ def test_postgres_pathlock_binding_without_redis(tmp_path):
     assert binding["pathlock"]["postgres_dsn_env"] == "OV_POSTGRES_DSN"
     assert binding["service_name"] == "pg-community"
     assert not binding["cache"]["enabled"]
+
+
+def test_postgres_queuefs_binding_without_redis(tmp_path):
+    config = AGFSConfig(
+        path=str(tmp_path),
+        queuefs={
+            "backend": "postgres",
+            "postgres_dsn_env": "OV_QUEUE_PG_DSN",
+            "postgres_lease_seconds": 45,
+        },
+    )
+    binding = RagfsBindingConfig(agfs=config, service_name="pg-queues").to_binding_dict()
+    plugins = _generate_plugin_config(config, tmp_path, service_name="pg-queues")
+    assert plugins["queuefs"]["config"] == {
+        "backend": "postgres",
+        "service_name": "pg-queues",
+        "postgres_dsn_env": "OV_QUEUE_PG_DSN",
+        "postgres_lease_seconds": 45,
+    }
+    assert not binding["cache"]["enabled"]
+    assert "db_path" not in plugins["queuefs"]["config"]
+
+
+@pytest.mark.parametrize("value", [None, "", "  ", "dsn-url://secret", "9ENV", "非ASCII", 42])
+def test_postgres_queuefs_requires_dsn_environment_name(value):
+    with pytest.raises(ValueError):
+        AGFSConfig(queuefs={"backend": "postgres", "postgres_dsn_env": value})
+
+
+@pytest.mark.parametrize("seconds", [0, 9, 86401, "invalid"])
+def test_postgres_queuefs_rejects_invalid_lease(seconds):
+    with pytest.raises(ValueError):
+        AGFSConfig(queuefs={
+            "backend": "postgres",
+            "postgres_dsn_env": "OV_QUEUE_PG_DSN",
+            "postgres_lease_seconds": seconds,
+        })
 
 
 @pytest.mark.parametrize("value", [None, "", "  ", 42])
@@ -1836,8 +1876,8 @@ def _mysql_watch_store_config(watch_params):
 
 def test_watch_store_defaults_to_file_and_rejects_unknown_providers():
     assert OpenVikingConfig.from_dict({}).storage.watch_store.provider == "file"
-    with pytest.raises(ValueError, match="'file' or 'mysql'"):
-        OpenVikingConfig.from_dict({"storage": {"watch_store": {"provider": "sqlite"}}})
+    with pytest.raises(ValueError, match="'file', 'mysql', 'postgres' or 'sqlite'"):
+        OpenVikingConfig.from_dict({"storage": {"watch_store": {"provider": "unknown"}}})
 
 
 def test_mysql_watch_store_requires_credential_encryption_key():
@@ -1878,13 +1918,18 @@ def test_coordination_cache_activates_shared_runtime_without_cachefs():
     assert not binding["cache"]["enabled"]
 
 
+@pytest.mark.parametrize("store_provider", ["mysql", "postgres"])
 @pytest.mark.parametrize("leader_provider", ["cache", "auto", None])
-def test_legacy_watch_cache_selects_coordination_and_activates_shared_runtime(leader_provider):
+def test_legacy_watch_cache_selects_coordination_and_activates_shared_runtime(
+    leader_provider, store_provider
+):
     data = (
         _mysql_watch_store_config({"credential_encryption_key": "a" * 43 + "="})
         if leader_provider != "cache"
         else {}
     )
+    if leader_provider != "cache":
+        data["storage"]["watch_store"]["provider"] = store_provider
     if leader_provider is not None:
         data["watch_leader_provider"] = leader_provider
     with pytest.raises(ValueError, match="top-level cache"):

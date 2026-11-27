@@ -188,7 +188,15 @@ def agent_runner(limits):
             name: ScratchFileTool(name, sandbox, output_root, readonly_paths)
             for name in ("read_file", "write_file", "edit_file")
         }
-        evidence = EvidenceReader(model.files, data)
+        evidence = EvidenceReader(
+            model.files,
+            data,
+            recovery_evidence=(
+                runtime.recovery_evidence
+                if (getattr(runtime, "changes", None) or {}).get("recovery_sources")
+                else None
+            ),
+        )
         if evidence.allowed:
             tools[evidence.name] = evidence
         if runtime.resources is not None:

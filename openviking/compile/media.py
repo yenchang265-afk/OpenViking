@@ -10,12 +10,14 @@ take images inside tool results receive them as a following user message.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, NamedTuple
 
+from openviking.utils.image_input import MAX_COMPILE_IMAGE_DOWNLOAD_BYTES, compress_image_input
 from openviking.utils.media_limits import MAX_INLINE_TOOL_RESULT_MEDIA_BYTES
 from openviking.utils.message_format import tool_images_as_user_messages
 
@@ -63,9 +65,11 @@ def is_inline_image(uri: str) -> bool:
     return PurePosixPath(path).suffix.lower() in INLINE_IMAGE_EXTENSIONS
 
 
-async def read_image(client: Any, uri: str) -> dict[str, Any]:
+async def read_image(client: Any, uri: str, *, for_compile: bool = False) -> dict[str, Any]:
     """Load one image as an ``image_url`` part, checking size and actual format.
 
+    With ``for_compile`` the image may be larger on disk and is normalized (resized
+    and re-encoded) to fit the inline budget, as upstream's Compile image reads do.
     Returns ``{"success": False, "content": reason}`` instead of raising, so callers
     can fail one source without failing the task.
     """
@@ -73,10 +77,11 @@ async def read_image(client: Any, uri: str) -> dict[str, Any]:
     size = stat.get("size") if isinstance(stat, dict) else None
     if isinstance(size, bool) or not isinstance(size, int) or size < 0:
         return {"success": False, "content": "Image size is unavailable; cannot attach it safely."}
-    if size > MAX_INLINE_MEDIA_BYTES:
+    download_limit = MAX_COMPILE_IMAGE_DOWNLOAD_BYTES if for_compile else MAX_INLINE_MEDIA_BYTES
+    if size > download_limit:
         return {
             "success": False,
-            "content": f"Image is {size} bytes; the inline limit is {MAX_INLINE_MEDIA_BYTES} bytes.",
+            "content": f"Image is {size} bytes; the download limit is {download_limit} bytes.",
         }
     data = await client.download_bytes(uri)
     if len(data) > size:
@@ -87,15 +92,39 @@ async def read_image(client: Any, uri: str) -> dict[str, Any]:
             "success": False,
             "content": "File bytes do not match a supported PNG, JPEG, GIF, or WebP image.",
         }
-    encoded = base64.b64encode(data).decode("ascii")
+    model_data, mime_type = data, image_format.mime_type
+    if for_compile:
+        from PIL.Image import DecompressionBombError
+
+        try:
+            model_data, mime_type = await asyncio.to_thread(
+                compress_image_input,
+                data,
+                mime_type,
+                compile_inline_budget=MAX_INLINE_MEDIA_BYTES,
+            )
+        except (DecompressionBombError, OSError, ValueError) as exc:
+            return {"success": False, "content": f"Cannot prepare image for Compile: {exc}"}
+    if len(model_data) > MAX_INLINE_MEDIA_BYTES:
+        return {
+            "success": False,
+            "content": (
+                f"Model rendition is {len(model_data)} bytes; the inline limit is "
+                f"{MAX_INLINE_MEDIA_BYTES} bytes."
+            ),
+        }
+    encoded = base64.b64encode(model_data).decode("ascii")
     return {
         "success": True,
-        "content": f"Image resource ({image_format.mime_type}, {len(data)} bytes).",
+        "content": (
+            f"Image resource ({image_format.mime_type}, {len(data)} bytes); "
+            f"model input ({mime_type}, {len(model_data)} bytes)."
+        ),
         "image": {
             "type": "image_url",
-            "image_url": {"url": f"data:{image_format.mime_type};base64,{encoded}"},
+            "image_url": {"url": f"data:{mime_type};base64,{encoded}"},
         },
-        "media_bytes": len(data),
+        "media_bytes": len(model_data),
         "sha256": hashlib.sha256(data).hexdigest(),
     }
 

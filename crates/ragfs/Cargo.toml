@@ -158,7 +158,7 @@ default = []
 cache = ["dep:fred", "dep:libloading", "dep:native-tls"]
 test-utils = []
 s3 = ["aws-sdk-s3", "aws-config", "aws-types", "aws-smithy-runtime-api", "aws-smithy-types"]
-postgres = ["dep:postgres", "dep:postgres-native-tls", "dep:native-tls"]
+postgres = ["dep:postgres", "dep:postgres-native-tls", "dep:native-tls", "sqlx/postgres", "sqlx/tls-native-tls"]
 # MySQL/MariaDB-backed small-file tier (core::tiered). sqlx itself is now a
 # required dependency (upstream snapshot log), so this is a marker feature.
 tiered = []

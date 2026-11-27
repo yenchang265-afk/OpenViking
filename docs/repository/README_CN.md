@@ -166,6 +166,13 @@ uv tool install openviking --upgrade && openviking-server init
 
 </details>
 
+<details>
+<summary><strong>使用 OpenViking Service（BytePlus 託管）</strong></summary>
+
+[BytePlus](https://openviking.ai/byteplus?utm_source=github&utm_medium=referral&utm_campaign=readme) 在亞太地區（柔佛）託管 OpenViking。連線客戶端時，使用你的 BytePlus OpenViking 服務地址和 API Key。CLI 與 Agent 接入方法見 [BytePlus 接入指南](https://docs.openviking.ai/zh/guides/27-byteplus-setup?utm_source=github&utm_medium=referral&utm_campaign=readme)。
+
+</details>
+
 ### 用 CLI 試一試
 
 `openviking` 安裝包包含 `ov` CLI。服務執行時，匯入程式碼庫並檢索：
@@ -210,7 +217,7 @@ API key 是我在這個服務上給自己生成的 user key，安裝器會把它
 <details>
 <summary><strong>自己在終端安裝</strong></summary>
 
-執行安裝指令碼，按提示勾選工具、選擇服務：本機的服務選「自建 / 本地」，OpenViking Service 選「火山引擎 OpenViking 雲服務」，其他地址選「自定義 URL」。開了鑑權的話，填 user key，不是 root key。
+執行安裝指令碼，按提示勾選工具、選擇服務。託管例項選擇「OpenViking 託管服務」，再選擇「BytePlus」或「Volcengine」。本機服務選擇「自建 / 本地」，其他服務選擇「自定義 URL」。舊版安裝器連線 BytePlus 時使用「自定義 URL」。開了鑑權的話，填 user key，不是 root key。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -349,7 +356,7 @@ ov chat   # 在另一個終端執行
 <img src="../images/commercial-saas.png" alt="商業化 SaaS 版" width="100%" />
 
 <h3>☁️ 商業化 SaaS 版</h3>
-<p>由<a href="https://www.volcengine.com/product/openviking-service?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=readme">火山引擎</a>託管和運維，提供個人版、企業版，以及開源部署的遷移工具。套餐與額度見<a href="https://docs.volcengine.com/docs/84313/2374478">服務文件</a>。中國以外地區的託管服務計劃在 <a href="https://www.byteplus.com">BytePlus</a> 上線。</p>
+<p>由<a href="https://www.volcengine.com/product/openviking-service?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=readme">火山引擎</a>託管和運維，提供個人版、企業版，以及開源部署的遷移工具。套餐與額度見<a href="https://docs.volcengine.com/docs/84313/2374478">服務文件</a>。<a href="https://openviking.ai/byteplus?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=readme">BytePlus</a> 在亞太地區（柔佛）託管 OpenViking。</p>
 
 </td>
 <td width="50%" valign="top">

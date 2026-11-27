@@ -57,9 +57,10 @@ import '@openviking/react/components/command-console/style.css';
 | disabled         | 停用輸入和提交，並在輸入區下方顯示 `labels.unavailableMessage`                             | `boolean`                                                             | `false`                  |
 | busy             | 執行中鎖定輸入與提交，由結果卡片展示進度，不顯示不可用提示                                 | `boolean`                                                             | `false`                  |
 | emptyState       | 沒有記錄時顯示的內容，替換內建空態；傳 `null` 時不顯示空態                                 | `ReactNode`                                                           | -                        |
-| quickCommands    | 內建空態裡的快捷入口，沒有可用入口時內建空態不顯示內容                                     | `readonly CommandConsoleQuickCommand[]`                               | -                        |
+| quickCommands    | 內建空態和有執行記錄時輸入框上方的快捷入口                                                 | `readonly CommandConsoleQuickCommand[]`                               | -                        |
 | commands         | 命令目錄，用於補全、引數幫助和執行中記錄的骨架；省略時仍可輸入和提交，但沒有候選和引數幫助 | `readonly CommandConsoleCommandDefinition[]`                          | `[]`                     |
 | commandGroups    | 候選列表的分組名稱和順序，沒有宣告的分組按出現順序排在後面                                 | `readonly CommandConsoleCommandGroup[]`                               | `[]`                     |
+| inputRef         | 命令輸入框的 ref，用於程式聚焦或訪問 textarea，支援物件和回撥 ref                          | `Ref<HTMLTextAreaElement>`                                            | -                        |
 | onValueChange    | 輸入變化時觸發，包括接受補全和示例；省略時輸入區只讀                                       | `(value: string) => void`                                             | -                        |
 | onSubmit         | 按 Enter 提交時觸發，引數是去掉首尾空白的命令文本；省略時不能提交                          | `(command: string) => void`                                           | -                        |
 | onOpenUri        | 點選資源連結時觸發，引數是連結地址；省略時連結按 `href` 原生跳轉                           | `(uri: string) => void`                                               | -                        |
@@ -216,10 +217,11 @@ import '@openviking/react/components/command-console/style.css';
 
 ### CommandConsoleQuickCommand
 
-| 引數  | 說明                                                                                                       | 型別     | 預設值 |
-| ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------ |
-| name  | 對應 `commands` 裡的命令名，空態裡顯示該命令的名稱和說明；找不到命令的名稱會被跳過，重複的名稱只保留第一個 | `string` | 必填   |
-| value | 點選後原樣填入輸入區的文本，不補字首，也不提交；空字串會清空輸入                                           | `string` | 必填   |
+| 引數         | 說明                                                                                                       | 型別     | 預設值    |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| name         | 對應 `commands` 裡的命令名，空態裡顯示該命令的名稱和說明；找不到命令的名稱會被跳過，重複的名稱只保留第一個 | `string` | 必填      |
+| value        | 點選後原樣填入輸入區的文本，不補字首，也不提交；空字串會清空輸入                                           | `string` | 必填      |
+| compactLabel | 輸入框上方的快捷按鈕文案                                                                                   | `string` | 同 `name` |
 
 ### CommandConsoleCommandDefinition
 

@@ -92,7 +92,7 @@ memory 僅協調同一個客戶端內的操作。租約有效期間，共享同�
 | `git.author_name` | `viking-bot` | 呼叫方未傳 `author_name` 時使用的預設提交者名字 |
 | `git.author_email` | `bot@viking.local` | 預設提交者郵箱 |
 | `git.local.base_dir` | `""` | Git 物件/引用的存放目錄。**留空時預設使用 `{storage.workspace}/.ovgit`** |
-| `git.snapshot.log.provider` | `sqlite` | `snapshot/log?paths=...` 的路徑歷史索引 provider：`sqlite`、`mysql` 或 `none` |
+| `git.snapshot.log.provider` | `sqlite` | `snapshot/log?paths=...` 的路徑歷史索引 provider：`sqlite`、`mysql`、`postgres` 或 `none` |
 | `git.snapshot.log.sqlite.path` | `{storage.workspace}/_system/snapshot/log/snapshot_log.db` | 可選 SQLite 資料庫絕對路徑。留空時每個 workspace 使用自己的索引庫 |
 
 上述工作區預設路徑由 OpenViking 服務端解析。直接使用 RAGFS binding 配置時沒有工作區預設值：若省略 SQLite 路徑，快照功能仍可使用，路徑歷史會回退為掃描 Git 提交。這類呼叫方可設定明確的 SQLite 絕對路徑來啟用索引。
@@ -151,10 +151,14 @@ memory 僅協調同一個客戶端內的操作。租約有效期間，共享同�
 | `git.s3.access_key` / `git.s3.secret_key` | 繼承 `storage.agfs.s3` 對應欄位，否則 `null` | 直接讀取的憑據；留空則走 SDK 預設憑據鏈 |
 | `git.s3.use_path_style` | `true` | `true` 用 path-style 定址（MinIO 等）；`false` 用 virtual-host 定址（TOS 等） |
 | `git.s3.cas_mode` | `native` | 引用 CAS 模式。`native` 使用 S3 條件寫（If-Match） |
-| `git.snapshot.log.provider` | `sqlite` | `snapshot/log?paths=...` 的路徑歷史索引 provider。多例項部署建議使用 `mysql` |
+| `git.snapshot.log.provider` | `sqlite` | `snapshot/log?paths=...` 的路徑歷史索引 provider。多例項部署可使用 `mysql` 或 `postgres` |
 | `git.snapshot.log.mysql.dsn_env` | `OPENVIKING_SNAPSHOT_LOG_DSN` | 儲存 MySQL DSN 的環境變數名 |
 | `git.snapshot.log.mysql.max_connections` | `16` | MySQL 連線池最大連線數 |
 | `git.snapshot.log.mysql.connect_timeout_ms` | `3000` | MySQL 連線超時時間，單位毫秒 |
+| `git.snapshot.log.postgres.dsn_env` | `OPENVIKING_SNAPSHOT_LOG_POSTGRES_DSN` | 儲存 PostgreSQL 連線 URL 的環境變數名，可包含 TLS 引數 |
+| `git.snapshot.log.postgres.max_connections` | `16` | PostgreSQL 連線池最大連線數 |
+| `git.snapshot.log.postgres.connect_timeout_ms` | `3000` | PostgreSQL 連線池獲取連線的超時時間，單位毫秒 |
+| `git.snapshot.log.postgres.operation_timeout_ms` | `3000` | 初始化及每次完整索引操作的執行期限，包含獲取連線、等鎖和全部寫入批次，單位毫秒 |
 
 ### 按路徑查詢的日誌索引
 
@@ -168,6 +172,7 @@ provider 取值：
 | --- | --- |
 | `sqlite` | 單機部署。預設資料庫位於 `{storage.workspace}/_system/snapshot/log/snapshot_log.db`；如需覆蓋，設定絕對路徑 `git.snapshot.log.sqlite.path` |
 | `mysql` | 多例項部署。DSN 從 `git.snapshot.log.mysql.dsn_env` 指定的環境變數讀取 |
+| `postgres` | 多例項部署。先建表，再配置 `git.snapshot.log.postgres.dsn_env` |
 | `none` | 關閉索引，保留原有歷史掃描邏輯 |
 
 MySQL 示例：
@@ -175,6 +180,54 @@ MySQL 示例：
 ```bash
 export OPENVIKING_SNAPSHOT_LOG_DSN='mysql://user:password@host:3306/openviking'
 ```
+
+PostgreSQL（14+）部署時，由管理員或 migration role 一次性建表：
+
+```bash
+psql "$OV_POSTGRES_ADMIN_DSN" -v ON_ERROR_STOP=1 \
+  -f openviking/service/sql/snapshot_log_postgres_init.sql
+export OPENVIKING_SNAPSHOT_LOG_POSTGRES_DSN='postgresql://user:password@host:5432/openviking?sslmode=verify-full&sslrootcert=/etc/ssl/pg-ca.pem'
+```
+
+```json
+{
+  "git": {
+    "snapshot": {
+      "log": {
+        "provider": "postgres",
+        "postgres": {
+          "dsn_env": "OPENVIKING_SNAPSHOT_LOG_POSTGRES_DSN",
+          "max_connections": 16,
+          "connect_timeout_ms": 3000,
+          "operation_timeout_ms": 3000
+        }
+      }
+    }
+  }
+}
+```
+
+執行時不會建立或遷移 PostgreSQL 表。執行帳號只需 `snapshot_log` 的
+`SELECT`、`INSERT` 許可權，以及 identity sequence 的 `USAGE` 許可權。
+不同 OV 部署應使用獨立資料庫或 schema；同一索引內按帳號、分支隔離。
+自定義 schema 可通過連線 URL 的 `options` 引數指定
+`-c search_path=your_schema`，引數值需要 URL 編碼。
+
+PostgreSQL 索引操作有執行期限，連線同時設定 `statement_timeout` 和
+`lock_timeout`。初始化超時後，啟動繼續使用 Git 歷史掃描；寫索引超時後，
+提交或恢復繼續，並觸發後臺盡力回填；索引不可用時查詢回退到 Git。
+提交前超時的寫事務會回滾。如果正常索引操作超過預設期限，可增大 `operation_timeout_ms`。
+
+無需安裝 PostgreSQL 擴充或 Python 資料庫 extra，驅動由 Rust binding 提供；
+獨立 Rust 接入需啟用 `ragfs/postgres` feature。
+
+同一帳號、分支的索引追加使用事務 advisory lock 序列化，包括空索引的首次寫入。
+僅當最新索引提交等於預期父提交時，整批路徑記錄才會原子提交。
+路徑索引使用 `md5(path)` 避免超過 PostgreSQL B-tree 鍵寬限制，
+查詢同時校驗原始路徑；同一提交發生摘要衝突時會拒絕整批追加，不會靜默丟失路徑。
+切換 provider 不會複製舊索引，按路徑查詢會在需要時觸發從 Git 歷史後臺回填。
+啟動時資料庫不可用或缺少表，會為該例項關閉索引並回退到歷史掃描；
+恢復後需重啟例項。回退掃描仍受 1000 個候選提交上限約束。
 
 修改服務端配置後，重啟 OpenViking 服務。重新初始化 HTTP SDK 客戶端不會重新載入服務端配置。
 

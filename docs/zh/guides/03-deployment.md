@@ -6,11 +6,12 @@ OpenViking 以 HTTP 服務執行。安裝服務端之前，先選擇由誰執行
 
 | 服務方式 | 你需要準備什麼 |
 | --- | --- |
+| [BytePlus 託管 OpenViking](27-byteplus-setup.md) | 使用 BytePlus OpenViking 服務地址和 API Key 連線，無需安裝本地服務端。 |
 | [火山引擎託管 OpenViking](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment)獲取 API Key，用獨立 CLI 連線，無需本地服務端或模型配置。 |
 | 團隊已有服務或他人部署 | 向管理員獲取服務地址和 user/admin key。 |
 | 自建 OpenViking | 按下文安裝、配置和執行服務端。 |
 
-託管及已有服務使用者可直接從 [CLI 快速開始](../getting-started/02-quickstart.md)進入。託管服務的可用範圍、套餐和額度見[官方服務文件](https://docs.volcengine.com/docs/84313/2374478)。
+託管及已有服務使用者可直接從 [CLI 快速開始](../getting-started/02-quickstart.md)進入。火山引擎託管服務的可用範圍、套餐和額度見[官方服務文件](https://docs.volcengine.com/docs/84313/2374478)。
 
 本頁後續內容適用於自建服務。
 
@@ -355,7 +356,7 @@ docker compose up -d
 - 所有例項共用同一個 `encryption.local.root_key`（或共享的 `vault` provider）。即使 `encryption.enabled` 為 `false`，持久任務與 Connector watch 儲存的憑據仍會加密；預設的單例項 `~/.openviking/master.key` 無法解密其他例項的任務。
 - readiness 檢查請用 `/ready`，不要用 `/health`。`/health` 只表示行程還活著；`/ready` 還會實際連一次 PathLock 與 QueueFS 使用的快取服務，連不上時回 503。liveness 請維持用 `/health`，否則快取一斷線，所有例項會同時被重啟。
 
-MySQL Task store 與帳號 store 需要 `mysql` / `redis-mysql` extras，Docker 映像檔已內建。
+MySQL Task store 與帳號 store（含 `redis_mysql`）需要 `mysql` extra，Docker 映像檔已內建。
 
 示例：
 

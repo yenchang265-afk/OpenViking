@@ -6,11 +6,12 @@ OpenViking runs as an HTTP service. Choose who operates it before installing a s
 
 | Service | What you need |
 | --- | --- |
+| [BytePlus managed OpenViking](27-byteplus-setup.md) | Connect with your BytePlus OpenViking service URL and API key. No local OpenViking server is needed. |
 | [Volcano Engine managed OpenViking](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment) | Obtain an API key in the [console](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment), then connect with the independent CLI. No local server or model configuration is needed. |
 | An existing team or remote deployment | Obtain the service URL and a user/admin key from its administrator. |
 | Self-hosted OpenViking | Install and configure the server using the instructions below. |
 
-Managed and existing-service users can start with the [CLI quickstart](../getting-started/02-quickstart.md). For managed-service availability, plans, and limits, see the [official service documentation](https://docs.volcengine.com/docs/84313/2374478).
+Managed and existing-service users can start with the [CLI quickstart](../getting-started/02-quickstart.md). For Volcengine availability, plans, and limits, see the [official service documentation](https://docs.volcengine.com/docs/84313/2374478).
 
 The rest of this guide covers self-hosting.
 
@@ -360,7 +361,7 @@ When the instances share one deployment (same `service_name`, Redis, object stor
 - One `encryption.local.root_key` shared by every instance (or a shared `vault` provider). Saved credentials of durable tasks and Connector watches are encrypted even when `encryption.enabled` is `false`, and the default per-instance `~/.openviking/master.key` cannot decrypt another instance's tasks.
 - Readiness checks against `/ready`, not `/health`. `/health` only reports that the process is alive; `/ready` also round-trips the cache provider used by PathLock and QueueFS and returns 503 while it is unreachable. Keep liveness on `/health`, or a cache outage restarts every instance at once.
 
-The MySQL Task and account stores need the `mysql` / `redis-mysql` extras, which the Docker image installs.
+The MySQL Task and account stores (including `redis_mysql`) need the `mysql` extra, which the Docker image installs.
 
 Example:
 

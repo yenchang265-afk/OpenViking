@@ -8,6 +8,13 @@
 
 Claude Code 和 Codex 共用同一個安裝指令碼。它會詢問要安裝的 harness 和 OpenViking 憑據；所有步驟冪等，可安全地重複執行。
 
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
+
 ```bash
 curl -fsSL https://openviking.ai/install | bash
 # AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
@@ -110,6 +117,7 @@ memory 外掛預設內建 OV-Usage。報告彙總自動召回和顯式 OpenVikin
 | `OPENVIKING_CODEX_LOCK_WAIT_MS` | `120000`（SessionEnd）、`40000`（PreCompact） | 捕獲類 hook 等待單會話狀態鎖的時長（毫秒） |
 | `OPENVIKING_CODEX_COMMITTED_TTL_MS` | `2592000000` | 已提交會話的轉錄游標保留時長（毫秒），過期後刪除狀態檔案 |
 | `OPENVIKING_RECALL_QUERY_FILTERS` | `""` | CSV 格式的 sed 風格正則規則，在 prompt 變成檢索 query 前生效（[語法與示例](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/README.md#input-filters)） |
+| `OPENVIKING_RECALL_EVENTS_DECAY_PROTECTION` | `30d` | 自動召回時，事件記憶在保護期內保持原分，超過保護期後開始衰減。可設為 `off` 或指定其他保護期。MCP `find` 和 `search` 由呼叫方傳入各自的引數。 |
 | `OPENVIKING_CAPTURE_FILTERS` | `""` | CSV 格式的 sed 風格正則規則，作用於每個被捕獲的回合（同一套語法） |
 | `OPENVIKING_DEBUG` | `false` | 是否將日誌寫入 `~/.openviking/logs/codex-hooks.log` |
 

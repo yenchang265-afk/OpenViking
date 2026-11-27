@@ -512,7 +512,7 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 - `embedding`
 - `rerank`
 
-`openviking_model_provider_readiness=1` 不證明模型認證、額度或遠端推理可用；它只檢查客戶端例項能否建立。模型呼叫錯誤和耗時應結合實際呼叫指標判斷。
+全域向量和檢索探針要求配置 Cluster VectorDB；模型 provider 探針要求配置 Cluster VLM。`openviking_model_provider_readiness=1` 只檢查客戶端建立，不驗證憑證、額度或遠端推理。
 
 ## 配置示例
 

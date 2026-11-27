@@ -122,7 +122,7 @@ acl_inherited_grants
 
 `acl_direct_grants` 是當前節點直接 ACL，`acl_inherited_grants` 是父節點當前有效 ACL，`acl_mode` 決定 inherited 是否參與當前節點的有效許可權。每個 principal 只儲存最高 level，編碼為 `{mask}:{principal}`：`1` 表示 `read`、`3` 表示 `write`、`7` 表示 `manage`。不維護獨立 ACL collection。
 
-空 grants 列表儲存為 `["none"]`，讀取時解析為空許可權。`"none"` 必須單獨出現，不授予任何許可權。該儲存標記與 `acl_mode` 獨立：清空直接授權時，模式和已有繼承許可權保持原有語義。
+空 grants 列表儲存為 `["none"]`，讀取時解析為空許可權。`"none"` 必須單獨出現，不授予任何許可權。讀取時忽略離線索引產生的精確空字串元素，其他非法 grant token 仍報錯。該儲存標記與 `acl_mode` 獨立：清空直接授權時，模式和已有繼承許可權保持原有語義。
 
 ACL 隨索引更新，允許同一 URI 的不同索引記錄短暫保留不同版本。讀取採用索引返回的一份 ACL 快照，不合並不同版本的授權，也不因副本暫時不一致阻斷處理。許可權變更按索引更新進度生效，不保證強一致。
 

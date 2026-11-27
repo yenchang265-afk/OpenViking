@@ -9,6 +9,9 @@ import {
   INSTALLER_HARNESSES,
 } from './agent-connect-installer.js';
 
+export const PRELAUNCH_BASE_URL =
+  'https://shms8eb05es6du8q1aoq5.apigateway-cn-beijing.volceapi.com/openviking';
+
 export const DEFAULT_BASE_URL =
   'https://api.vikingdb.cn-beijing.volces.com/openviking';
 
@@ -43,10 +46,10 @@ export function getAgentConnectInstructions(
       );
     return {
       fixed: true,
-      display: instructions('••••••••'),
+      display: instructions('********'),
       copy: instructions(apiKey),
       command: {
-        display: getInstallerCommand(harness, locale, '••••••••', baseUrl),
+        display: getInstallerCommand(harness, locale, '********', baseUrl),
         copy: getInstallerCommand(harness, locale, apiKey, baseUrl),
       },
     };
@@ -59,8 +62,9 @@ export function getAgentConnectInstructions(
       /^[\s\S]*?(?=^## )/m,
       () => text.hermesCustomIntro,
     );
+    // 文档的 zh 指南可能是繁体（選擇），两种写法都要匹配。
     template = template.replace(
-      /^3\. (?:选择|Choose) \*\*OpenViking Service \(VolcEngine Cloud\)\*\*[。.][ \t]*$/m,
+      /^3\. (?:选择|選擇|Choose) \*\*(?:OpenViking Service \(VolcEngine Cloud\)|OpenViking Managed Service)\*\*(?:[。.]|[，,][^\r\n]*)[ \t]*$/m,
       () => text.hermesCustomStep,
     );
   }
@@ -95,7 +99,7 @@ export function getAgentConnectInstructions(
   }
   return {
     fixed: false,
-    display: hydrate('••••••••'),
+    display: hydrate('********'),
     copy: hydrate(apiKey),
     markdown: hydrate(keyToken),
     keyToken,

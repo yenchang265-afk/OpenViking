@@ -37,6 +37,8 @@ from openviking_cli.utils.logger import get_logger
 logger = get_logger(__name__)
 
 _ACTIVE_STATUSES = frozenset({"pending", "running", "cancelling"})
+# Local stage for a Compile submission that exhausted retries.
+SUBMIT_EXHAUSTED = "submit_exhausted"
 # Persisted on a task when submission fails before the queue accepts it.
 ENQUEUE_FAILURE = "Failed to enqueue external task"
 _CREDENTIAL_PROVIDER = "encrypted_external_task"

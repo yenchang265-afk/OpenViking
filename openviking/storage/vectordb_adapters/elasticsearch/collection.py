@@ -21,6 +21,7 @@ from openviking.storage.vectordb.collection.result import (
     SearchResult,
 )
 from openviking.utils.time_utils import parse_iso_datetime
+from openviking_cli.exceptions import InvalidArgumentError
 from openviking_cli.utils import get_logger
 
 from .client import is_not_found
@@ -792,10 +793,20 @@ class ElasticsearchCollection(ICollection):
         output_fields: Optional[List[str]] = None,
         mode: Optional[str] = None,
         fields: Optional[List[str]] = None,
+        bm25_k1: Optional[float] = None,
+        bm25_b: Optional[float] = None,
+        advance: Optional[Dict[str, Any]] = None,
     ) -> SearchResult:
         # multi_match scores with BM25, the only keyword mode callers request.
         if mode not in (None, "bm25"):
             raise NotImplementedError(f"Elasticsearch keyword search does not support mode {mode!r}")
+        if bm25_k1 is not None or bm25_b is not None:
+            # BM25 similarity is fixed in the index settings, not per query.
+            raise InvalidArgumentError(
+                "Elasticsearch keyword search does not support args.bm25_k1 or args.bm25_b"
+            )
+        # advance only carries engine post-processing budgets; multi_match has none.
+        del advance
         text = (query or " ".join(keyword for keyword in keywords or [] if keyword)).strip()
         text_fields = list(self._text_fields)
         if fields:

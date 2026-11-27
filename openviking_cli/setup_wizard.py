@@ -43,9 +43,6 @@ _DEFAULT_GLM_MODEL = "glm-4.6v"
 # distinguishes "handled elsewhere" from "cancelled" (None).
 _CUSTOM_SETUP = object()
 
-# Sentinel for "user chose to skip the VLM" (embedding-only setup).
-_SKIP_VLM = object()
-
 # Sentinel for "user navigated back to the previous step" (← key / [0] Back).
 _GO_BACK = object()
 
@@ -621,9 +618,7 @@ def _ensure_codex_auth() -> bool:
             print(f"  {_green('OK')} Codex OAuth stored in {path}")
             return True
 
-    print(
-        f"  {_dim('You can finish setup now and re-run `openviking-server init` later to complete Codex sign-in.')}"
-    )
+    print(f"  {_dim('Complete Codex sign-in before starting OpenViking.')}")
     return False
 
 
@@ -1137,15 +1132,13 @@ def _prompt_custom_vlm(
 
 
 def _prompt_cloud_vlm(
-    allow_skip: bool = False,
     reuse_key: tuple[str, str] | None = None,
     allow_back: bool = False,
     current: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None | object, bool | None]:
     """VLM provider selection (cloud APIs, subscriptions, or local Ollama).
 
-    Returns ``(vlm_config, ollama_running)``; ``vlm_config`` is None on cancel,
-    the ``_SKIP_VLM`` sentinel when *allow_skip* is set and taken, or
+    Returns ``(vlm_config, ollama_running)``; ``vlm_config`` is None on cancel or
     ``_GO_BACK`` when *allow_back* is set and the user navigated back.
     ``ollama_running`` is only set when the local Ollama option was taken.
     *reuse_key* is an optional ``(provider, api_key)`` from the embedding step,
@@ -1155,8 +1148,6 @@ def _prompt_cloud_vlm(
     """
     current = current or {}
     options = list(_WIZARD_VLM_OPTIONS)
-    if allow_skip:
-        options.append(("Skip for now", "(embedding only — add a VLM later)"))
     default_idx = _vlm_option_index_for(current) if current else 1
 
     # An existing same-provider key takes priority as the reuse candidate.
@@ -1178,9 +1169,6 @@ def _prompt_cloud_vlm(
 
         if vlm_mode == 0:
             return _GO_BACK, None
-
-        if allow_skip and vlm_mode == len(options):
-            return _SKIP_VLM, None
 
         if vlm_mode == _WIZARD_VLM_OLLAMA_CHOICE:
             current_ollama_model = (
@@ -1614,7 +1602,7 @@ def _wizard_two_step() -> tuple[dict[str, Any] | None | object, bool | None]:
         if isinstance(dense, dict) and dense.get("api_key"):
             reuse_key = (dense["provider"], dense["api_key"])
         vlm_config, vlm_ollama = _prompt_cloud_vlm(
-            allow_skip=True, reuse_key=reuse_key, allow_back=True
+            reuse_key=reuse_key, allow_back=True
         )
         if vlm_config is _GO_BACK:
             continue  # back to Step 1
@@ -1623,17 +1611,15 @@ def _wizard_two_step() -> tuple[dict[str, Any] | None | object, bool | None]:
         if vlm_ollama is not None:
             ollama_running = vlm_ollama
 
-        if vlm_config is _SKIP_VLM:
-            print(f"\n  {_green('✓')} VLM: {_dim('skipped — add one later with init')}")
-        else:
-            print(f"\n  {_green('✓')} VLM: {_summarize_model(vlm_config)}")
+        # Summarize only non-secret fields; the VLM block carries its API key.
+        vlm_label = {k: vlm_config.get(k) for k in ("provider", "model", "api_base")}
+        print(f"\n  {_green('✓')} VLM: {_summarize_model(vlm_label)}")
 
         config: dict[str, Any] = {
             "storage": {"workspace": _workspace_path()},
             "embedding": {"dense": dense},
+            "vlm": vlm_config,
         }
-        if vlm_config is not _SKIP_VLM:
-            config["vlm"] = vlm_config
         return config, ollama_running
 
 

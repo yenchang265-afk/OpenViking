@@ -8,7 +8,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 
 ## 壓縮做什麼 {#long-conversations}
 
-[壓縮](../guides/15-gateway.md#key-terms)讓對話始終不超出模型的上下文視窗（單次請求最多能容納的 token 數），預設開啟。對話接近視窗上限時，由同一個模型為目前為止的對話寫一份摘要，此後截斷點之前的全部內容都由這份摘要替代。客戶端裡顯示的歷史不受影響。開啟了儲存對話、模型也能用 OpenViking 的 `grep` 和 `read` 工具時，摘要末尾會附上[查詢被壓縮內容](#finding-what-was-cut)的方法。
+[壓縮](../guides/15-gateway.md#key-terms)讓對話始終不超出模型的上下文視窗（單次請求最多能容納的 token 數），預設開啟。對話接近視窗上限時，由同一個模型為目前為止的對話寫一份摘要，此後截斷點之前的全部內容都由這份摘要替代。客戶端裡顯示的歷史不受影響。開啟了儲存對話、模型也能用 OpenViking 的 `session_history` 工具（沒有它時則是 `grep` 和 `read`）時，摘要末尾會附上[查詢被壓縮內容](#finding-what-was-cut)的方法。
 
 在 Studio 中的位置：**上下文配置** → **長對話**。
 
@@ -58,7 +58,8 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 - 檔案、路徑和識別符號；
 - 出過的錯誤和修正；
 - 未完成的事項；
-- 最近幾次工具結果裡的要點。
+- 最近幾次工具結果裡的要點；
+- 對話提供了 `session_history` 工具時，末尾再列出之後可用來檢索的確切字串：檔案路徑、錯誤資訊、命令、識別符號，以及使用者描述需求的原話。
 
 摘要是純文本，最長**摘要長度上限**（8,000）個 token。思考內容也計入輸出上限，而有些模型（如 DeepSeek V4.1）即使請求裡沒有思考設定也會預設思考，所以閘道器總在摘要長度上限之外再留 16,000 token 的輸出餘量；客戶端手動指定了思考預算時，改為加上這份預算。這次請求和其他請求一樣由服務商計費。整個請求最長 `summary_timeout_seconds`（見[配置](13-configuration.md#gateway-fields)；預設為 `upstream_timeout_seconds`，即 600 秒），超時按摘要失敗處理。它的時間不計入 `prepare_timeout_seconds`。
 
@@ -79,12 +80,20 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 
 ### 查詢被壓縮的內容 {#finding-what-was-cut}
 
-對話本身仍儲存在 OpenViking 裡。開啟了**儲存對話**、這段對話也提供了 `openviking_grep` 和 `openviking_read` 工具時，摘要末尾會附上查詢方法：
+對話本身仍儲存在 OpenViking 裡。開啟了**儲存對話**時，摘要末尾會附上查詢方法，具體內容取決於這段對話提供的工具：
 
-- 這段對話對應的 OpenViking 會話（`viking://user/<user_id>/sessions/<session_id>/`），以及會話中訊息的存放位置；
-- 檢索步驟：先用具體的關鍵詞 grep 會話，拿到行號，再讀取匹配位置前後的內容。
+- **有 `openviking_session_history` 時**（OpenViking 服務的 MCP 工具中包含 `session_history`）：說明儲存了什麼（使用者和助手的訊息、工具呼叫及其完整輸出，不含思考內容、圖片和閘道器自己執行的 OpenViking 工具呼叫），以及如何按原文檢索（結果直接列出匹配的行及其 id 和偏移量），再從這個偏移量開始讀取該條內容。
+- **否則，有 `openviking_grep` 和 `openviking_read` 時**：這段對話對應的 OpenViking 會話（`viking://user/<user_id>/sessions/<session_id>/`）和會話中訊息的存放位置，以及檢索步驟：先用具體的關鍵詞 grep 會話，拿到行號，再讀取匹配位置前後的內容。
 
 截斷點落在一輪中間時，截斷點之前的部分會立即儲存到 OpenViking，模型在這一輪裡就能檢索到；這次寫入失敗時，由這一輪結束時的儲存一併寫入。
+
+`session_history` 和其他 OpenViking 工具一樣預設提供，可以在**工具**裡取消勾選（見[選擇工具](04-openviking-tools.md#choose-tools)）；關閉**儲存對話**時不提供。對話沿用開始時的工具清單，所以服務端還沒有這個工具時開始的對話，仍然得到 grep 的查詢方法。模型沒有傳 `session` 引數或傳了空值時，閘道器填入儲存著這段對話訊息的 OpenViking 會話，從新到舊：當前會話（已經儲存過內容時），然後是這段對話之前儲存過的最多五個會話。客戶端自己壓縮對話時仍沿用同一個會話；之前的會話只來自[重新同步對話…](10-overview-and-requests.md#resync-a-conversation)或更早版本的閘道器。模型傳了 `session` 時原樣傳送。這段對話還沒有任何內容儲存時（例如第一輪還沒結束），閘道器不請求 OpenViking，直接回復模型：目前沒有可查的內容，請根據上下文裡已有的內容繼續。
+
+每一輪在回覆結束時寫入 OpenViking，所以一輪進行中時，它最新的訊息還沒有儲存。還在模型上下文裡的未儲存訊息不需要提醒。只有某次寫入沒能完成時，摘要或新視窗替換掉的訊息裡才會有尚未儲存的：一輪中間截斷時的寫入失敗了，或者因為 OpenViking 不可用而跳過了，又或者之前某一輪的儲存失敗了。這種情況下，如果 `session` 是閘道器填入的，結果末尾會多一行閘道器說明：“Gateway note: the last *N* messages before your current context window are not saved yet and may be missing from this result.” 同一個請求裡剛被 `openviking_new_context` 截掉的部分也算在內。閘道器不知道這段歷史儲存到了哪裡時，不加這一行：最後儲存的那條訊息不在這次請求的歷史裡（客戶端壓縮、編輯或截短了歷史），或者重新同步開啟了一個還沒寫入任何內容的新會話。這一行在按**結果大小上限**截斷之後才追加，不會被截掉。
+
+**每個視窗的歷史查詢預算。** 和所有 OpenViking 工具往返一樣，`session_history` 的結果會一直留在模型的上下文裡，直到下一個截斷點。當前窗口裡這些結果累計達到上下文視窗的五分之一或 8,000 token（取較大者，小視窗也夠一次檢索加一次讀取）後，這個窗口裡再呼叫 `session_history` 只會得到一行回覆：之前的結果仍在上下文裡，下次壓縮之後（開啟 Agent 自管上下文視窗時，也可以在模型開啟新視窗之後）可以繼續查詢。閘道器根據已經為這個視窗儲存的工具往返計算用量。
+
+**升級順序。** 請先升級閘道器，再升級提供 `session_history` 的 OpenViking 服務，或者同時升級。舊版網關同樣會把服務端的新工具以 `openviking_session_history` 提供給新對話，但沒有預設會話、閘道器說明和預算；在閘道器升級之前，請把 `session_history` 加入上下文配置的 `disabled_tools`（在**工具**裡取消勾選）。新版閘道器搭配舊版服務時，仍然使用現在的 grep 查詢方法。
 
 ## 在請求日誌中檢視壓縮 {#see-compaction-in-the-request-log}
 
@@ -151,7 +160,7 @@ description: OpenViking 閘道器如何壓縮長對話、要設定哪個上下�
 1. 這是模型開啟的第 N 個視窗，內容不是使用者寫的；
 2. reason、notes 和 next_steps；
 3. 使用者最新一條訊息的原文；
-4. 檢索之前視窗的方法（條件和[壓縮](#finding-what-was-cut)時相同）；
+4. 檢索之前視窗的方法（條件和[壓縮](#finding-what-was-cut)時相同）；有 `session_history` 時，還會要求模型把之後的視窗要用到的訊息 id 寫進交接筆記；
 5. 這段對話開頭的閘道器說明。
 
 之後的請求會根據客戶端的歷史重建同一個視窗。重置之前的內容會立即儲存到 OpenViking，之後仍可檢索；reason 和 notes 只出現在視窗頭裡，不儲存到 OpenViking。每次重置讓服務商快取失效一次，但不需要摘要請求。

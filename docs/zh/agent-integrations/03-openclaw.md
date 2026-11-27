@@ -1,5 +1,7 @@
 # OpenClaw
 
+> **推薦通過 [OpenViking 閘道器](../guides/15-gateway.md) 接入。** 關掉下面的外掛，把模型的 Base URL 指向閘道器、API Key 換成閘道器金鑰，閘道器會為新使用者訊息召回記憶並儲存對話。[上游](../gateway/07-upstreams.md#upstreams)要自帶服務商 API Key，訂閱登入無法走閘道器。配置見[把客戶端接入 OpenViking 閘道器](../gateway/03-connect-clients.md#openclaw-and-hermes)，從零開始見[閘道器快速上手](../gateway/02-quickstart.md)，兩種方式的取捨見[閘道器還是外掛](../guides/15-gateway.md#gateway-or-plugin)，官網介紹見 [openviking.ai/gateway](https://openviking.ai/gateway)。
+
 為 [OpenClaw](https://github.com/openclaw/openclaw) 新增長效記憶。安裝完成後，OpenClaw 會自動記住對話中的重要資訊，並在每次回覆前召回相關上下文。
 
 原始碼：[examples/openclaw-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openclaw-plugin)
@@ -95,8 +97,10 @@ openclaw openviking setup --base-url https://openviking.example.com --api-key sk
 ```text
 summaryMessage = { role: "user", content: "[Session History Summary]\n" + latest_archive_overview }
 messages = [summaryMessage] + OV active messages
-systemPromptAddition = Session Context Guide（有歸檔時）+ 使用者 profile（profile.md 存在時）+ 本輪召回結果（有命中時）
+systemPromptAddition = Session Context Guide（有歸檔時）+ 使用者 profile（profile.md 存在時）
 ```
+
+外掛擁有 `plugins.entries.openviking.hooks.allowConversationAccess` 授權（setup 會自動寫入）時，召回不在 `assemble()` 中進行：`before_prompt_build` hook 每輪以當前請求查詢一次，並把結果以 `prependContext` 返回；OpenClaw 將其凍結在本輪 user turn 上並原樣重放，後續輪次的歷史字首快取因此不受影響。未授權時，主分支仍把召回結果追加到 `systemPromptAddition`；這部分每輪變化，可能使其後歷史的 provider prompt cache 失效。
 
 `latest_archive_overview` 是服務端返回的摘要正文，`[Session History Summary]` 是外掛加在正文前的固定文本標題。僅在 overview 非空時插入這條合成 user 訊息；active messages 保留近期未壓縮對話。當前 `prompt` 由宿主加入本輪；外掛只用它查詢記憶，不把它重複追加到返回的歷史中。召回結果屬於本次請求的上下文，不直接作為新對話寫回 OV。
 

@@ -26,6 +26,21 @@ import '@openviking/react/modules/console/style.css';
 
 ## 程式碼演示
 
+### 等待可用模式
+
+宿主確認可用模式期間，可渲染 `ConsoleSkeleton`。通過 `aria-label` 提供載入狀態說明，並把骨架放在與 Console 相同的、有明確高度的面板中。
+
+```tsx
+import { Console, ConsoleSkeleton } from '@openviking/react/modules/console';
+import '@openviking/react/modules/console/style.css';
+
+const panel = loading ? (
+  <ConsoleSkeleton aria-label="正在載入 Console" />
+) : (
+  <Console modes={modes} />
+);
+```
+
 ### 基礎用法
 
 面板預設進入對話模式；切換到「終端」，輸入 `ov ls viking://resources/demo` 或 `ov read viking://resources/demo/notes.md`，點選結果裡的資源連結，面板下方會顯示 `onOpenUri` 收到的 URI。
@@ -42,7 +57,7 @@ import '@openviking/react/modules/console/style.css';
 
 請求、會話和流式狀態由 Console 內部管理；可通過 `chatOptions.service` 適配其他後端，服務同時實現對話與會話契約。模組切換保留當前對話；新建或切換會話會取消舊連線。歷史儲存失敗單獨提示，不改變已成功的回答。
 
-點選「建立 Wiki」或「定時日報」可填入空白草稿或切換預設。傳送後由配置的對話服務處理請求，編譯相關的確認問題通過下方介紹的流程展示。用 `conversation.quickInputs` 提供自定義列表，傳入 `[]` 可隱藏快捷入口。
+點選「Wiki」或「定時日報」可填入空白草稿或切換預設。傳送後由配置的對話服務處理請求，編譯相關的確認問題通過下方介紹的流程展示。用 `conversation.quickInputs` 提供自定義列表，傳入 `[]` 可隱藏快捷入口。
 
 ```tsx file="../../_demos/console-chat.tsx" preview
 
@@ -50,23 +65,57 @@ import '@openviking/react/modules/console/style.css';
 
 示例使用模擬服務，可切換原生能力與火山當前契約。原生介面卡提供 `interrupt` 和 `steer`，支援停止及生成中追問；火山當前介面卡省略這兩個方法，生成中停用傳送且不顯示停止。回答後的下一輪提問兩者均支援。
 
-點選底部的 `@`，或在輸入框中鍵入 `@`，可瀏覽、搜尋並引用檔案和目錄。內建選擇器使用當前請求作用域下的 `/api/v1/fs/ls` 和 `/api/v1/search/glob`，開啟時才載入。通過 `chatOptions.referenceSelection` 傳入 `{ selected, onChange }`，可以讓目錄樹與內建 `@` 選擇器共享已選引用。傳送後由宿主移除已傳送的引用，重置會話時由 Console 清空已選引用。設定 `conversation.references` 可自行提供候選項和已選引用，替代內建選擇器。自定義對話服務可通過傳送引數中的 `references` 讀取已選引用。
+點選底部的 `@`，或在輸入框中鍵入 `@`，可瀏覽、搜尋並引用檔案和目錄。內建選擇器使用當前請求作用域下的 `/api/v1/fs/ls` 和 `/api/v1/search/glob`，開啟時才載入。通過 `chatOptions.referenceSelection` 傳入 `{ selected, onChange }`，可以讓目錄樹與內建 `@` 選擇器共享已選引用。若要讓目錄樹只在會話就緒且空閒時替換引用，傳入可選的 `replaceRef`，並在選中檔案或目錄時呼叫 `replaceRef.current?.(reference)`。VikingBot 回覆期間仍可移除草稿引用。
+
+傳送新訊息時，Console 立即移除已提交的引用。流式追問經服務端確認後才移除本次提交的引用，保留等待期間新選的引用。追問被拒絕時保留選擇。等待確認期間移除後重新選中的引用視為新選擇。重置會話時清空選擇。設定 `conversation.references` 可自行提供候選項和已選引用，替代內建選擇器。自定義對話服務可通過傳送引數中的 `references` 讀取已選引用。
+
+### 啟用 VikingBot
+
+庫決定 VikingBot 是否可用且由宿主啟動執行時，可以傳入 `chatOptions.activation`。示例模擬了允許啟用、庫未開啟 Bot 和首次啟用失敗三種情況，也可切換覆蓋文案、ReactNode 整塊替換和隱藏介紹。
+
+```tsx file="../../_demos/console-activation.tsx" preview
+
+```
+
+通過 `isEligible` 確認當前作用域是否允許使用 Bot。所有資格和狀態讀取，包括啟用後複查和重試前檢查，都保留 Bot 標籤頁並顯示輕量載入提示；只有 `start` 等待返回時才顯示啟用中。啟用流程中，只有 `isEligible` 返回 `false` 才移除 Bot 標籤頁。錯誤原文僅在通知中顯示一次，卡片保留重試入口，常駐狀態播報只報告流程狀態變化，不重複播報錯誤。載入和就緒狀態變化會保留使用者選擇的模式，包括命令模式。
+
+同一次失敗的通知關閉後，切換 Bot/CLI 會保留關閉狀態，只有新的失敗才可重新展示。啟用或重試時，若操作按鈕持有焦點，先將焦點移到穩定的 Bot 面板，失敗時留在 Bot。資格否定移除 Bot 控制元件時，僅當焦點位於被移除的模式切換組或 Bot 面板內才交給內建 CLI 編輯器，無法聚焦時回退面板，不搶佔外部焦點。`CommandConsole` 的可選 `inputRef` 提供真實 textarea 引用，即使插槽嵌入完整 Console，焦點也會準確交給當前 Console 自己的編輯器。
+
+狀態區域先空掛載、可見時釋出公告。在支援的顯隱訊號使 Console 恢復可見時，會重播當前狀態，不發起新請求。這些訊號包括祖先屬性變化（含 `data-state`）、`ResizeObserver` 可用時的盒子尺寸變化、視窗或可視視口尺寸變化，以及祖先 CSS 過渡和動畫的開始、結束或取消。其他未產生上述訊號的 CSS 顯隱變化，宿主應同步 `hidden` 等顯式可見狀態，以便恢復顯示時補播。
+
+作用域的請求 signal 已取消或隨後被取消時，Console 保留 Bot 標籤頁並顯示靜態取消提示，不顯示載入狀態，也不提供無法重啟已取消請求的重試按鈕。宿主須換用未取消的新 signal，或移除已取消的 signal，才能重新檢查。只修改 `scopeKey` 而繼續傳入同一個已取消的 signal，面板仍保持取消狀態。
+
+`isEligible` 返回 `true` 後，Console 通過 `getStatus` 查詢 Bot 是否已就緒。尚未啟動時，使用者點選「開始使用 VikingBot」會觸發宿主的 `start` 回撥。Console 會再次確認狀態，就緒後加載對話和會話歷史。切換庫或身份時，更新 `scopeKey` 或傳入對應的 `activation`。模擬火山宿主介面卡將 `GetOpenVikingCollection` 返回的 `EnableVikingBot === true` 對映為 `isEligible` 的布林結果。
+
+當前庫和身份不變時保持介面卡引用穩定。三個回撥都接收 `AbortSignal`，失敗時應丟擲錯誤。可通過 `media` 用介紹影片或封面替換預設插圖。
+
+`labels.activationTitle` 和 `labels.activationDescription` 覆蓋預設介紹文案，空字串隱藏相應文案。`slots.activationIntro` 替換媒體、標題和描述整塊介紹；`undefined` 保留預設介紹，`null` 隱藏介紹。啟用、重試和生命週期狀態仍由 Console 管理。切換這些展示配置不會重新查詢啟用狀態或清空草稿。
 
 ### 待確認互動
 
-傳送任意訊息觸發模擬問題組。示例為名稱注入非同步校驗、為輸出目錄提供選擇器，並用自定義元件替換指令卡片；定時的外部規則將更新時間限制在 09:00–18:00。勾選「模擬答案發送失敗」可檢查輸入保留、錯誤清理與重試。
+傳送一條訊息體驗內建的 Wiki 澄清流程，或傳送「日報」體驗定時更新。勾選「啟用宿主自定義表單」可體驗名稱非同步校驗、自定義輸出目錄選擇器、替換指令卡片以及 09:00–18:00 的更新時段限制。勾選「模擬答案發送失敗」可檢查輸入保留、錯誤清理與重試。
 
 ```tsx file="../../_demos/console-hitl.tsx" preview
 
 ```
 
-Console 在 `request_user_input` 工具成功且當前輪正常結束後展示問題，按問題組順序收集答案。中斷、截斷、錯誤結果和不支援的協議保留普通工具展示。傳入 `chatOptions.hitl={false}` 關閉自動互動；顯式傳入 `conversation.interaction` 時使用宿主的問題與回撥。
+Console 在 `request_user_input` 工具成功且當前輪正常結束後展示問題，當輸出目錄依賴來源目錄和配置名稱時，先收集這兩項。中斷、截斷、錯誤結果和不支援的協議保留普通工具展示。傳入 `chatOptions.hitl={false}` 關閉自動互動；顯式傳入 `conversation.interaction` 時使用宿主的問題與回撥。
+
+配置檔案系統後，Console 使用選擇器選取來源目錄和技能，並在繼續前檢查輸出目錄。自定義對話服務未連線檔案系統時，可以直接輸入 URI。輸出目錄不能與來源目錄相同或互相包含。已有明確答案或可以從技能識別產物型別時，Console 會跳過產物型別問題。只有工具明確提供已啟用的計劃，或使用者主動啟用，才會開啟自動更新。
 
 歷史訊息不包含可確認的輪次終止狀態，載入歷史只恢復訊息和答案摘要，不重新觸發問題卡片。新一輪即時回覆正常結束後仍可觸發互動。
 
 最後一項提交後，Console 傳送 `request_user_input_response` JSON 繼續下一輪對話，包含 `schema_version: '1.0'`、`tool_call_id` 和按原順序排列的 `answers: { card_type, title, value }[]`。使用者氣泡、複製和歷史展示採用標籤/值摘要；傳送與儲存保留協議原文，選項名稱從對應問題中恢復。
 
-宿主通過 `chatOptions.hitl.cards[card_type]` 提供擴充套件。同一型別的多個問題可用 `configureCard(card)` 按 `card.id` 或 `card.payload` 分別配置。欄位名與值型別見 [VikingBotInteractionFields](../components/viking-bot#vikingbotinteractionfields)。校驗通過後才進入下一項，最後一項才呼叫對話服務。目錄存在性、許可權和業務規則由宿主校驗器檢查；自定義選擇器的資料與請求由宿主提供。
+宿主通過 `chatOptions.hitl.cards[card_type]` 提供擴充套件。同一型別的多個問題可用 `configureCard(card)` 按 `card.id` 或 `card.payload` 分別配置。欄位名與值型別見 [VikingBotInteractionFields](../components/viking-bot#vikingbotinteractionfields)。校驗通過後才進入下一項，最後一項才呼叫對話服務。宿主可以新增校驗，併為自定義選擇器提供資料和請求。
+
+### 提交會話
+
+點選最新一條完整回覆下方的「提交會話」，可為當前對話發起記憶提取。Console 會顯示提交狀態，並在服務端返回任務 ID 時跟蹤後臺任務。如果任務返回記憶變更檔案，且宿主提供了 `conversation.onOpenUri`，可從完成通知中開啟結果。
+
+設為 `chatOptions.memoryCommit={false}` 可隱藏該操作。自定義對話服務可實現 `commitSession`；未實現時，由原生對話或已配置的 Provider 提供原生會話介面。
+
+開啟會話歷史時，Console 會從服務端恢復當前提交狀態。自定義服務負責提交時，可實現 `getSessionCommitTask(id, signal)`，在最近的提交任務覆蓋已載入訊息時返回該任務。
 
 ### 後臺任務
 
@@ -96,41 +145,53 @@ Console 在 `request_user_input` 工具成功且當前輪正常結束後展示�
 
 ### Console
 
-| 引數              | 說明                                                                                                                                                                | 型別                                    | 預設值                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------- |
-| modes             | 啟用的模式及工具欄順序；只傳一項即可單獨接入對話或 TUI，空陣列不顯示面板                                                                                            | `readonly ConsoleMode[]`                | `['conversation', 'command']`                                     |
-| mode              | 當前模式，傳入後由宿主控制；`'conversation'` 為對話，`'command'` 為命令                                                                                             | `ConsoleMode`                           | -                                                                 |
-| defaultMode       | 初始模式，傳入 `mode` 後不再生效                                                                                                                                    | `ConsoleMode`                           | `'conversation'`                                                  |
-| onModeChange      | 使用者切換模式時觸發，引數為切換後的模式；傳入 `mode` 時由宿主更新它                                                                                                | `(mode: ConsoleMode) => void`           | -                                                                 |
-| conversation      | 對話模式的資料和回撥：`sessions` 與 `headerActions` 顯示在面板工具欄，其餘屬性傳給 [VikingBot](../components/viking-bot)，省略 `draft` 時由 Console 儲存對話草稿    | `Partial<VikingBotProps>`               | -                                                                 |
-| taskService       | 後臺任務查詢介面卡，兩個模式預設共享                                                                                                                                | `ConsoleTaskService`                    | 原生任務查詢介面                                                  |
-| chatOptions       | 對話配置；自定義 service 同時實現對話和會話契約                                                                                                                     | `ConsoleChatOptions`                    | 原生服務                                                          |
-| quickCommands     | 命令模式空態裡的快捷入口 `{ name, value }`，點選後把 `value` 填入輸入框，不自動執行；傳入空陣列時不顯示空態，型別見 [CommandConsole](../components/command-console) | `readonly CommandConsoleQuickCommand[]` | `add-resource`、`add-skill`、`add-memory`、`find`、`compile` 五條 |
-| scopeKey          | 身份由函式動態取值時的隔離標識，值變化時清空記錄和草稿並中止進行中的請求                                                                                            | `string`                                | -                                                                 |
-| commandHistoryKey | 同一標籤頁重新整理時恢復命令歷史，按宿主提供的環境和身份標識隔離                                                                                                    | `string`                                | -                                                                 |
-| command           | 命令模式的覆蓋項，型別見下方 `ConsoleCommandProps`                                                                                                                  | `ConsoleCommandProps`                   | -                                                                 |
-| commandOptions    | [檔案選擇、下載與管理員命令配置](#consolecommandoptions)                                                                                                            | `ConsoleCommandOptions`                 | 使用瀏覽器處理檔案，管理員命令關閉                                |
-| onOpenUri         | 點選資源連結時觸發，引數為資源 URI；兩種模式各自以 `conversation.onOpenUri`、`command.onOpenUri` 為準                                                               | `(uri: string) => void`                 | -                                                                 |
-| slots             | 在面板中插入宿主內容，型別見下方 `ConsoleSlots`                                                                                                                     | `ConsoleSlots`                          | -                                                                 |
-| labels            | 覆蓋介面文案，型別見下方 `ConsoleLabels`                                                                                                                            | `ConsoleLabels`                         | -                                                                 |
-| locale            | 介面語言，規則見[國際化](../guide/i18n)                                                                                                                             | `'zh-CN' \| 'en-US'`                    | 繼承上級，預設 `'en-US'`                                          |
-| requestOptions    | 覆蓋請求配置，規則見[區塊概覽](./)                                                                                                                                  | `OvRequestOptions`                      | -                                                                 |
-| className、style  | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                                                                              | HTML 屬性                               | -                                                                 |
+| 引數              | 說明                                                                                                                                                                       | 型別                                    | 預設值                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------- |
+| modes             | 啟用的模式及工具欄順序；只傳一項即可單獨接入對話或 TUI，空陣列不顯示面板                                                                                                   | `readonly ConsoleMode[]`                | `['conversation', 'command']`                                       |
+| mode              | 當前模式，傳入後由宿主控制；`'conversation'` 為對話，`'command'` 為命令                                                                                                    | `ConsoleMode`                           | -                                                                   |
+| defaultMode       | 初始模式，傳入 `mode` 後不再生效                                                                                                                                           | `ConsoleMode`                           | `'conversation'`                                                    |
+| onModeChange      | 使用者切換模式時觸發，引數為切換後的模式；傳入 `mode` 時由宿主更新它                                                                                                       | `(mode: ConsoleMode) => void`           | -                                                                   |
+| conversation      | 對話模式的資料和回撥：`sessions` 與 `headerActions` 顯示在面板工具欄，其餘屬性傳給 [VikingBot](../components/viking-bot)，省略 `draft` 時由 Console 儲存對話草稿           | `Partial<VikingBotProps>`               | -                                                                   |
+| taskService       | 後臺任務查詢介面卡，兩個模式預設共享                                                                                                                                       | `ConsoleTaskService`                    | 原生任務查詢介面                                                    |
+| chatOptions       | 對話配置；自定義 service 同時實現對話和會話契約                                                                                                                            | `ConsoleChatOptions`                    | 原生服務                                                            |
+| quickCommands     | 終端空態和有執行記錄時輸入框上方的快捷入口。點選後填入 `value`，等待使用者提交。傳入空陣列會隱藏快捷入口和內建空態。型別見 [CommandConsole](../components/command-console) | `readonly CommandConsoleQuickCommand[]` | `add-resource`、`add-skill`、`add-memory`、`find`、`compile create` |
+| scopeKey          | 身份由函式動態取值時的隔離標識，值變化時清空記錄和草稿並中止進行中的請求                                                                                                   | `string`                                | -                                                                   |
+| commandHistoryKey | 在瀏覽器中儲存命令歷史，按宿主提供的環境、庫和使用者標識隔離                                                                                                               | `string`                                | -                                                                   |
+| command           | 命令模式的覆蓋項，型別見下方 `ConsoleCommandProps`                                                                                                                         | `ConsoleCommandProps`                   | -                                                                   |
+| commandOptions    | [檔案選擇、下載與管理員命令配置](#consolecommandoptions)                                                                                                                   | `ConsoleCommandOptions`                 | 使用瀏覽器處理檔案，管理員命令關閉                                  |
+| onOpenUri         | 點選資源連結時觸發，引數為資源 URI；兩種模式各自以 `conversation.onOpenUri`、`command.onOpenUri` 為準                                                                      | `(uri: string) => void`                 | -                                                                   |
+| slots             | 在面板中插入宿主內容，型別見下方 `ConsoleSlots`                                                                                                                            | `ConsoleSlots`                          | -                                                                   |
+| labels            | 覆蓋介面文案，型別見下方 `ConsoleLabels`                                                                                                                                   | `ConsoleLabels`                         | -                                                                   |
+| locale            | 介面語言，規則見[國際化](../guide/i18n)                                                                                                                                    | `'zh-CN' \| 'en-US'`                    | 繼承上級，預設 `'en-US'`                                            |
+| requestOptions    | 覆蓋請求配置，規則見[區塊概覽](./)                                                                                                                                         | `OvRequestOptions`                      | -                                                                   |
+| className、style  | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                                                                                     | HTML 屬性                               | -                                                                   |
 
 ### ConsoleChatOptions
 
-| 引數               | 說明                                                | 型別                                                  | 預設值           |
-| ------------------ | --------------------------------------------------- | ----------------------------------------------------- | ---------------- |
-| taskService        | 對話後臺任務查詢介面卡，預設共享 Console 的查詢服務 | `ConsoleTaskService`                                  | 繼承 Console     |
-| locale             | 對話文案語言                                        | `'zh-CN' \| 'en-US'`                                  | 繼承 Console     |
-| persist            | 儲存已完成的訊息                                    | `boolean`                                             | `true`           |
-| scopeKey           | 動態身份的隔離鍵                                    | `string`                                              | 繼承 Console     |
-| service            | 對話與會話介面卡，保持引用穩定                      | `VikingBotChatService & VikingBotSessionService`      | 原生服務         |
-| requestOptions     | 對話請求配置                                        | `OvRequestOptions`                                    | 繼承 Console     |
-| hitl               | 自動問題組、欄位校驗與自定義卡片配置                | `ConsoleHitlOptions \| false`                         | 自動啟用內建卡片 |
-| referenceSelection | 內建 `@` 選擇器的受控引用狀態                       | `Pick<VikingBotReferences, 'selected' \| 'onChange'>` | 可選             |
+| 引數               | 說明                                                                    | 型別                                             | 預設值           |
+| ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------ | ---------------- |
+| taskService        | 對話後臺任務查詢介面卡，預設共享 Console 的查詢服務                     | `ConsoleTaskService`                             | 繼承 Console     |
+| locale             | 對話文案語言                                                            | `'zh-CN' \| 'en-US'`                             | 繼承 Console     |
+| persist            | 儲存已完成的訊息                                                        | `boolean`                                        | `true`           |
+| scopeKey           | 動態身份的隔離鍵                                                        | `string`                                         | 繼承 Console     |
+| service            | 對話與會話介面卡，保持引用穩定                                          | `VikingBotChatService & VikingBotSessionService` | 原生服務         |
+| activation         | 檢查庫是否允許使用 Bot，並在 Console 內啟動                             | `ConsoleBotActivation`                           | 可選             |
+| requestOptions     | 對話請求配置                                                            | `OvRequestOptions`                               | 繼承 Console     |
+| hitl               | 自動問題組、欄位校驗與自定義卡片配置                                    | `ConsoleHitlOptions \| false`                    | 自動啟用內建卡片 |
+| referenceSelection | 內建 `@` 選擇器的受控引用狀態，可用 `replaceRef` 在空閒時由宿主替換引用 | `ConsoleChatOptions['referenceSelection']`       | 可選             |
+| memoryCommit       | 隱藏「提交會話」操作                                                    | `false`                                          | 服務支援時啟用   |
 
-介面卡每個方法都收到 `AbortSignal`，應響應取消並在失敗時丟擲錯誤。後端自動儲存訊息時省略 `saveMessage`。
+介面卡每個方法都收到 `AbortSignal`，應響應取消並在失敗時丟擲錯誤。後端自動儲存訊息時省略 `saveMessage`。 `loadMessages` 應為已知中斷的助手回覆返回 `interrupted: true`，開啟歷史會話時這些回覆不會顯示「提交會話」。
+
+### ConsoleBotActivation
+
+| 引數         | 說明                                                    | 型別                                                                          | 預設值   |
+| ------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------- | -------- |
+| initialState | 使用宿主已解析的初始狀態，跳過首次檢查                  | `{ status: 'ready' \| 'not-started' } \| { status: 'error'; error: unknown }` | 可選     |
+| isEligible   | 確認當前作用域是否允許使用 Bot，返回 false 時隱藏標籤頁 | `(signal: AbortSignal) => Promise<boolean>`                                   | 必填     |
+| getStatus    | 資格確認後讀取執行狀態                                  | `(signal: AbortSignal) => Promise<'not-started' \| 'ready'>`                  | 必填     |
+| start        | 使用者點選啟用後啟動 Bot，Console 隨後再次確認狀態      | `(signal: AbortSignal) => Promise<void>`                                      | 必填     |
+| media        | 啟用卡片中的介紹媒體                                    | `ReactNode`                                                                   | 內建插畫 |
 
 ### ConsoleHitlOptions
 
@@ -159,15 +220,15 @@ Console 在 `request_user_input` 工具成功且當前輪正常結束後展示�
 
 #### 內建卡片
 
-| card_type           | 預設表單欄位              | 協議中的 value                                                 |
-| ------------------- | ------------------------- | -------------------------------------------------------------- |
-| compile_name        | `value`，文本             | `string`                                                       |
-| compile_output_type | `value`，單選             | 選項的 `value`                                                 |
-| compile_source      | `value`，每行一個目錄 URI | 去空行、去重後的 `string[]`                                    |
-| compile_target      | `value`，目錄 URI         | `string`                                                       |
-| compile_skill       | `value`，候選或自定義 URI | `string`                                                       |
-| compile_instruction | `value`，多行文本         | `string`                                                       |
-| compile_schedule    | `mode`、`time`、`weekday` | `{ frequency: 'disabled' }` 或包含頻率、時間、星期和時區的物件 |
+| card_type           | 預設表單欄位                  | 協議中的 value                                                 |
+| ------------------- | ----------------------------- | -------------------------------------------------------------- |
+| compile_name        | `value`，文本                 | `string`                                                       |
+| compile_output_type | `value`，單選                 | 選項的 `value`                                                 |
+| compile_source      | `value`，多選目錄             | 去空值、去重後的 `string[]`                                    |
+| compile_target      | `value`，推薦或自定義目錄     | `string`                                                       |
+| compile_skill       | `value`，推薦或自定義 Skill   | `string`                                                       |
+| compile_instruction | `value`，可選多行文本，可留空 | `string`                                                       |
+| compile_schedule    | `mode`、`time`、`weekday`     | `{ frequency: 'disabled' }` 或包含頻率、時間、星期和時區的物件 |
 
 工具結果支援直接 JSON、MCP `structuredContent` 或文本 `content`，`schema_version` 必須為 `'1.0'`。優先讀取 `structuredContent`；一組中任一問題無效或未註冊時，整組保留為工具結果。原生服務接受裸工具名及 `mcp_openviking-mcp_request_user_input`；自定義介面卡應保留工具呼叫的唯一 `id`，將服務名設為 `openviking-mcp`、工具名設為 `request_user_input`。
 
@@ -184,15 +245,17 @@ Console 在 `request_user_input` 工具成功且當前輪正常結束後展示�
 
 ### VikingBotChatService
 
-| 引數             | 說明                                                                     | 型別                                                                                    | 預設值 |
-| ---------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ |
-| stream           | 流式請求；必須發出 complete 或 interrupted 終止事件                      | `(input: VikingBotChatInput, signal: AbortSignal) => AsyncIterable<VikingBotChatEvent>` | 必填   |
-| createSession    | 新建會話                                                                 | `(signal: AbortSignal) => Promise<VikingBotSession>`                                    | 必填   |
-| loadMessages     | 讀取完整會話歷史                                                         | `(id: string, signal: AbortSignal) => Promise<readonly VikingBotMessage[]>`             | 必填   |
-| attachmentUpload | 啟用新增資源按鈕；傳送時將 `upload` 返回的標識傳給 `attachment.uploadId` | `VikingBotAttachmentUpload`                                                             | 可選   |
-| saveMessage      | 逐條儲存；後端自動持久化時省略，避免重複                                 | `(id: string, message: VikingBotMessage, signal: AbortSignal) => Promise<void>`         | 可選   |
-| interrupt        | 實際中斷後端生成；與本地斷開連線不同                                     | `(id: string, signal: AbortSignal) => Promise<{ interrupted: boolean }>`                | 可選   |
-| steer            | 向當前流追加輸入；accepted 僅表示接受，不表示回覆完成                    | `(input: VikingBotChatInput, signal: AbortSignal) => Promise<{ accepted: boolean }>`    | 可選   |
+| 引數                 | 說明                                                                     | 型別                                                                                                                             | 預設值 |
+| -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| stream               | 流式請求；必須發出 complete 或 interrupted 終止事件                      | `(input: VikingBotChatInput, signal: AbortSignal) => AsyncIterable<VikingBotChatEvent>`                                          | 必填   |
+| createSession        | 新建會話                                                                 | `(signal: AbortSignal) => Promise<VikingBotSession>`                                                                             | 必填   |
+| loadMessages         | 讀取完整會話歷史                                                         | `(id: string, signal: AbortSignal) => Promise<readonly VikingBotMessage[]>`                                                      | 必填   |
+| attachmentUpload     | 啟用新增資源按鈕；傳送時將 `upload` 返回的標識傳給 `attachment.uploadId` | `VikingBotAttachmentUpload`                                                                                                      | 可選   |
+| saveMessage          | 逐條儲存；後端自動持久化時省略，避免重複                                 | `(id: string, message: VikingBotMessage, signal: AbortSignal) => Promise<void>`                                                  | 可選   |
+| getSessionCommitTask | 查詢覆蓋最近已載入訊息的會話提交任務                                     | `(id: string, signal: AbortSignal) => Promise<TaskReference \| undefined>`                                                       | 可選   |
+| commitSession        | 提交當前會話以提取記憶                                                   | `(id: string, signal: AbortSignal) => Promise<{ status: 'accepted'; taskId: string } \| { status: 'skipped'; reason?: string }>` | 可選   |
+| interrupt            | 實際中斷後端生成；與本地斷開連線不同                                     | `(id: string, signal: AbortSignal) => Promise<{ interrupted: boolean }>`                                                         | 可選   |
+| steer                | 向當前流追加輸入；accepted 僅表示接受，不表示回覆完成                    | `(input: VikingBotChatInput, signal: AbortSignal) => Promise<{ accepted: boolean }>`                                             | 可選   |
 
 `VikingBotAttachmentUpload` 接收可選的檔案選擇器過濾器 `accept`，以及必填的 `upload(file, signal)`，它返回已上傳檔案的標識。檔案選擇器不會過濾拖入的檔案，介面卡仍需驗證檔案。附件上傳完成後才可傳送。移除附件會取消該檔案的上傳；切換帳號、請求身份或會話，或取消請求訊號時，會取消待完成的上傳並清空託管附件。通過 `conversation.sessions.currentId` 回寫新建會話 ID 時，會保留該會話的正常上傳。如果宿主提供草稿附件或檔案選擇回撥，則使用宿主的配置。
 
@@ -240,9 +303,9 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 | error      | 服務端返回的任務錯誤                       | `string`                                                                           | -      |
 | queryError | 排程器生成的查詢錯誤，保留最後一次任務狀態 | `{ code: 'request' \| 'invalid-response'; message?: string }`                      | -      |
 
-排程器每 3 秒查詢一次活躍任務，同一作用域和任務 ID 只保留一個查詢，最多併發 4 個請求。查詢失敗指數退避至最多 30 秒，到達終態後停止。資源匯入進度顯示在結果記錄中，其他任務還會顯示載入通知。任務到達終態後顯示結果圖示，查詢異常時顯示警告並保留任務狀態。
+排程器每 3 秒查詢一次活躍任務，同一作用域和任務 ID 只保留一個查詢，最多併發 4 個請求。查詢失敗指數退避至最多 30 秒，到達終態後停止。終端追蹤 `add-resource`、`add-skill`、`add-memory`、`session commit` 和 `compile` 返回的任務 ID。僅由終端引用的任務在對應命令記錄中展示進度、完成和錯誤，不彈出獨立通知。查詢異常時保留任務最後的狀態，並在記錄中展示查詢錯誤。同時被 VikingBot 引用的任務保留通知。
 
-任務快照優先使用完成結果裡的資源 URI，並以提交任務時的 URI 兜底。自定義任務服務可以在 `uri` 中直接提供最終資源地址。終端任務完成且有資源 URI 時，「檢視結果」會通過 `command.onOpenUri` 或 `Console.onOpenUri` 開啟資源。通知會保留到點選按鈕或關閉。
+任務快照優先使用完成結果裡的資源 URI，並以提交任務時的 URI 兜底。自定義任務服務可以在 `uri` 中直接提供最終資源地址。任務完成並返回資源 URI 後，命令記錄保留原始輸出，並在該 URI 尚未顯示時追加最終資源連結。資源連結優先通過 `command.onOpenUri` 開啟，其次使用 `Console.onOpenUri`；兩者均未配置時，使用原生連結導航。
 
 切換模式或聊天會話、清空終端記錄、關閉通知均不取消後臺任務。關閉通知後仍更新關聯記錄；切換身份或解除安裝 Console 會中止查詢並忽略舊響應。通知與任務狀態不跨頁面重新整理持久化。
 
@@ -256,12 +319,13 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 
 ### ConsoleCommandOptions
 
-| 引數                 | 說明                                                                         | 型別                                                                      | 預設值                               |
-| -------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
-| `allowAdminCommands` | 在命令列表顯示並啟用 `ov backup` 和 `ov restore`。服務端仍會校驗許可權。     | `boolean`                                                                 | `false`                              |
-| `files`              | 選擇本地檔案和儲存下載內容。                                                 | [ConsoleCommandFiles](#consolecommandfiles)                               | 使用瀏覽器選擇檔案和下載             |
-| `choosePackFile`     | 為 `ov import` 選擇本地歸檔包，回撥接收目標 URI。返回 `undefined` 取消匯入。 | `(targetUri: string, signal?: AbortSignal) => Promise<File \| undefined>` | 通過 `files.pickFile` 篩選 `.ovpack` |
-| `onPackImported`     | `ov import` 成功並返回 URI 後，以該 URI 呼叫。                               | `(uri: string) => void`                                                   | -                                    |
+| 引數                        | 說明                                                                                                       | 型別                                                                      | 預設值                               |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
+| `allowAdminCommands`        | 在命令列表顯示並啟用 `ov backup` 和 `ov restore`。服務端仍會校驗許可權。                                   | `boolean`                                                                 | `false`                              |
+| `files`                     | 選擇本地檔案和儲存下載內容。                                                                               | [ConsoleCommandFiles](#consolecommandfiles)                               | 使用瀏覽器選擇檔案和下載             |
+| `onOpenLocalResourceImport` | `ov add-resource` 未傳選項且未指定遠端來源時開啟宿主的本地上傳頁。使用者在該頁選擇檔案或資料夾並配置匯入。 | `() => void`                                                              | -                                    |
+| `choosePackFile`            | 為 `ov import` 選擇本地歸檔包，回撥接收目標 URI。返回 `undefined` 取消匯入。                               | `(targetUri: string, signal?: AbortSignal) => Promise<File \| undefined>` | 通過 `files.pickFile` 篩選 `.ovpack` |
+| `onPackImported`            | `ov import` 成功並返回 URI 後，以該 URI 呼叫。                                                             | `(uri: string) => void`                                                   | -                                    |
 
 ### ConsoleCommandFiles
 
@@ -274,33 +338,36 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 
 ### ConsoleSlots
 
-| 引數                | 說明                                                     | 型別                                              | 預設值 |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------- | ------ |
-| errorFallback       | 替換區塊及內部失敗區域的渲染錯誤展示                     | `ReactNode \| ((reset: () => void) => ReactNode)` | -      |
-| toolbar             | 工具欄裡模式切換和操作按鈕之間的內容，兩種模式下都顯示   | `ReactNode`                                       | -      |
-| conversationContext | 對話模式下輸入區上方的內容，優先於 `conversation.footer` | `ReactNode`                                       | -      |
-| commandHelp         | 命令模式下命令控制台上方的內容                           | `ReactNode`                                       | -      |
+| 引數                | 說明                                                          | 型別                                              | 預設值   |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------------------- | -------- |
+| errorFallback       | 替換區塊及內部失敗區域的渲染錯誤展示                          | `ReactNode \| ((reset: () => void) => ReactNode)` | -        |
+| toolbar             | 工具欄裡模式切換和操作按鈕之間的內容，兩種模式下都顯示        | `ReactNode`                                       | -        |
+| conversationContext | 對話模式下輸入區上方的內容，優先於 `conversation.footer`      | `ReactNode`                                       | -        |
+| commandHelp         | 命令模式下命令控制台上方的內容                                | `ReactNode`                                       | -        |
+| activationIntro     | 替換啟用頁的媒體、標題和描述，保留操作和狀態；`null` 隱藏介紹 | `ReactNode`                                       | 內建介紹 |
 
 ### ConsoleLabels
 
-| 引數               | 說明                                                                               | 型別                   | 預設值                    |
-| ------------------ | ---------------------------------------------------------------------------------- | ---------------------- | ------------------------- |
-| conversation       | 對話模式按鈕的文案                                                                 | `string`               | `'VikingBot'`             |
-| command            | 命令模式按鈕的文案                                                                 | `string`               | `'終端'`                  |
-| mode               | 模式切換區域的無障礙名稱                                                           | `string`               | `'面板模式'`              |
-| description        | 對話模式歡迎區的說明，也是 `vikingBot.welcomeDescription` 的預設值                 | `string`               | 內建說明                  |
-| clear              | 命令模式下「新建會話」按鈕的文案                                                   | `string`               | `'新建會話'`              |
-| history            | 命令模式下「命令歷史」按鈕的文案                                                   | `string`               | `'命令歷史'`              |
-| emptyHistory       | 命令歷史為空時的提示                                                               | `string`               | `'暫無命令歷史'`          |
-| commandTitle       | 命令模式空態的標題，等同於 `commandConsole.emptyTitle`                             | `string`               | CommandConsole 的預設文案 |
-| commandDescription | 命令模式空態的說明，等同於 `commandConsole.emptyDescription`                       | `string`               | CommandConsole 的預設文案 |
-| quickStart         | 快捷入口上方的引導文案，等同於 `commandConsole.quickStart`                         | `string`               | CommandConsole 的預設文案 |
-| commandConsole     | CommandConsole 的文案，優先於 `commandTitle`、`commandDescription` 和 `quickStart` | `CommandConsoleLabels` | -                         |
-| vikingBot          | VikingBot 的文案，優先於 `description`，會被 `conversation.labels` 覆蓋            | `VikingBotLabels`      | -                         |
+| 引數                  | 說明                                                                               | 型別                   | 預設值                    |
+| --------------------- | ---------------------------------------------------------------------------------- | ---------------------- | ------------------------- |
+| conversation          | 對話模式按鈕的文案                                                                 | `string`               | `'VikingBot'`             |
+| command               | 命令模式按鈕的文案                                                                 | `string`               | `'終端'`                  |
+| mode                  | 模式切換區域的無障礙名稱                                                           | `string`               | `'面板模式'`              |
+| description           | 對話模式歡迎區的說明，也是 `vikingBot.welcomeDescription` 的預設值                 | `string`               | 內建說明                  |
+| activationTitle       | 啟用頁介紹標題，空字串隱藏                                                         | `string`               | 內建本地化標題            |
+| activationDescription | 啟用頁介紹描述，空字串隱藏                                                         | `string`               | 內建本地化描述            |
+| clear                 | 命令模式下「新建會話」按鈕的文案                                                   | `string`               | `'新建會話'`              |
+| history               | 命令模式下「命令歷史」按鈕的文案                                                   | `string`               | `'命令歷史'`              |
+| emptyHistory          | 命令歷史為空時的提示                                                               | `string`               | `'暫無命令歷史'`          |
+| commandTitle          | 命令模式空態的標題，等同於 `commandConsole.emptyTitle`                             | `string`               | CommandConsole 的預設文案 |
+| commandDescription    | 命令模式空態的說明，等同於 `commandConsole.emptyDescription`                       | `string`               | CommandConsole 的預設文案 |
+| quickStart            | 快捷入口上方的引導文案，等同於 `commandConsole.quickStart`                         | `string`               | CommandConsole 的預設文案 |
+| commandConsole        | CommandConsole 的文案，優先於 `commandTitle`、`commandDescription` 和 `quickStart` | `CommandConsoleLabels` | -                         |
+| vikingBot             | VikingBot 的文案，優先於 `description`，會被 `conversation.labels` 覆蓋            | `VikingBotLabels`      | -                         |
 
 ## 命令
 
-命令模式只執行內建的原生 API 命令。輸入 `/` 或執行 `ov help`，可以按「核心流程」「檔案系統」「搜尋與上下文」「檔案傳輸」「會話」「配置與狀態」檢視命令和各自的選項。
+命令模式只執行內建的原生 API 命令。輸入 `/` 或執行 `ov help`，可以按「核心流程」「檔案系統」「搜尋與上下文」「檔案傳輸」「會話」「配置與狀態」檢視簡短的命令名稱和摘要。在 `/` 候選列表中高亮命令後，引數指南會展示完整語法和選項。
 
 ### 寫法
 
@@ -334,7 +401,7 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 - `session` 支援建立、列表、詳情、上下文、歸檔、訊息寫入、提交和配置。批次訊息用 `ov session add-messages <session-id> '<messages-json>'`。
 - `ov get <uri> <local-path>` 和 `ov export <uri> <output.ovpack>` 由瀏覽器下載。輸出路徑的最後一段用作檔名。`export` 和 `backup` 支援 `--include-vectors`。
 - `ov import <file.ovpack> <target-uri>` 通過本地檔案選擇器上傳 OVPack，可傳 `--on-conflict` 和 `--vector-mode`。宿主可以通過 `commandOptions.choosePackFile` 複用檔案管理器的匯入彈窗。彈窗只接受有效的 `.ovpack` 檔案。
-- `add-resource` 的本地來源以及 `write --from-file` 通過瀏覽器選擇檔案。瀏覽器的本機配置和登入由宿主處理。管理員命令 `backup`、`restore` 預設關閉，由有授權的宿主通過 `commandOptions.allowAdminCommands` 啟用。
+- `add-resource` 的本地來源預設通過瀏覽器選擇檔案。配置 `onOpenLocalResourceImport` 後，使用者可在宿主的本地上傳頁選擇來源並配置匯入。要對已上傳檔案應用命令選項，可使用 `--temp-file-id`。`write --from-file` 通過瀏覽器選擇檔案。瀏覽器的本機配置和登入由宿主處理。管理員命令 `backup`、`restore` 預設關閉，由有授權的宿主通過 `commandOptions.allowAdminCommands` 啟用。
 
 ## 注意
 
@@ -347,7 +414,7 @@ Console 按介面卡是否提供方法決定停止與追問能力。`steer` 返�
 - 命令模式的「新建會話」會中止進行中的請求並忽略遲到的響應，同時清空命令記錄、錯誤和輸入框；服務端已接收的操作不會撤銷，服務端資料也不會刪除。`clear` 命令只清空本地記錄。
 - 命令歷史列出當前面板的記錄，最新的在前，時間為提交時的本地時間（`YYYY-MM-DD HH:mm`）；點選一條會把命令填回輸入框，不會執行。
 - 命令記錄和草稿只儲存在記憶體中。`scopeKey`、`requestOptions` 或 Provider 的配置變化時，Console 清空記錄和草稿並中止進行中的請求，解除安裝時同樣中止。
-- 設定 `commandHistoryKey` 後，Console 在瀏覽器的會話儲存中在瀏覽器儲存容量內儲存最近最多 50 條有效只讀命令及其提交時間。寫入命令和格式錯誤的命令可在當前頁面回填。「新建會話」清除當前身份範圍的歷史。
+- 設定 `commandHistoryKey` 後，Console 將已提交的命令文本及時間儲存在瀏覽器本地儲存中。重新整理後，歷史選單和方向鍵可回查同一份記錄。瀏覽器儲存空間不足時，新記錄會按需替換當前作用域最早的記錄。若新記錄仍無法寫入，則保留已有歷史並跳過儲存。「新建會話」清除當前作用域的歷史。
 - 身份欄位使用函式時，保持函式引用穩定，並在身份變化時更新 `scopeKey`，或用身份作為元件的 `key`。
 - Console 撐滿父容器的寬高，父容器需要有明確的高度，或是可伸展的 flex 佈局。
 - 切換 `locale` 會更新已有記錄裡的命令幫助、引數錯誤和取消提示，保留記錄和草稿；服務端返回的內容保持原樣。

@@ -47,6 +47,9 @@ const workspace = {
       selectUserDescription: '請先選擇具備有效資料憑據的 User，再進入工作臺。',
       unavailable: '無法訪問管理模式',
       unavailableDescription: '當前連線未提供管理許可權，請檢查連線憑據。',
+      devUnavailable: 'dev 模式不支援管理後臺',
+      devUnavailableDescription:
+        '當前服務使用 dev 認證模式。如需管理 Account、User 和服務設定，請在 ov.conf 中啟用 api_key 模式。',
       checking: '正在校驗許可權…',
       makeDefault: '設為預設入口',
       isDefault: '預設入口',

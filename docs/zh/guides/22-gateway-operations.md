@@ -425,7 +425,7 @@ appendfsync everysec
 
 在閘道器配置中設定 `request_log_sink: "stdout"`，或設定 `OPENVIKING_GATEWAY_REQUEST_LOG_SINK=stdout`，重啟後新記錄只寫到 stdout。每個模型請求（包括失敗的請求）產生一行 JSON，即使 stdout 接到管道也會立即重新整理。每條記錄包含 `time`（寫入時的 Unix 秒數）、`account` 和 `user_id`（金鑰確認之前就失敗的請求為 `null`），以及位於頂層的現有請求指標，如 `kind`、`status`、`input_tokens` 和 `cached_tokens`。不包含憑證、提示詞或回覆。採集系統負責這些記錄的保留期限和訪問許可權；`log_retention_days` 只作用於儲存中的日誌。
 
-設定 `request_log_sink: "file"` 和 `request_log_path`，就把同樣的行寫到檔案。寫檔案由後臺執行緒完成，磁碟慢也不會拖住請求；它的佇列（10,000 行）滿了時，新行被丟棄，並計入狀態行的 `records_dropped`。檔案達到 `request_log_max_bytes`（預設 256 MiB）時輪轉，保留四個舊檔案（`requests.jsonl.1` … `.4`）。這種輸出需要單個 worker 程序：獨立閘道器設 `workers: 1`，嵌入式閘道器需要服務端只有一個 worker；需要擴容時增加副本。在 Kubernetes 上，把檔案放在日誌採集器能讀到的捲上，例如用 chart 的 `extraVolumes` 和 `extraVolumeMounts`：
+設定 `request_log_sink: "file"` 和 `request_log_path`，就把同樣的行寫到檔案。寫檔案由後臺執行緒完成，磁碟慢也不會拖住請求；它的佇列（10,000 行）滿了時，新行被丟棄，並計入狀態行的 `records_dropped`。與服務端的用量日誌相同，檔案每隔 `request_log_rotation_interval_hours`（預設 1）小時輪轉一次，保留 `request_log_backup_count` 箇舊檔案（預設 168，即一週的每小時檔案）；舊檔案以開始時的 UTC 小時命名，如 `requests.jsonl.2026-01-31_13`。舊檔案按個數而不是大小保留，佔用的磁碟隨流量增長；要限制佔用，調低 `request_log_backup_count`。檔案旁邊有一個空的隱藏檔案 `.<檔名>.lock`，如 `.requests.jsonl.lock`，日誌採集的匹配規則應排除它。從按大小輪轉的版本升級後，刪除舊的 `requests.jsonl.1` … `.4`：它們不會被自動刪除。這種輸出需要單個 worker 程序：獨立閘道器設 `workers: 1`，嵌入式閘道器需要服務端只有一個 worker；需要擴容時增加副本。在 Kubernetes 上，把檔案放在日誌採集器能讀到的捲上，例如用 chart 的 `extraVolumes` 和 `extraVolumeMounts`：
 
 ```yaml
 config:
@@ -441,13 +441,15 @@ extraVolumeMounts:
     mountPath: /var/log/openviking-gateway
 ```
 
-`$HOSTNAME` 從環境變數解析為 Pod 名，每個 Pod 寫自己的檔案：副本之間絕不能共用一個日誌檔案。
+`$HOSTNAME` 從環境變數解析為 Pod 名，每個 Pod 寫自己的檔案，輪轉後為 `<Pod 名>.jsonl.<YYYY-MM-DD_HH>`：副本之間絕不能共用一個日誌檔案。閘道器只清理本 Pod 的舊檔案，已不存在的 Pod 留下的檔案會一直留在節點上，需要由節點或日誌採集系統清理。
 
-獨立閘道器設定 `log_path` 後，應用日誌（警告、錯誤和 traceback）不再以文本寫到 stderr，而是以 JSON 行寫入這個輪轉檔案，欄位為 `time`、`level`、`logger`、`message`、`request_id`（處理請求時寫下的行才有）和 `exc`（有 traceback 時）。
+獨立閘道器的應用日誌在 stderr 或 `log_path` 指定的輪轉檔案中使用統一 UTC 文本格式。每條記錄包含 `ts`、`level`、`logger`、`pid`、`request_id`、`trace_id` 和帶引號的訊息。非同步寫入前捕獲上下文，缺失的關聯 ID 使用 `-`。Uvicorn 同樣使用此格式。請求和後臺儲存記錄繼續使用前述獨立 JSON 格式。
 
 當 `management_api: false` 關閉 Studio 和管理介面時，配置 stdout sink 並採集程序或容器日誌進行觀測。管理面開啟但選擇 stdout sink 時也採用同樣流程：請求日誌頁和概覽中的請求統計不會收到新記錄。之前已儲存的記錄仍可見，直到過期。
 
-從請求日誌的頂層欄位統計 reason 和首調快取結果。對儲存失敗（`capture_status: "failed"`，按 `capture_reason` 統計）、`openviking_http_429`、Redis 記憶體/驅逐和 HTTP 錯誤率設定告警。閘道器自身的錯誤也會寫入記錄：按 `error_reason` 和 `error_origin` 統計（見[日誌記錄](../api/25-gateway.md#log-records)）。store 輸出不儲存金鑰確認之前就被拒絕的請求，使用它時請從代理訪問日誌統計這些 401/402/403；`internal_error` 的 traceback 看閘道器 stderr。確認平臺實際採集 stdout；只掛一個目錄不會把它轉成檔案日誌。
+從請求日誌的頂層欄位統計 reason 和首調快取結果。對儲存失敗（`capture_status: "failed"`，按 `capture_reason` 統計）、`openviking_http_429`、Redis 記憶體/驅逐和 HTTP 錯誤率設定告警。閘道器自身的錯誤也會寫入記錄：按 `error_reason` 和 `error_origin` 統計（見[日誌記錄](../api/25-gateway.md#log-records)）。store 輸出不儲存金鑰確認之前就被拒絕的請求，使用它時請從代理訪問日誌統計這些 401/402/403；在閘道器應用日誌中檢視 `internal_error` 的安全異常型別摘要。確認平臺實際採集 stdout；只掛一個目錄不會把它轉成檔案日誌。
+
+對話寫入失敗以 ERROR 輸出，訊息為 `gateway finished turn save failed` 或 `gateway history save before compaction failed`：模型回覆仍可能成功，但歷史可能丟失。commit 失敗以 INFO 輸出，訊息為 `gateway session commit failed`，可檢視 `error_code` 區分 `openviking_http_429` 和 `openviking_unavailable` 等原因。這些後臺 commit 失敗不會進入請求記錄。壓縮前歷史儲存失敗的日誌也包含 `error_code`。
 
 ### 狀態行 {#status-line}
 

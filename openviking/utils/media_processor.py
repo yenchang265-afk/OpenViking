@@ -4,11 +4,13 @@
 
 import time
 from collections.abc import Awaitable
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlparse
 
 from openviking.metrics.datasources.resource import ResourceIngestionEventDataSource
+from openviking.observability.reporting.token_sources import bind_dashboard_token_source_type
 from openviking.parse.accessors.base import LocalResource, SourceType
 from openviking.parse.accessors.mime_types import IANA_MEDIA_TYPE_TO_EXTENSION
 from openviking.parse.backend import ParserBackend, normalize_parser_backend
@@ -273,7 +275,12 @@ class UnifiedResourceProcessor:
             started_at = time.perf_counter()
             status = "ok"
             try:
-                with get_current_telemetry().measure(f"resource.{stage}"):
+                with (
+                    get_current_telemetry().measure(f"resource.{stage}"),
+                    bind_dashboard_token_source_type("document")
+                    if stage == "parse_artifact"
+                    else nullcontext(),
+                ):
                     return await operation
             except Exception:
                 status = "error"

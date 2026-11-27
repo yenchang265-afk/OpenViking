@@ -409,6 +409,7 @@ ov find "紅色海報風格" --image ./poster.png --uri "viking://resources/imag
 | session | Session | 否 | None | 用於上下文感知搜尋的會話（SDK）|
 | session_id | str | 否 | None | 用於上下文感知搜尋的會話 ID（HTTP）|
 | events_time_decay_protection | str \| null | 否 | null | 不傳或傳 `null` 關閉衰減；傳 `"0"` 立即衰減；傳 `"7d"` 等時長則在保護期內保持原分，之後衰減。支援非負整數 `Xm`/`Xh`/`Xd` |
+| args | Dict | 否 | null | `search_type="keywords"` 且 `mode="list"` 時的進階引擎引數。支援 `bm25_k1`（float，> 0）、`bm25_b`（float，`[0, 1]`）、`post_process_input_limit`（int，有效 `limit`/`node_limit` 到 `2000000`）。未知 key 會被拒絕 |
 | context_type | str \| List[str] | 否 | None | 限定一個或多個 `ContextType` 取值：`memory`、`resource` 或 `skill` |
 | tags | List[str] | 否 | None | 顯式檢索標籤，必須是嚴格的 `k=v` 格式。多個 tags 之間是 AND 關係，結果必須同時包含所有請求的標籤 |
 | limit | int | 否 | 10 | 每條規劃查詢的結果上限；list 模式直接彙總各查詢結果，總數可能超過此值 |
@@ -423,7 +424,7 @@ ov find "紅色海報風格" --image ./poster.png --uri "viking://resources/imag
 | read_content | bool | 否 | False | 按可見內容 read 語義讀取每個最終命中的 URI，並以內聯 `content` 返回。單個讀取失敗時保留原命中，不附加內容；僅支援 `mode="list"`。 |
 | telemetry | bool \| object | 否 | False | 在響應中附帶遙測資料 |
 
-`search()` 使用和 `find()` 相同的目標解析和顯式標籤過濾規則，包括由 `X-OpenViking-Actor-Peer` 或 SDK `actor_peer_id` 選擇的 peer 集合過濾。提供 `image_url` 時，`search()` 會直接執行圖片檢索並跳過會話 query planning。`keywords` 要求非空文本 query，不支援圖片，且僅 Elasticsearch 向量後端支援；其他後端會返回錯誤。
+`search()` 使用和 `find()` 相同的目標解析和顯式標籤過濾規則，包括由 `X-OpenViking-Actor-Peer` 或 SDK `actor_peer_id` 選擇的 peer 集合過濾。提供 `image_url` 時，`search()` 會直接執行圖片檢索並跳過會話 query planning。`keywords` 要求非空文本 query，不支援圖片，且僅 Elasticsearch 向量後端支援；其他後端會返回錯誤。`args` 僅在 `search_type="keywords"` 且 `mode="list"` 時接受，用同一個 map 承載引擎調參，避免為每個引數增加頂層欄位。Elasticsearch 後端的 BM25 相似度按索引固定，因此會拒絕 `args.bm25_k1` 與 `args.bm25_b`。
 
 事件時間衰減作用於語義 `find()`、`search(mode="list")` 和 `search(mode="context")` 中帶 `memory_type=events` 標籤的結果。記憶提取流程將該標籤寫入 user / peer 事件的 L2 記錄；檢索按標籤判斷，不從 URI 或層級推斷事件型別。無事件標籤的結果、無 query 的純過濾 `find()`、`recall`、`grep` 和 `glob` 不受影響。事件召回階段由向量引擎將原向量分乘以 `time_score`；響應中的 `score` 是最終檢索分數，開啟模型 rerank 時使用模型分。context 模式預設按向量分組裝候選，開啟 `retrieval.apply_rerank_to_context` 後按模型分組裝。保護期內 `time_score` 為 1，原分不變；時間距離與 VikingDB 指數衰減運算元一致，取時間戳與請求時間的絕對差。list 響應中的 event 結果額外返回 `origin_score` 和 `time_score`，CLI 分別展示為 semantic、time 和 final 分。時間取自已有索引的 `updated_at` 欄位，無需重新索引或改寫時間戳；遇到缺失或非法時間時保持原分。衰減曲線由服務端內部維護，呼叫方只需按請求傳入保護期，無需修改 `ov.conf` 或 `ovcli.conf`。
 
@@ -478,7 +479,12 @@ curl -X POST http://localhost:1933/api/v1/search/search \
         "query": "hnsw",
         "search_type": "keywords",
         "target_uri": "viking://resources/docs",
-        "limit": 10
+        "limit": 10,
+        "args": {
+            "bm25_k1": 1.2,
+            "bm25_b": 0.75,
+            "post_process_input_limit": 100
+        }
     }'
 ```
 
@@ -600,6 +606,10 @@ ov search "how to implement OAuth 2.0 authorization code flow"
 
 # BM25 關鍵詞檢索
 ov search "SearchByKeywords" --search-type keywords --uri "viking://resources/docs"
+
+# BM25 關鍵詞檢索並調優引擎引數
+ov search "SearchByKeywords" --search-type keywords --uri "viking://resources/docs" \
+  --args '{"bm25_k1":1.2,"bm25_b":0.75,"post_process_input_limit":100}'
 
 # 限定層級範圍（僅 L0）
 ov search "best practices" --level 0
@@ -860,8 +870,8 @@ curl -X POST http://localhost:1933/api/v1/search/search \
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| uri | str | 是 | - | 要搜索的 Viking URI |
-| pattern | str | 是 | - | 搜尋模式（正規表示式）|
+| uri | str | 是 | - | 要搜尋的 Viking URI |
+| pattern | str | 是 | - | 搜尋模式，使用 Rust `regex` 語法逐行匹配 |
 | case_insensitive | bool | 否 | False | 忽略大小寫 |
 | node_limit | int | 否 | 256 | 最大返回節點數。省略時預設使用 256；如需更多結果，請顯式傳入更大的整數 |
 | exclude_uri | str | 否 | None | 要排除在搜尋之外的 URI 字首 |
@@ -871,9 +881,15 @@ curl -X POST http://localhost:1933/api/v1/search/search \
 | before_context | int | 否 | 0 | 每條匹配行之前返回的上下文行數；僅 HTTP API 和 CLI 支援 |
 | after_context | int | 否 | 0 | 每條匹配行之後返回的上下文行數；僅 HTTP API 和 CLI 支援 |
 
+環視、反向引用等超出支援範圍的寫法屬於無效正則。
+
 `tags` 使用 AND 語義，並在內容匹配與 `node_limit` 截斷之前過濾候選檔案。例如 `["team=search", "env=prod"]` 只匹配同時具有兩個標籤的檔案。
 
 使用 `tags` 過濾或傳 `include_tags=true` 時，`matches` 中的命中會返回檔案的 `tags`；沒有檢索標籤的檔案返回空陣列 `[]`。普通 grep 會省略 `tags`，避免不必要的 VectorDB 讀取。
+
+原生檔案系統 grep 在 ACL 許可權過濾前應用 `node_limit`，並返回布林欄位 `limit_reached`。該欄位為 true 時，即使 `matches` 少於 `node_limit` 條或為空，結果仍可能不完整。該標記不保證還存在更多可見匹配；可提高 `node_limit` 或縮小範圍、調整模式後重試。返回的匹配及其數量仍經過許可權過濾。其他 grep 實現及舊版服務可能省略該欄位；欄位缺失不代表結果完整。
+
+grep 使用 BM25 召回檔案再執行正則匹配時，候選返回數量達到本次請求的上限會返回 `candidate_limit_reached: true`。即使 `matches` 為空，仍可能有檔案未進入正則掃描。可縮小 URI 範圍或直接讀取有希望的檔案核驗證據。
 
 #### 3. 使用示例
 

@@ -63,7 +63,7 @@ export function StudioManagementNavigation({
 }) {
   const { t } = useTranslation(['appShell', 'settings', 'studio'])
   const serviceItems = [
-    ...(isRoot && !gatewayOnly
+    ...(isRoot && !gatewayOnly && !developmentMode
       ? ([
           {
             to: '/admin/configuration/server',
@@ -72,7 +72,7 @@ export function StudioManagementNavigation({
           },
         ] as const)
       : []),
-    ...(isRoot
+    ...(isRoot && !developmentMode
       ? ([
           {
             to: '/admin/vikingbot',

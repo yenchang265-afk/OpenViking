@@ -28,7 +28,7 @@ description: 查詢 OpenViking 閘道器的配置欄位、環境變數、上下�
 | `host` | 獨立 | `127.0.0.1` | | 監聽地址 |
 | `port` | 獨立 | `1935` | 1–65,535 | 監聽埠 |
 | `workers` | 獨立 | `1` | 1–64 | worker 程序數 |
-| `log_path` | 獨立 | 空 | 檔案路徑 | 應用日誌不再以文本寫到 stderr，而是以 JSON 行寫入這個輪轉檔案（256 MiB，保留四個舊檔案）；需要 `workers: 1`。見[觀測](../guides/22-gateway-operations.md#monitoring) |
+| `log_path` | 獨立 | 空 | 檔案路徑 | 應用日誌使用統一 UTC 文本格式寫入這個輪轉檔案（256 MiB，保留四個舊檔案），替代 stderr 輸出；需要 `workers: 1`。見[觀測](../guides/22-gateway-operations.md#monitoring) |
 | `keep_alive_seconds` | 獨立 | `75` | 大於 0 | 兩次請求之間保留空閒 HTTP 連線的秒數；應大於負載均衡器的後端空閒超時 |
 | `public_url` | 兩者 | 空 | HTTP(S) URL，不帶 `/gateway` | 客戶端訪問的對外地址，`/gateway` 由閘道器自己加。為空時，嵌入閘道器沿用 Server 的對外地址；兩者都沒有時，接入指南使用請求來源地址，MCP 檔案上傳和下載也不可用（`mcp_file_links` 為 `direct` 時除外）。見[對外地址](../guides/22-gateway-operations.md#public-address) |
 | `mcp_file_links` | 兩者 | `proxy` | `proxy`、`direct` | MCP 上傳和下載工具返回的連結如何交給客戶端。`proxy` 改寫為 `public_url` 加 `/gateway/uploads` 或 `/gateway/downloads`，需要設定 `public_url`。`direct` 原樣透傳 OpenViking 的連結，需要 Server 的 `OPENVIKING_PUBLIC_BASE_URL`（或 `server.public_base_url`）是客戶端能訪問的地址 |
@@ -46,7 +46,8 @@ description: 查詢 OpenViking 閘道器的配置欄位、環境變數、上下�
 | `response_ttl_seconds` | 兩者 | `2592000`（30 天） | 60 及以上 | Responses 響應與上游的對應關係保留多少秒 |
 | `request_log_sink` | 兩者 | `store` | `store`, `stdout`, `file` | 將請求記錄寫入儲存，或以每條一行 JSON 寫到 stdout 並立即重新整理，或由後臺執行緒把同樣的行寫入 `request_log_path`；見[觀測](../guides/22-gateway-operations.md#monitoring)。`file` 輸出需要單個 worker 程序：獨立閘道器設 `workers: 1`，嵌入式閘道器需要服務端只有一個 worker |
 | `request_log_path` | 兩者 | 空 | 檔案路徑 | `file` 輸出寫入的檔案；使用 `file` 時必填 |
-| `request_log_max_bytes` | 兩者 | `268435456`（256 MiB） | 1,048,576 及以上 | `file` 輸出的檔案達到這個大小時輪轉，保留四個舊檔案 |
+| `request_log_rotation_interval_hours` | 兩者 | `1` | 1 及以上 | `file` 輸出每隔這麼多小時輪轉一次檔案，與服務端的[用量日誌](../guides/01-configuration.md#usage-reporter)相同；舊檔案以開始時的 UTC 小時命名，如 `requests.jsonl.2026-01-31_13`。父目錄不存在時自動建立 |
+| `request_log_backup_count` | 兩者 | `168` | 0 及以上 | `file` 輸出保留的舊檔案數；`0` 表示全部保留 |
 | `snapshot_interval_seconds` | 兩者 | `0` | 0 及以上 | 寫一行本程序計數的[狀態行](../guides/22-gateway-operations.md#status-line)的間隔秒數。`0` 表示不寫 |
 | `trusted_host_headers` | 兩者 | `false` | `true`, `false` | 把閘道器前置服務發來的 `X-OpenViking-Resource-Id` 和 `X-OpenViking-Request-Source` 記為 `resource_id` 和 `request_source`；見[宿主整合約定](../guides/22-gateway-operations.md#host-integration-contract)。只有客戶端無法直接訪問閘道器時才打開，見[來自宿主的請求頭](11-security-and-data.md#headers-from-a-host) |
 | `log_retention_days` | 兩者 | `30` | 1 及以上 | 儲存中的請求日誌保留天數；stdout 和檔案的保留期限由日誌採集系統管理 |
@@ -145,7 +146,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | `tenancy` | `key` 要求 `management_api: false`；`openviking_keys` 關閉時此欄位不生效 |
 | `client_rules` | 新增的模式必須是合法的 Python 正規表示式；新增的標籤名以英文字母開頭，只能包含英文字母、數字、`_`、`.`、`:` 和 `-` |
 | 未知欄位 | 校驗失敗 |
-| 已刪除的欄位 | 忽略，啟動時列印警告：`encryption_key_env`、`session_ttl_days`（已由 `session_ttl_seconds` 取代）、`capture_concurrency`、`capture_delivery_records`，以及 `ov.conf` 中[遷移](../guides/22-gateway-operations.md#migration)列出的 v0.5 欄位 |
+| 已刪除的欄位 | 忽略，啟動時列印警告：`encryption_key_env`、`session_ttl_days`（已由 `session_ttl_seconds` 取代）、`capture_concurrency`、`capture_delivery_records`、`request_log_max_bytes`（`file` 輸出改為按時間輪轉），以及 `ov.conf` 中[遷移](../guides/22-gateway-operations.md#migration)列出的 v0.5 欄位 |
 
 ## 客戶端規則 {#client-rules}
 

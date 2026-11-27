@@ -6,11 +6,18 @@
 
 ## 安裝
 
-前置條件：[OpenCode](https://opencode.ai/) 1.15.7+ 或 2.0.15+、Node.js 18+，以及一個可訪問的 OpenViking HTTP server（用 `curl http://localhost:1933/health` 確認）；服務端啟用了鑑權時，還需要一個可用的 OpenViking API key。
+前置條件：[OpenCode](https://opencode.ai/) 1.15.7+ 或 2.0.15+、Node.js 18+，以及一個可訪問的 OpenViking 服務（託管或自建；僅本地服務使用 `curl http://localhost:1933/health` 檢查）；服務端啟用了鑑權時，還需要一個可用的 OpenViking API key。
 
 ### 一鍵安裝（推薦）
 
 OpenCode 與 Claude Code、Codex 共用同一個安裝器。它會詢問要安裝的 harness 和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
+
+連線託管例項時，選擇 **OpenViking 託管服務**，再選擇服務商：
+
+- **Volcengine**：輸入服務 API Key，安裝器會提供服務地址。
+- **BytePlus**：先輸入例項的完整 HTTPS 服務地址，再輸入 API Key。詳見 [BytePlus 接入指南](../guides/27-byteplus-setup.md)。
+
+舊版安裝器連線 BytePlus 時使用**自定義 URL**。
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -40,7 +47,7 @@ opencode
 
 OpenCode 2 使用同一個包：v2 呼叫 `setup()`，OpenCode 1 呼叫 `server()`。OpenCode 2 會把 `"plugin"` 規範化為 `"plugins"`，因此安裝器繼續寫相容 v1/v2 的 `"plugin"`；不要為了 v2 手工改寫現有配置。
 
-外掛自帶 skill，不需要另外安裝：`openviking-memory`、`openviking-skills` 和 `ov-experience-memory`，告訴模型什麼時候該用哪個 OpenViking 工具。OpenCode 1 由外掛的 `config` hook 把外掛的 `skills/` 目錄加進 `skills.paths`；OpenCode 2 則通過 `skill.transform` 註冊這個目錄。這些 skill 只隨外掛的 OpenViking MCP server 一起提供：hook-only 模式下、或你關閉了 `mcp.openviking` 時不會加入。
+外掛自帶 skill，不需要另外安裝：`openviking-memory`、`openviking-skills`、`ov-experience-memory` 和 `openviking-rule-search` 告訴模型什麼時候該用哪個 OpenViking 工具，`ov-memory-doctor` 診斷外掛安裝、客戶端配置和服務端連線。OpenCode 1 由外掛的 `config` hook 把外掛的 `skills/` 目錄加進 `skills.paths`；OpenCode 2 則通過 `skill.transform` 註冊這個目錄。這些 skill 只隨外掛的 OpenViking MCP server 一起提供：hook-only 模式下、或你關閉了 `mcp.openviking` 時不會加入。
 
 在 OpenCode 2 中，外掛把 MCP server 設為 `codemode: false`，所以工具仍以 `openviking_*` 直接暴露，不會收進 Code Mode。OpenCode 2 沒有外掛 toast API，服務不可用等資訊只寫入外掛日誌。
 
@@ -148,6 +155,8 @@ OpenCode 1.15.7 不會呼叫外掛 dispose。v1 的短時 CLI 執行也可能在
 ```
 
 ## 故障排查
+
+先執行診斷：`node ~/.config/opencode/plugins/openviking/scripts/ov-memory-doctor.mjs` 檢查外掛安裝、客戶端配置和服務端連線，併為發現的每個問題給出修復方法（支援 `--json`、`--offline`、`--timeout <ms>`、`--no-color`）。npm 包在 `scripts/` 下帶有同一個指令碼，會話中也可以用 `ov-memory-doctor` skill 執行它。
 
 | 問題 | 排查方向 |
 |------|----------|
