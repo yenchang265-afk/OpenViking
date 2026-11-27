@@ -30,6 +30,7 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 from urllib.parse import quote
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import (
     AudioContent,
@@ -37,6 +38,7 @@ from mcp.types import (
     ContentBlock,
     ImageContent,
     TextContent,
+    Tool,
     ToolAnnotations,
 )
 from pydantic import BaseModel, BeforeValidator, Field
@@ -84,6 +86,7 @@ from openviking.server.local_input_guard import (
     is_remote_resource_source,
     looks_like_local_path,
 )
+from openviking.server.mcp_tool_access import allowed_mcp_tools
 from openviking.server.resource_ingest import ingest_temp_upload
 from openviking.server.routers.search import context_only_fields_error, resolve_search_filter
 from openviking.server.skill_ingest import install_skills
@@ -318,7 +321,25 @@ class _IdentityASGIMiddleware:
 # MCP server tools (aligned with vikingbot/agent/tools/ov_file.py)
 # ---------------------------------------------------------------------------
 
-mcp = FastMCP(
+
+class _UserScopedFastMCP(FastMCP):
+    """FastMCP that hides and refuses tools outside the caller's allowlist."""
+
+    async def list_tools(self) -> list[Tool]:
+        tools = await super().list_tools()
+        allowed = await allowed_mcp_tools(_mcp_ctx.get())
+        if allowed is None:
+            return tools
+        return [tool for tool in tools if tool.name in allowed]
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        allowed = await allowed_mcp_tools(_mcp_ctx.get())
+        if allowed is not None and name not in allowed:
+            raise ToolError(f"Tool '{name}' is not available for this user")
+        return await super().call_tool(name, arguments)
+
+
+mcp = _UserScopedFastMCP(
     "openviking",
     transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     stateless_http=True,

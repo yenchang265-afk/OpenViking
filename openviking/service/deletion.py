@@ -398,6 +398,13 @@ class DeletionService:
                     await run_to_completion(lambda: runtime_config.delete_account(account_id))
                 await run_to_completion(lambda: self._delete_account_files(account_id))
             else:
+                runtime_config = self._service.runtime_config_manager
+                if runtime_config is not None:
+                    from openviking.server.mcp_tool_access import clear_user_mcp_tools
+
+                    await run_to_completion(
+                        lambda: clear_user_mcp_tools(runtime_config, account_id, user_id)
+                    )
                 await run_to_completion(lambda: self._delete_uploads(ctx))
                 await run_to_completion(
                     lambda: self._service.viking_fs.rm(

@@ -1194,6 +1194,48 @@ For example, PATCH `{"privacy":{"mode":"auto"}}` to enable automatic discovery a
 
 ---
 
+### user_mcp_tools
+
+ROOT and ADMIN can choose which `/mcp` tools a User may use. ADMIN can manage
+non-GLOBAL Users in its own account. A USER can read only their own entry and
+cannot change it.
+
+```http
+GET /api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools
+PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/mcp-tools
+Content-Type: application/json
+
+{"allowed_tools": ["find", "read", "list", "tree"]}
+```
+
+CLI:
+
+```bash
+ov admin get-mcp-tools acme bob
+ov admin set-mcp-tools acme bob --tools find,read,list,tree
+ov admin set-mcp-tools acme bob --all    # remove the restriction
+ov admin set-mcp-tools acme bob --none   # block every tool
+```
+
+`allowed_tools: null` lets the User use every tool, including tools added in later
+releases. A list allows only those tools; `[]` allows none. Unknown tool names are
+rejected with `400`. The response returns the stored `allowed_tools` and an
+`available_tools` catalog (`name`, `description`, `read_only`).
+
+A restricted User's MCP `tools/list` returns only allowed tools, and `tools/call`
+for any other tool returns an MCP tool error. Unauthenticated discovery and ROOT
+always see the full list. External MCP servers mounted into OpenViking are reached
+through `find_mcp_tools` and `invoke_mcp_tool`, so allow or deny those two tools to
+control them. The allowlist applies to the `/mcp` endpoint only; it does not change
+REST API permissions.
+
+Allowlists are stored in the Account configuration section `mcp_tools.users`,
+which only ROOT and ADMIN can write. Deleting a User removes their entry, so a
+User later created with the same id starts unrestricted. Studio edits them in the **MCP tools** column
+on the Users page.
+
+---
+
 ### create_account
 
 #### 1. API Implementation Overview

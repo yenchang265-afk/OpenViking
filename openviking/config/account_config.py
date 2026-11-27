@@ -18,11 +18,12 @@ identity and credentials.
 
 from __future__ import annotations
 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from pydantic import BaseModel, field_validator, model_validator
 
 from openviking.config.account_vector import AccountEmbeddingConfig, AccountVectorDBConfig
+from openviking.core.identifiers import validate_user_id
 from openviking.models.vlm.registry import is_valid_provider
 from openviking_cli.utils.config.agent_evolution_config import AgentEvolutionConfig
 from openviking_cli.utils.config.github_config import GitHubConfig
@@ -35,6 +36,39 @@ class AccountAclSettings(BaseModel):
     """Account-scoped ACL switch."""
 
     enabled: bool = RuntimeField(default=False)
+
+
+MAX_MCP_TOOL_NAME_LENGTH = 128
+
+
+class AccountMcpToolsConfig(BaseModel):
+    """Per-User MCP tool allowlists set by an ADMIN or ROOT.
+
+    A User without an entry may use every tool. An entry lists the only tools
+    that User may list and call on ``/mcp``; an empty list allows none.
+    Tool names are checked against the live catalog by the admin API.
+    """
+
+    users: Dict[str, List[str]] = RuntimeField(default_factory=dict)
+
+    @field_validator("users")
+    @classmethod
+    def validate_users(cls, value: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        normalized: Dict[str, List[str]] = {}
+        for user_id, tools in value.items():
+            error = validate_user_id(user_id)
+            if error:
+                raise ValueError(error)
+            for name in tools:
+                if not name.strip():
+                    raise ValueError(f"mcp_tools.users.{user_id} has a blank tool name")
+                if len(name) > MAX_MCP_TOOL_NAME_LENGTH:
+                    raise ValueError(
+                        f"mcp_tools.users.{user_id} tool names must not exceed "
+                        f"{MAX_MCP_TOOL_NAME_LENGTH} characters"
+                    )
+            normalized[user_id] = sorted(set(tools))
+        return normalized
 
 
 class AccountMemoryConfig(BaseModel):
@@ -147,6 +181,7 @@ class AccountConfig(BaseModel):
         fallback="agent_evolution",
     )
     acl: Optional[AccountAclSettings] = RuntimeField(default=None)
+    mcp_tools: Optional[AccountMcpToolsConfig] = RuntimeField(default=None)
 
     ttl: Optional[TTLConfig] = RuntimeField(default=None)
 
